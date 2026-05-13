@@ -18,6 +18,38 @@ git rev-parse --is-inside-work-tree && git rev-parse HEAD
 
 If this fails, the repo isn't initialized — ask the user to `git init && git commit --allow-empty -m "init"` before continuing.
 
+## Companion skill installed (REQUIRED)
+
+The scaffolded CLAUDE.md template points at the `autonomous-build-loop` skill for the per-iter protocol. If that skill isn't installed at the user level, every loop iter will lack guidance and burn budget producing low-quality output.
+
+```bash
+test -f ~/.claude/skills/autonomous-build-loop/SKILL.md && echo "ok" || echo "MISS"
+```
+
+If MISS, halt the bootstrap and tell the user:
+
+```
+The companion skill 'autonomous-build-loop' is required but not installed.
+
+Install via either:
+  Option A (symlink from clone):
+    git clone https://github.com/radroid/claude-skills.git ~/Documents/claude-skills
+    ln -s ~/Documents/claude-skills/autonomous-build-loop ~/.claude/skills/autonomous-build-loop
+
+  Option B (.skill release artifact):
+    curl -L -o /tmp/autonomous-build-loop.skill \\
+      https://github.com/radroid/claude-skills/releases/latest/download/autonomous-build-loop.skill
+    unzip /tmp/autonomous-build-loop.skill -d ~/.claude/skills/
+
+Restart Claude Code, then re-run the bootstrap.
+```
+
+Also check optional dependencies (warn but don't block):
+
+```bash
+test -f ~/.claude/skills/grill-me/SKILL.md && echo "grill-me ok" || echo "grill-me MISS (Phase 2 will fall back to brainstorming or manual Q&A)"
+```
+
 ## CLAUDE.md protocol section
 
 ```bash

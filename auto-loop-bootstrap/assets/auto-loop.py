@@ -42,9 +42,21 @@ DEFAULTS = {
     "msgs_per_5h": 800,        # ~10% safety margin under Max-20x's ~900
     "msgs_per_week": 5000,     # rough weekly soft cap
     "max_iters_per_run": 50,
-    "max_budget_usd_per_iter": 5.0,
+    # Fresh `claude -p` sessions don't reuse the prompt cache across iters,
+    # so cache-creation tokens are paid on every iter. Empirically a typical
+    # Opus iter on a non-trivial repo lands at $4-8 just on context bootstrap
+    # (~200-400K input tokens × Opus's $18.75/MTok cache-creation rate). Pin
+    # at $10 by default. To lower cost, pass --model sonnet via --extra-args.
+    "max_budget_usd_per_iter": 10.0,
     "iter_timeout_s": 1800,    # 30 min hard cap per iter
 }
+
+EXTERNAL_SCHEDULER_NOTE = (
+    "EXTERNAL_SCHEDULER=1 is set; the driver script handles cadence. "
+    "Do NOT call ScheduleWakeup or attempt to schedule a follow-up — that "
+    "tool is not registered in non-interactive `claude -p` sessions and "
+    "any such call will fail. Exit cleanly after the iter log is committed."
+)
 
 PROMPT = (
     "Run ONE iteration of the autonomous build loop per CLAUDE.md "
@@ -109,7 +121,13 @@ def latest_iter_number(repo: Path) -> int | None:
     return max(nums) if nums else None
 
 
-def run_one_iter(repo: Path, prompt: str, budget_usd: float, timeout_s: int) -> IterRecord:
+def run_one_iter(
+    repo: Path,
+    prompt: str,
+    budget_usd: float,
+    timeout_s: int,
+    proc_holder: dict,
+) -> IterRecord:
     head_before = current_head(repo)
     iter_before = latest_iter_number(repo)
     start = time.time()
@@ -120,17 +138,42 @@ def run_one_iter(repo: Path, prompt: str, budget_usd: float, timeout_s: int) -> 
         "--permission-mode", "bypassPermissions",
         "--max-budget-usd", str(budget_usd),
         "--no-session-persistence",
+        "--append-system-prompt", EXTERNAL_SCHEDULER_NOTE,
     ]
+    # stdin=DEVNULL: if any prompt path leaks (workspace-trust dialog, MCP auth,
+    # OAuth refresh), the subprocess would block on TTY read until iter_timeout_s.
+    # start_new_session=True: gives the child its own process group, so SIGINT to
+    # the parent doesn't propagate automatically and we can choose to escalate.
     try:
-        proc = subprocess.run(
-            cmd, capture_output=True, text=True, env=env, cwd=str(repo),
-            timeout=timeout_s,
+        proc = subprocess.Popen(
+            cmd,
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            env=env,
+            cwd=str(repo),
+            start_new_session=True,
         )
-        stdout, stderr, returncode = proc.stdout, proc.stderr, proc.returncode
-    except subprocess.TimeoutExpired as e:
-        stdout = (e.stdout or b"").decode("utf-8", errors="replace") if isinstance(e.stdout, bytes) else (e.stdout or "")
-        stderr = (e.stderr or b"").decode("utf-8", errors="replace") if isinstance(e.stderr, bytes) else (e.stderr or "")
-        returncode = 124  # conventional timeout exit code
+        proc_holder["proc"] = proc
+        try:
+            stdout, stderr = proc.communicate(timeout=timeout_s)
+            returncode = proc.returncode
+        except subprocess.TimeoutExpired:
+            try:
+                os.killpg(proc.pid, signal.SIGTERM)
+                stdout, stderr = proc.communicate(timeout=10)
+            except (subprocess.TimeoutExpired, ProcessLookupError):
+                try:
+                    os.killpg(proc.pid, signal.SIGKILL)
+                except ProcessLookupError:
+                    pass
+                stdout, stderr = proc.communicate()
+            returncode = 124  # conventional timeout exit code
+        finally:
+            proc_holder["proc"] = None
+    except FileNotFoundError:
+        stdout, stderr, returncode = "", "claude CLI not found on PATH", 127
 
     duration = time.time() - start
     head_after = current_head(repo)
@@ -230,11 +273,23 @@ def main() -> int:
     log(f"  cfg={cfg} max_iters={args.max_iters} budget_usd_per_iter={args.max_budget_usd_per_iter}")
 
     interrupted = False
+    proc_holder: dict = {"proc": None}
 
     def handle_sigint(signum, frame):
         nonlocal interrupted
+        if interrupted:
+            # second Ctrl-C: escalate — kill the in-flight claude child process
+            # group immediately rather than waiting up to iter_timeout_s.
+            log("second SIGINT — killing in-flight iter")
+            child = proc_holder.get("proc")
+            if child is not None and child.poll() is None:
+                try:
+                    os.killpg(child.pid, signal.SIGTERM)
+                except (ProcessLookupError, OSError):
+                    pass
+            return
         interrupted = True
-        log("SIGINT received — exiting after current iter")
+        log("SIGINT received — exiting after current iter (press Ctrl-C again to kill child immediately)")
 
     signal.signal(signal.SIGINT, handle_sigint)
 
@@ -281,6 +336,7 @@ def main() -> int:
             repo, args.prompt,
             budget_usd=args.max_budget_usd_per_iter,
             timeout_s=args.iter_timeout_s,
+            proc_holder=proc_holder,
         )
         iters_this_run += 1
 

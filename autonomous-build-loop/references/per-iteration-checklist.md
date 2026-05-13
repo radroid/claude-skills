@@ -93,11 +93,14 @@ Eyeball remaining context budget.
 
 Better to space than compact mid-build.
 
-## 13. Schedule next iter
+## 13. Schedule next iter — OR exit cleanly
 
-Call `ScheduleWakeup` (or the project's equivalent — `CronCreate` for fixed cadence; `ScheduleWakeup` for dynamic /loop). Pass the SAME prompt back verbatim (or `<<autonomous-loop-dynamic>>` for the autonomous variant).
+**Check `$EXTERNAL_SCHEDULER` first.**
 
-**Always schedule.** No semantic halt (see `references/continuous-loop.md`).
+- **`EXTERNAL_SCHEDULER` unset (in-session mode):** call `ScheduleWakeup` (or the project's equivalent — `CronCreate` for fixed cadence; `ScheduleWakeup` for dynamic /loop). Pass the SAME prompt back verbatim (or `<<autonomous-loop-dynamic>>` for the autonomous variant).
+- **`EXTERNAL_SCHEDULER=1` (external-scheduler mode, e.g. driven by `scripts/auto-loop.py`):** do NOT call `ScheduleWakeup` — it's not a registered tool in `claude -p` sessions and the call will fail. The external driver handles cadence. Just exit cleanly after step 14.
+
+**No semantic halt** (see `references/continuous-loop.md`) — but in external-scheduler mode, "no halt" means "the driver fires the next iter on schedule," not "you keep working in this turn."
 
 ## 14. End the turn
 

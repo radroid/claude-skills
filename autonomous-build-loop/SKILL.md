@@ -11,9 +11,20 @@ This skill codifies the patterns that keep a long-horizon autonomous build loop 
 
 Read `references/per-iteration-checklist.md` at the start of every iteration. Use `references/fat-iter-mode.md` when picking 2+ features. Use `references/sub-agent-protocol.md` when dispatching sub-agents. Use `references/log-hygiene.md` when writing the iter log + handoff. Use `references/continuous-loop.md` when something would normally halt the loop.
 
+## Two operating modes
+
+This skill supports two scheduler modes. **Check which mode applies BEFORE step 13 of any iter.**
+
+| Mode | Trigger | Step 13 behavior |
+|------|---------|------------------|
+| **In-session loop** | Interactive Claude Code session; `ScheduleWakeup` tool is registered. | Call `ScheduleWakeup` to schedule the next iter. |
+| **External scheduler** | Env var `EXTERNAL_SCHEDULER=1` is set (driven by `scripts/auto-loop.py` or equivalent); session started via `claude -p`. | Do NOT call `ScheduleWakeup`. External driver handles cadence — exit cleanly after commit. `ScheduleWakeup` is not registered as a tool in `claude -p` sessions; any call to it will fail. |
+
+Every mention of `ScheduleWakeup` below is conditional on in-session mode. In external-scheduler mode, replace "schedule wake-up" with "exit cleanly."
+
 ## Core principles
 
-1. **One iteration = one bounded turn.** End by scheduling the next wake-up via `ScheduleWakeup` (dynamic /loop) or the project's equivalent. Never start a second iteration in the same turn.
+1. **One iteration = one bounded turn.** End by scheduling the next wake-up via `ScheduleWakeup` (in-session mode) OR by exiting cleanly (external-scheduler mode). Never start a second iteration in the same turn.
 
 2. **Read state before acting.** Every iter starts by reading: project-root `CLAUDE.md`, `GOALS.md`, `ARCHITECTURE.md` (section-scoped, not full re-read per iter), `logs/latest.md` (includes prior wake-up handoff), `logs/blocks.md`, `PLAN.md`. Missing files → create stubs in the current iter before doing other work.
 
@@ -40,7 +51,7 @@ Read `references/per-iteration-checklist.md` at the start of every iteration. Us
 7. Write `logs/iter-NNN.md` (cap 50 lines fat-iter / 40 lines otherwise — see `references/log-hygiene.md`).
 8. Commit `iter NNN: <one-line summary>`.
 9. Push if push cadence triggers (default: 5 iters since last push OR ≥8 commits ahead).
-10. `ScheduleWakeup` for next iter (default: 600s impl, 1500s plan, 1800s+ if token-runway tight).
+10. **In-session mode:** `ScheduleWakeup` for next iter (default: 600s impl, 1500s plan, 1800s+ if token-runway tight). **External-scheduler mode (`EXTERNAL_SCHEDULER=1`):** exit cleanly — driver handles cadence.
 
 ## When NOT to fat-iter
 
@@ -54,7 +65,7 @@ Read `references/per-iteration-checklist.md` at the start of every iteration. Us
 - Always read `CLAUDE.md` first if it exists at the project root.
 - Never start a second iteration in the same turn.
 - Never delete logs; archive them under `logs/archive/` after a decade rollup.
-- End every iteration by scheduling the next. Always. No semantic halt.
+- End every iteration by scheduling the next (in-session) OR exiting cleanly (external-scheduler). Always. No semantic halt.
 - A sub-agent `block` verdict → log to `logs/blocks.md`, pick next non-conflicting `GOALS.md` item, continue. Do NOT write a halt-marker file.
 - Never run dev-server commands unless the project's CLAUDE.md authorizes it (typically the dev server is user-managed).
 - Never update git config without explicit `GOALS.md` authorization.

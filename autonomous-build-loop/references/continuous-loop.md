@@ -8,7 +8,7 @@
 
 | Event | Agent action |
 |-------|--------------|
-| **Sub-agent returns `block`** | Append to `logs/blocks.md` (date, iter, sub-agent name, charter, verdict text, reason). Pick the next non-conflicting `GOALS.md` item and proceed in the SAME iter or the next one. Do NOT skip `ScheduleWakeup`. |
+| **Sub-agent returns `block`** | Append to `logs/blocks.md` (date, iter, sub-agent name, charter, verdict text, reason). Pick the next non-conflicting `GOALS.md` item and proceed in the SAME iter or the next one. Do NOT skip step 13 — in-session: still `ScheduleWakeup`; external-scheduler (`EXTERNAL_SCHEDULER=1`): still exit cleanly so the driver fires the next iter. |
 | **Runtime smoke fail** (chrome-devtools MCP, lighthouse, etc.) | Log to `logs/blocks.md` with screenshot path + console output. Continue. |
 | **MCP server unreachable** | Log a one-line entry to `logs/blocks.md` once (not per-iter). Skip that surface's work for this iter; route to backend gap-fill. Escalate to user-restart recommendation after 3 consecutive iters. |
 | **User-decision blocker** (API key needed, schema purge, project provision) | Log under `GOALS.md` § "Open dependencies (waiting on user)". Prefix `**HIGH PRIORITY —**` if it blocks meaningful work. Continue with any item that does NOT depend on the decision. |
@@ -20,9 +20,11 @@
 
 ## The only legitimate halt
 
-**Process-level token-runway exhaustion** is the only legitimate halt cause — and even that isn't a halt, it's a longer wake-up + explicit user-restart recommendation in the iter log.
+**Process-level token-runway exhaustion** is the only legitimate halt cause in in-session mode — and even that isn't a halt, it's a longer wake-up + explicit user-restart recommendation in the iter log.
 
 When the iter log says "restart Claude Code at earliest opportunity," the `ScheduleWakeup` is still placed (typically 3600s) so the loop resumes from the next wake-up after relaunch. The session ending is the user's decision, not the agent's.
+
+In **external-scheduler mode** (`EXTERNAL_SCHEDULER=1`), token-runway exhaustion is impossible by construction — every iter is a fresh `claude -p` process with zero accumulated context. The driver script enforces budget at the OS level (rolling 5h window, per-iter `--max-budget-usd`); the agent just exits after committing.
 
 ## Repeated-issue counter
 

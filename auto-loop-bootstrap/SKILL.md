@@ -21,6 +21,7 @@ Check the repo for what's already in place. See `references/audit-checklist.md` 
 
 | File / dir | Required state |
 |-----|-----|
+| `~/.claude/skills/autonomous-build-loop/SKILL.md` | **REQUIRED companion skill.** Halt the bootstrap if missing — see `references/audit-checklist.md` for install instructions to surface to the user. |
 | `CLAUDE.md` | Exists AND contains "autonomous build loop" or equivalent protocol section |
 | `GOALS.md` | Exists AND has at least 3 actionable items with `[ ]` / `[wip]` / `[blocked]` / `[done]` markers |
 | `ARCHITECTURE.md` | Exists (content can be sparse — minimum: domain summary + key tech choices) |

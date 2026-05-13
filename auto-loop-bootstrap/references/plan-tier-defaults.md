@@ -49,16 +49,28 @@ python3 scripts/auto-loop.py \
 
 Add a daily wallet cap by stopping the script at the end of the day and capping `--max-iters` based on `target_daily_dollars / max_budget_usd_per_iter`.
 
-## Observed burn rate (from prior ARK loop session)
+## Observed burn rate
 
-For calibration — actual ARK iters in fat-iter mode typically used:
+**CRITICAL — fresh sessions and warm sessions cost very differently. Calibrate before deciding cadence.**
 
-- **Per-iter cost:** $1.50–$4 (Opus 4.x) depending on feature complexity
-- **Per-iter duration:** 4–15 minutes wall-clock
-- **Per-iter input tokens:** 80k–250k (most is CLAUDE.md + memory + log reads)
-- **Per-iter output tokens:** 5k–20k
+### Warm-session (in-session `ScheduleWakeup` loop, where prompt cache reuses across iters)
 
-Cache reads are ~70–90% of input tokens when iters are < 5 min apart. With fresh-session-per-iter (auto-loop driver), cache hit rate drops to ~0% so input tokens skew higher per iter. Net cost stays comparable because the cache discount applies to cache-read tokens only.
+- Per-iter cost: $1.50–$4 (Opus 4.x)
+- Cache reads: 70–90% of input tokens
+- This is what the original ARK loop reported
+
+### Fresh-session (`scripts/auto-loop.py`, `claude -p` per iter — DEFAULT FOR THIS REPO)
+
+- Per-iter cost: **$4–$8** on Opus, **$1–$2** on Sonnet 4.x
+- Cache reads: ~0% (each `claude -p` invocation has its own cache window)
+- Cache-creation tokens are paid every iter on the full CLAUDE.md + GOALS.md + ARCHITECTURE.md + logs read. At Opus's $18.75/MTok cache-creation rate, a typical 200–400K-token bootstrap is $3.75–$7.50 BEFORE the iter does any actual work.
+- Per-iter input tokens: 250k–500k (most is the per-iter context bootstrap)
+- Per-iter output tokens: 5k–20k
+- Per-iter duration: 4–15 minutes wall-clock
+
+**Implication:** the script's default `--max-budget-usd-per-iter 10` is intentionally generous to cover Opus iters that bootstrap heavy projects. If you hit "3 consecutive failed iters" and the recorded `cost_usd` values are near 5, your iters are getting truncated by an old (too-low) budget cap.
+
+**Cost reduction lever — switch the per-iter prompt to use Sonnet:** the easiest 4–6× cost cut is to drop `--model sonnet` into the cmd args in `scripts/auto-loop.py`. Sonnet 4.x handles most autonomous-loop iters fine; reserve Opus for phase-boundary arch passes or hard architectural iters that the agent can request mid-loop.
 
 ## Tuning loop after first 5 iters
 
