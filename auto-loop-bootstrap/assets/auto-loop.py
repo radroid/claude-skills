@@ -4,7 +4,10 @@
 Each iter is a brand-new Claude Code session — no accumulated context, no /compact,
 no token-runway exhaustion. State persists on disk (CLAUDE.md, GOALS.md, logs/).
 
-Defaults are tuned for Claude Max 20x (~900 msgs / 5h rolling window).
+Defaults are tuned for Claude Max 20x. Note: Anthropic's plan limit is per *model
+request*, not per `claude -p` invocation. A single fat-iter dispatching 6-8
+sub-agents + tool calls can be 50-100 requests, so we throttle on iters, not
+msgs (default ~12 iters/5h ≈ ~900 requests/5h, the Max-20x soft cap).
 
 Usage:
   python3 scripts/auto-loop.py                       # defaults
@@ -33,14 +36,17 @@ from dataclasses import asdict, dataclass
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
+VERSION = "0.1.2"
 ROLLING_WINDOW_HOURS = 5
 WEEKLY_WINDOW_HOURS = 24 * 7
 
 DEFAULTS = {
     "min_interval": 600,
     "max_interval": 3600,
-    "msgs_per_5h": 800,        # ~10% safety margin under Max-20x's ~900
-    "msgs_per_week": 5000,     # rough weekly soft cap
+    # Iters per 5h rolling window. Anthropic counts per model request; a fat-iter
+    # ≈ 50-100 requests, so 12 iters ≈ ~900 requests, ~Max-20x soft cap.
+    "iters_per_5h": 12,
+    "iters_per_week": 80,      # ~5x the 5h budget, accounting for off-hours
     "max_iters_per_run": 50,
     # Fresh `claude -p` sessions don't reuse the prompt cache across iters,
     # so cache-creation tokens are paid on every iter. Empirically a typical
@@ -84,7 +90,17 @@ class IterRecord:
 def load_records(state_file: Path) -> list[dict]:
     if not state_file.exists():
         return []
-    return [json.loads(line) for line in state_file.read_text().splitlines() if line.strip()]
+    records: list[dict] = []
+    for line in state_file.read_text().splitlines():
+        if not line.strip():
+            continue
+        try:
+            records.append(json.loads(line))
+        except json.JSONDecodeError:
+            # Truncated/corrupted line from a previous SIGKILL or power loss.
+            # Skip rather than crash the whole loader.
+            continue
+    return records
 
 
 def filter_window(records: list[dict], hours: int) -> list[dict]:
@@ -197,6 +213,12 @@ def run_one_iter(
     except (json.JSONDecodeError, ValueError):
         pass
 
+    # On timeout-kill, --output-format json never emits its envelope, so cost_usd
+    # comes out 0 even though the iter consumed budget. Conservatively assume the
+    # iter spent its full budget so the dashboard doesn't under-report burn.
+    if returncode == 124 and cost_usd == 0.0:
+        cost_usd = float(budget_usd)
+
     # write stderr tail to driver log on failure for debug
     if returncode != 0 and stderr:
         sys.stderr.write(f"[claude stderr tail]\n{stderr[-2000:]}\n")
@@ -213,14 +235,14 @@ def run_one_iter(
 
 
 def compute_sleep(records_5h: list[dict], cfg: dict) -> int:
-    """Pace so we don't blow the 5h budget.
+    """Pace so we don't blow the 5h iter budget.
 
-    Strategy: divide remaining-window-seconds by remaining-msg-budget. Clamp to
+    Strategy: divide remaining-window-seconds by remaining-iter-budget. Clamp to
     [min_interval, max_interval]. If budget exhausted, wait until oldest record
     drops out of the window.
     """
     used = len(records_5h)
-    remaining = cfg["msgs_per_5h"] - used
+    remaining = cfg["iters_per_5h"] - used
     if remaining <= 0:
         oldest = min(records_5h, key=lambda r: r["ts"])
         oldest_dt = datetime.fromisoformat(oldest["ts"])
@@ -230,19 +252,40 @@ def compute_sleep(records_5h: list[dict], cfg: dict) -> int:
     return int(max(cfg["min_interval"], min(cfg["max_interval"], target)))
 
 
+def interruptible_sleep(total_s: int, stop_file: Path, is_interrupted) -> None:
+    """Sleep up to total_s seconds, waking on SIGINT or stop_file presence.
+
+    Polls in 2s slices for stop_file. SIGINT raises InterruptedError inside time.sleep.
+    """
+    elapsed = 0
+    while elapsed < total_s:
+        if is_interrupted() or stop_file.exists():
+            return
+        slice_s = min(2, total_s - elapsed)
+        try:
+            time.sleep(slice_s)
+        except InterruptedError:
+            return
+        elapsed += slice_s
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--repo", default=os.getcwd(), help="repo root (default: cwd)")
     ap.add_argument("--min-interval", type=int, default=DEFAULTS["min_interval"])
     ap.add_argument("--max-interval", type=int, default=DEFAULTS["max_interval"])
-    ap.add_argument("--msgs-per-5h", type=int, default=DEFAULTS["msgs_per_5h"])
-    ap.add_argument("--msgs-per-week", type=int, default=DEFAULTS["msgs_per_week"])
+    ap.add_argument("--iters-per-5h", type=int, default=DEFAULTS["iters_per_5h"],
+                    help="iter cap per 5h rolling window (default 12 for Max-20x)")
+    ap.add_argument("--iters-per-week", type=int, default=DEFAULTS["iters_per_week"])
     ap.add_argument("--max-iters", type=int, default=DEFAULTS["max_iters_per_run"])
     ap.add_argument("--max-budget-usd-per-iter", type=float, default=DEFAULTS["max_budget_usd_per_iter"])
     ap.add_argument("--iter-timeout-s", type=int, default=DEFAULTS["iter_timeout_s"])
     ap.add_argument("--prompt", default=PROMPT)
     ap.add_argument("--no-empty-backlog-stop", action="store_true",
                     help="don't stop when GOALS.md backlog goes empty")
+    ap.add_argument("--skip-denylist-check", action="store_true",
+                    help="proceed even if .claude/settings.local.json is missing")
+    ap.add_argument("--version", action="version", version=f"auto-loop.py {VERSION}")
     args = ap.parse_args()
 
     repo = Path(args.repo).resolve()
@@ -259,8 +302,8 @@ def main() -> int:
     cfg = {
         "min_interval": args.min_interval,
         "max_interval": args.max_interval,
-        "msgs_per_5h": args.msgs_per_5h,
-        "msgs_per_week": args.msgs_per_week,
+        "iters_per_5h": args.iters_per_5h,
+        "iters_per_week": args.iters_per_week,
     }
 
     def log(msg: str) -> None:
@@ -269,25 +312,45 @@ def main() -> int:
         with log_file.open("a") as f:
             f.write(line + "\n")
 
-    log(f"auto-loop start: repo={repo}")
+    log(f"auto-loop start: v{VERSION} repo={repo}")
     log(f"  cfg={cfg} max_iters={args.max_iters} budget_usd_per_iter={args.max_budget_usd_per_iter}")
+
+    # Defense-in-depth: --permission-mode bypassPermissions is set in run_one_iter,
+    # so the only real sandbox is the repo's .claude/settings.local.json deny list.
+    # Warn loudly (or refuse) if missing — the bootstrap skill is supposed to write
+    # a baseline file but a hand-copied driver wouldn't have one.
+    settings_local = repo / ".claude" / "settings.local.json"
+    if not settings_local.exists():
+        msg = (
+            f"WARNING: no {settings_local.relative_to(repo)} — "
+            "claude -p will run with bypassPermissions and no deny list. "
+            "Re-run via the auto-loop-bootstrap skill OR pass "
+            "--skip-denylist-check to proceed anyway."
+        )
+        if args.skip_denylist_check:
+            log(msg)
+        else:
+            sys.stderr.write(msg + "\n")
+            return 2
 
     interrupted = False
     proc_holder: dict = {"proc": None}
+    sigint_count = 0
 
     def handle_sigint(signum, frame):
-        nonlocal interrupted
-        if interrupted:
-            # second Ctrl-C: escalate — kill the in-flight claude child process
-            # group immediately rather than waiting up to iter_timeout_s.
-            log("second SIGINT — killing in-flight iter")
-            child = proc_holder.get("proc")
+        nonlocal interrupted, sigint_count
+        sigint_count += 1
+        child = proc_holder.get("proc")
+        if sigint_count >= 2:
+            # second Ctrl-C: kill the child group AND exit the driver immediately.
+            # Skips the rest of post-iter bookkeeping; user expressly wants out.
             if child is not None and child.poll() is None:
                 try:
                     os.killpg(child.pid, signal.SIGTERM)
                 except (ProcessLookupError, OSError):
                     pass
-            return
+            log("second SIGINT — hard exit")
+            os._exit(130)
         interrupted = True
         log("SIGINT received — exiting after current iter (press Ctrl-C again to kill child immediately)")
 
@@ -317,18 +380,15 @@ def main() -> int:
         records_5h = filter_window(records, ROLLING_WINDOW_HOURS)
         records_week = filter_window(records, WEEKLY_WINDOW_HOURS)
 
-        if len(records_week) >= cfg["msgs_per_week"]:
-            log(f"pause: weekly cap reached ({len(records_week)}/{cfg['msgs_per_week']}); sleep 1h")
-            time.sleep(3600)
+        if len(records_week) >= cfg["iters_per_week"]:
+            log(f"pause: weekly cap reached ({len(records_week)}/{cfg['iters_per_week']}); sleep 1h")
+            interruptible_sleep(3600, stop_file, lambda: interrupted)
             continue
 
-        if len(records_5h) >= cfg["msgs_per_5h"]:
+        if len(records_5h) >= cfg["iters_per_5h"]:
             sleep_s = compute_sleep(records_5h, cfg)
-            log(f"5h cap reached ({len(records_5h)}/{cfg['msgs_per_5h']}); sleep {sleep_s}s")
-            for _ in range(sleep_s):
-                if interrupted or stop_file.exists():
-                    break
-                time.sleep(1)
+            log(f"5h cap reached ({len(records_5h)}/{cfg['iters_per_5h']}); sleep {sleep_s}s")
+            interruptible_sleep(sleep_s, stop_file, lambda: interrupted)
             continue
 
         log(f"iter {iters_this_run + 1}/{args.max_iters}: spawning claude -p")
@@ -362,16 +422,13 @@ def main() -> int:
         records_week = filter_window(load_records(state_file), WEEKLY_WINDOW_HOURS)
         total_cost_5h = sum(r.get("cost_usd", 0) for r in records_5h)
         log(
-            f"  window: 5h={len(records_5h)}/{cfg['msgs_per_5h']} msgs "
-            f"(${total_cost_5h:.2f}) · week={len(records_week)}/{cfg['msgs_per_week']}"
+            f"  window: 5h={len(records_5h)}/{cfg['iters_per_5h']} iters "
+            f"(${total_cost_5h:.2f}) · week={len(records_week)}/{cfg['iters_per_week']}"
         )
 
         sleep_s = compute_sleep(records_5h, cfg)
         log(f"  sleep {sleep_s}s")
-        for _ in range(sleep_s):
-            if interrupted or stop_file.exists():
-                break
-            time.sleep(1)
+        interruptible_sleep(sleep_s, stop_file, lambda: interrupted)
 
     log("auto-loop exit")
     return 0

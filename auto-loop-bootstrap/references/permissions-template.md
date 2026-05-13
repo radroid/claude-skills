@@ -2,6 +2,8 @@
 
 The auto-loop driver runs `claude -p` with `--permission-mode bypassPermissions`. That's required for headless operation — there's nobody to approve prompts. To compensate, use the project-local settings file to DENY access to sensitive files.
 
+**This file is REQUIRED.** As of `auto-loop.py` v0.1.2, the driver refuses to start if `.claude/settings.local.json` is missing (override with `--skip-denylist-check`). Phase 5 of the bootstrap must always write the baseline below — Phase 3 only collects ADDITIONS, not the baseline itself.
+
 ## Skeleton
 
 Write to `<repo>/.claude/settings.local.json`:

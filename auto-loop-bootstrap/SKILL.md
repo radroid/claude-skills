@@ -70,14 +70,16 @@ Templates to copy (with substitutions):
 ### Phase 5 — Wire up `.gitignore` and settings
 
 - Append `/.auto-loop/` to `.gitignore` (create file if missing).
-- If the user flagged sensitive paths in Phase 3, write `.claude/settings.local.json` per `references/permissions-template.md`.
+- **ALWAYS write the baseline `.claude/settings.local.json`** per `references/permissions-template.md` — this is required, not optional. As of v0.1.2 the driver refuses to start if it's missing. Phase 3 collected ADDITIONS the user named; merge those entries into the baseline before writing.
+- Before bootstrapping, REFUSE to proceed if `git status --porcelain` is non-empty — uncommitted WIP would get bundled into the iter-000 commit. Surface the dirty paths to the user and ask them to commit/stash first.
 
 ### Phase 6 — Initial commit
 
-Stage and commit the scaffolded files in ONE commit:
+Stage and commit ONLY the scaffolded files. Use explicit per-file `git add` so unrelated WIP edits don't sneak in:
 
 ```
-git add CLAUDE.md GOALS.md ARCHITECTURE.md PLAN.md logs/ scripts/auto-loop.py .gitignore
+git add CLAUDE.md GOALS.md ARCHITECTURE.md PLAN.md logs/latest.md logs/blocks.md \
+        scripts/auto-loop.py .gitignore .claude/settings.local.json
 git commit -m "iter 000: bootstrap autonomous build loop"
 ```
 
@@ -85,10 +87,15 @@ This commit is the loop's seed. `iter-000.md` doesn't exist yet — the first au
 
 ### Phase 7 — Smoke-test with one dry-run iter
 
-**Do not start the full loop yet.** Run ONE iter to verify plumbing:
+**Do not start the full loop yet.** Run ONE iter to verify plumbing. **Use Sonnet** — fresh-session Opus iters cost $4-8 just on context bootstrap, which would blow past a low smoke-test budget:
 
 ```bash
-python3 scripts/auto-loop.py --max-iters 1 --max-budget-usd-per-iter 2
+# Sonnet smoke (recommended)
+python3 scripts/auto-loop.py --max-iters 1 --max-budget-usd-per-iter 3 \
+  --prompt "Run ONE iteration of the autonomous build loop per CLAUDE.md, using model=sonnet."
+
+# Or Opus smoke (heavier)
+python3 scripts/auto-loop.py --max-iters 1 --max-budget-usd-per-iter 10
 ```
 
 Expected outcomes:
