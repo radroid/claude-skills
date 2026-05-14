@@ -55,8 +55,12 @@ For each feature in the iter (one feature, or each feature of a fat-iter):
 7. **Automated PR review.** Pick the reviewer by what is available — findings are always
    *suggestions to evaluate*, not orders (`superpowers:receiving-code-review`).
    - **CodeRabbit** — requires the repo be **public** *and* the `coderabbit` CLI authenticated.
-     CodeRabbit **cannot review private repos.** When both hold: `coderabbit:code-review` on the
-     PR, then resolve threads via `coderabbit:autofix`.
+     CodeRabbit **cannot review private repos.** When both hold: run `coderabbit:code-review`
+     **scoped to the feature's committed diff** — `--type committed --base main` — then resolve
+     threads via `coderabbit:autofix`. **Always scope it.** An unscoped review also ingests every
+     uncommitted file in the working tree (e.g. sibling features' files carried along on the
+     branch in fat-iter mode) and can hang for tens of minutes with no output. A scoped review of
+     one feature's diff completes in ~1–2 min.
    - **Private repo, or CodeRabbit unavailable** → fall back to Anthropic's `review` skill, or
      `superpowers:requesting-code-review` against the PR diff. Same discipline as above.
    - Whichever path runs, the per-PR **super-reviewer** (step 8) still runs — it is the floor and
