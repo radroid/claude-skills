@@ -9,6 +9,10 @@ Skills for [Claude Code](https://claude.com/claude-code).
 | [`autonomous-build-loop`](./autonomous-build-loop/) | Run a long-horizon autonomous build loop that ships features iteratively across many sessions. Per-iteration checklist, tiered read manifest (shrink the per-iter cold-boot cost), fat-iter parallel-dispatch protocol, Class A/B sub-agent discipline, peer-review triggers, frontend-critique gate, phase-boundary arch passes, token-runway management, log hygiene, no-halt continuous loop semantics. |
 | [`auto-loop-bootstrap`](./auto-loop-bootstrap/) | Bootstrap a repo for autonomous build looping. Scaffolds `CLAUDE.md`, `GOALS.md`, `ARCHITECTURE.md`, `PLAN.md`, `logs/`, and drops in the `auto-loop.py` driver script. Invokes `grill-me` to extract a backlog when one doesn't exist. Pairs with `autonomous-build-loop`. |
 
+## Roadmap
+
+[`ROADMAP.md`](./ROADMAP.md) — the strategic plan of record for evolving these skills into a **lifecycle-staged build loop** (S0 Alignment → S1 Tech Stack → S2 Scaffold & Wire → S3+ Feature Dev), with feature-PR mode, a machine-readable loop-state file, human checkpoints, a super-reviewer, auto-research, and a multi-repo testbed. Rollout is milestone-based (M0–M5).
+
 ## Install
 
 ### Option A — Symlink the source folder (recommended for editing)
@@ -67,6 +71,7 @@ See each skill's `SKILL.md` for the full protocol.
 ```
 claude-skills/
 ├── README.md
+├── ROADMAP.md                    strategic plan of record (milestones M0–M5)
 ├── LICENSE                       (CC BY 4.0)
 ├── autonomous-build-loop/        skill source
 │   ├── SKILL.md
