@@ -25,10 +25,13 @@ Gated by `.loop/state.json`:
 
 ## Prerequisites (one-time repo setup)
 
-- **Auto-merge must be enabled on the GitHub repo:** `gh repo edit <owner/repo> --enable-auto-merge`.
-  Without it, step 9's `gh pr merge --auto` fails with
-  `Auto merge is not allowed for this repository`. It is **off by default** on new repos — enable
-  it once when the repo is set up for `pr_mode: true`.
+- **Merge path depends on branch protection** (step 9):
+  - **No branch protection rules** (typical for testbeds / young repos) → the loop uses plain
+    `gh pr merge --squash`. Nothing to set up.
+  - **`gh pr merge --auto`** (queue-until-checks-pass) needs **both** `gh repo edit <owner/repo>
+    --enable-auto-merge` *and* branch protection rules on the target branch — without protection
+    rules it errors `Protected branch rules not configured for this branch`. Only set this up for
+    repos that actually run required CI checks.
 - **CodeRabbit** (the pre-push reviewer, step 5) needs a **public** repo + an authenticated
   `coderabbit` CLI. Private repo → use the fallback reviewer instead.
 
@@ -79,10 +82,14 @@ For each feature in the iter (one feature, or each feature of a fat-iter):
    peer-review sub-agent is the floor) against the PR diff + scoping plan — it is the floor and is
    never skipped. Verdict → `logs/blocks.md` regardless of outcome.
 9. **Merge decision:**
-   - **APPROVE + green checks** → `gh pr merge --squash --auto` (requires repo auto-merge enabled —
-     see Prerequisites). `--auto` queues the merge until required checks pass; on a repo with **no
-     required status checks** it merges immediately. If auto-merge cannot be enabled on the repo,
-     the manual equivalent after APPROVE + locally-verified green is plain `gh pr merge --squash`.
+   - **APPROVE + green** → merge the PR. Step 5's pre-push review already ran and step 8's
+     super-reviewer APPROVED, so the PR is merge-ready.
+     - **No branch protection** (testbeds / young repos) → plain `gh pr merge --squash --delete-branch`.
+       This is the loop's default. Do **not** reach for `--auto` here — it errors
+       `Protected branch rules not configured for this branch` because it has nothing to queue against.
+     - **Branch protection + required CI checks** → `gh pr merge --squash --auto --delete-branch`;
+       `--auto` queues the merge until the required checks pass (needs repo auto-merge enabled —
+       see Prerequisites).
    - **`request_changes`** → fix on the same branch this iter or the next; re-review; do not
      leave half-reviewed PRs merged.
    - **`block`** → log to `logs/blocks.md`, leave the PR open, re-queue the feature in `GOALS.md`,
