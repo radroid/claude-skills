@@ -72,7 +72,9 @@ Log result to `logs/blocks.md` regardless of verdict (see `references/peer-revie
 - Update `GOALS.md`
 - Write iter log (cap 50 lines fat-iter mode)
 - The iter log "Features landed:" bullet lists all `GOALS.md` ids closed this iter
-- Commit `iter NNN: <one-line summary listing all features>`
+- **Commit / merge depends on `pr_mode` (`.loop/state.json`):**
+  - **`pr_mode: false` or absent** → legacy: `Commit iter NNN: <one-line summary listing all features>` on the active branch.
+  - **`pr_mode: true`** → each feature lands on **its own branch + PR** per `references/feature-pr-mode.md` — not one combined commit. The Phase 4 peer-review still runs once over the integrated set for cross-feature coherence; each feature's PR then also gets the per-PR super-reviewer before its own auto-merge. `pr_size_policy` (`fat` in S3, `scoped` in S4) sets each PR's size contract. The iter log's "Features landed" bullet lists the merged PR numbers.
 
 ## When NOT to fat-iter
 

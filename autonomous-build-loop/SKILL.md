@@ -9,7 +9,7 @@ description: Run a long-horizon autonomous build loop that ships features iterat
 
 This skill codifies the patterns that keep a long-horizon autonomous build loop healthy: one bounded turn per iteration, scheduled wake-ups in between, parallel sub-agent dispatch when work is independent, and structured logs the user can review at their own pace. The loop NEVER halts on a semantic event — blocks, failures, and user-decision-needed all become log entries while the next iteration is scheduled.
 
-Read `references/per-iteration-checklist.md` at the start of every iteration. Use `references/read-manifest.md` to decide what to read on wake-up (tiered — not every file every iter). Use `references/fat-iter-mode.md` when picking 2+ features. Use `references/sub-agent-protocol.md` when dispatching sub-agents. Use `references/log-hygiene.md` when writing the iter log + handoff. Use `references/continuous-loop.md` when something would normally halt the loop.
+Read `references/per-iteration-checklist.md` at the start of every iteration. Use `references/read-manifest.md` to decide what to read on wake-up (tiered — not every file every iter). Use `references/fat-iter-mode.md` when picking 2+ features. Use `references/feature-pr-mode.md` when `.loop/state.json` has `pr_mode: true` (branch + PR per feature instead of commit-to-one-branch). Use `references/sub-agent-protocol.md` when dispatching sub-agents. Use `references/log-hygiene.md` when writing the iter log + handoff. Use `references/continuous-loop.md` when something would normally halt the loop.
 
 ## Two operating modes
 
@@ -89,6 +89,7 @@ If the same `issue-id` is raised across 3 consecutive iterations without resolut
 - `references/per-iteration-checklist.md` — the 13-step per-iter procedure.
 - `references/read-manifest.md` — tiered context-loading rules; what to read every iter vs. on-trigger vs. never.
 - `references/fat-iter-mode.md` — parallel feature dispatch protocol with disjoint allowlists.
+- `references/feature-pr-mode.md` — branch + PR + review + auto-merge per feature, gated by `.loop/state.json` `pr_mode`.
 - `references/sub-agent-protocol.md` — Class A vs Class B charters, prompt boilerplate.
 - `references/log-hygiene.md` — iter log format, growth control, archive cadence.
 - `references/continuous-loop.md` — block / fail / user-decision routing without halting.

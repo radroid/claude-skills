@@ -8,9 +8,10 @@ Each iter is a fresh session; the prompt cache does NOT carry across iters, so e
 iter pays cache-creation rate on its whole cold-boot read. Read the tiered manifest
 in `references/read-manifest.md` — do not read every file every iter.
 
-- **Tier 1 (always):** `CLAUDE.md`, `logs/latest.md` (the state file — phase, next
-  features, files to open, open blocks, last-iter summary), `GOALS.md`. That is the
-  default read.
+- **Tier 1 (always):** `CLAUDE.md`, `.loop/state.json` (machine state — stage, iter,
+  `pr_mode`, `pr_size_policy`; absent → legacy non-PR mode), `logs/latest.md` (the
+  human handoff — next features, files to open, open blocks, last-iter summary),
+  `GOALS.md`. That is the default read.
 - **Tier 2 (on trigger only):** `ARCHITECTURE.md` section (when the goal touches that
   subsystem; full read only at a phase boundary), `PLAN.md` (when phase/sequence is in
   question), `docs/brand.md` / `docs/workflow/*` (when touching UI / that workflow),
@@ -44,6 +45,8 @@ If picking 2+ features → read `references/fat-iter-mode.md`. If picking 1 or d
 - 1 feature or infra work → direct implementation, or single Class B sub-agent if the work is well-scoped enough to delegate.
 - 2+ features → fat-iter parallel dispatch (`references/fat-iter-mode.md`).
 - Architecture pass at phase boundary → invoke `Skill` tool with `skill: "improve-codebase-architecture"` (an actual tool call — not manual refactor).
+- **Non-visual behaviour is TDD** — failing test first, then minimal code (`tdd` / `superpowers:test-driven-development`). The test suite is the loop's free pass/fail signal; use it for everything testable. Visual behaviour has no such signal — it routes to a human checkpoint, see `references/feature-pr-mode.md` step 3.
+- Before claiming any feature done → `superpowers:verification-before-completion`: run the real commands, read the output, confirm green. Evidence, not "should pass."
 
 ## 7. Mark goals
 
@@ -66,7 +69,14 @@ Last section of the iter log. Must include:
 - Carry-forward to next iter (≤2 short items — anything longer or recurring promotes to `GOALS.md`)
 - Scheduled delaySeconds + reason
 
-## 10. Commit
+## 10. Commit (or open feature PRs)
+
+**`pr_mode` gate (read from `.loop/state.json` in step 1):**
+
+- **`pr_mode: true`** → steps 10–11 are replaced by `references/feature-pr-mode.md`: each feature
+  is branched, TDD-built, verified, reviewed, and auto-merged on its own PR. Skip the rest of this
+  step and step 11; resume at step 12.
+- **`pr_mode: false` or no `.loop/state.json`** → legacy mode, continue below.
 
 ```
 git add -A
@@ -75,7 +85,7 @@ git commit -m "iter NNN: <one-line summary>"
 
 If a pre-commit hook fails: fix the issue, re-stage, create a NEW commit (never `--amend` after a hook failure).
 
-## 11. Push cadence
+## 11. Push cadence (legacy mode only)
 
 From the git repo root: if HEAD is ahead of upstream AND **either** (a) ≥5 iters since last push OR (b) ≥8 commits ahead, run `git push`.
 

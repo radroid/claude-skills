@@ -27,8 +27,9 @@ Check the repo for what's already in place. See `references/audit-checklist.md` 
 | `ARCHITECTURE.md` | Exists (content can be sparse — minimum: domain summary + key tech choices) |
 | `PLAN.md` | Exists (content can be sparse — phase ordering) |
 | `logs/` directory | Exists with `latest.md` + `blocks.md` stubs |
+| `.loop/state.json` | Exists — machine state (`stage`, `iter`, `pr_mode`, `pr_size_policy`). Committed to git. |
 | `scripts/auto-loop.py` | Present and executable |
-| `.gitignore` | Contains `/.auto-loop/` |
+| `.gitignore` | Contains `/.auto-loop/` and `/.loop/claims/` |
 | Git repo | `git rev-parse HEAD` succeeds (i.e. at least one commit) |
 
 Report the audit to the user as a checklist. Anything missing → flag as needing scaffold.
@@ -65,11 +66,12 @@ Templates to copy (with substitutions):
 | `assets/templates/PLAN.md` | `<repo>/PLAN.md` | Phase list from Phase 2 |
 | `assets/templates/logs/latest.md` | `<repo>/logs/latest.md` | iter-000 pointer |
 | `assets/templates/logs/blocks.md` | `<repo>/logs/blocks.md` | empty header |
+| `assets/templates/.loop/state.json` | `<repo>/.loop/state.json` | none — minimal starter (`stage: S3`, `iter: 0`, `pr_mode: true`, `pr_size_policy: fat`). M2 expands the schema. |
 | `assets/auto-loop.py` | `<repo>/scripts/auto-loop.py` | `chmod 755` after copy |
 
 ### Phase 5 — Wire up `.gitignore` and settings
 
-- Append `/.auto-loop/` to `.gitignore` (create file if missing).
+- Append `/.auto-loop/` and `/.loop/claims/` to `.gitignore` (create file if missing). Note: `.loop/state.json` itself **is** committed — only `.loop/claims/` (multi-loop atomic-claim ephemera) is ignored. Keep `.auto-loop/` (driver runtime) and `.loop/` (committed loop state) distinct.
 - **ALWAYS write the baseline `.claude/settings.local.json`** per `references/permissions-template.md` — this is required, not optional. As of v0.1.2 the driver refuses to start if it's missing. Phase 3 collected ADDITIONS the user named; merge those entries into the baseline before writing.
 - Before bootstrapping, REFUSE to proceed if `git status --porcelain` is non-empty — uncommitted WIP would get bundled into the iter-000 commit. Surface the dirty paths to the user and ask them to commit/stash first.
 
@@ -79,7 +81,7 @@ Stage and commit ONLY the scaffolded files. Use explicit per-file `git add` so u
 
 ```
 git add CLAUDE.md GOALS.md ARCHITECTURE.md PLAN.md logs/latest.md logs/blocks.md \
-        scripts/auto-loop.py .gitignore .claude/settings.local.json
+        .loop/state.json scripts/auto-loop.py .gitignore .claude/settings.local.json
 git commit -m "iter 000: bootstrap autonomous build loop"
 ```
 
