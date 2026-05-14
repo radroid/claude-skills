@@ -43,10 +43,16 @@ For each feature in the iter (one feature, or each feature of a fat-iter):
 5. **Push the branch.** `git push -u origin loop/iter-NNN-<feature-slug>`.
 6. **Open the PR.** `gh pr create` — title `iter NNN: <feature>`, body lists the slice
    (files, contract, tests) and links the scoping `plan/<feature>.md`.
-7. **CodeRabbit review (if installed — see `docs/m0-vetting.md`).** Invoke `coderabbit:code-review`
-   on the PR. Resolve threads via `coderabbit:autofix`, each fix filtered through
-   `superpowers:receiving-code-review` — CodeRabbit findings are *suggestions to evaluate*, not
-   orders. Resolving a noisy PR may legitimately take its own follow-up iter; that is expected.
+7. **Automated PR review.** Pick the reviewer by what is available — findings are always
+   *suggestions to evaluate*, not orders (`superpowers:receiving-code-review`). Resolving a noisy
+   review may legitimately take its own follow-up iter; that is expected.
+   - **CodeRabbit** — requires the repo be **public** *and* the `coderabbit` CLI authenticated.
+     CodeRabbit **cannot review private repos.** When both hold: `coderabbit:code-review` on the
+     PR, then resolve threads via `coderabbit:autofix`.
+   - **Private repo, or CodeRabbit unavailable** → fall back to Anthropic's `review` skill, or
+     `superpowers:requesting-code-review` against the PR diff. Same discipline as above.
+   - Whichever path runs, the per-PR **super-reviewer** (step 8) still runs — it is the floor and
+     is never skipped.
 8. **Super-reviewer.** Dispatch the fresh-context reviewer (`super-reviewer.md`; for M1, a Class A
    peer-review sub-agent is the floor) against the PR diff + scoping plan. Verdict →
    `logs/blocks.md` regardless of outcome.

@@ -43,8 +43,14 @@ Every skill in ROADMAP §5 is installed and available via the `Skill` tool. The
 ## CodeRabbit availability → wire it in (Open Decision #3 resolved)
 
 - CLI installed: `~/.local/bin/coderabbit` v0.4.4. Plugin skills present.
-- **Decision:** M1 wires `coderabbit:*` in for real — no stub. Confirm `coderabbit auth status`
-  is authenticated at M1 wiring time (CLI presence confirmed; auth not yet verified).
+- **Decision:** M1 wires `coderabbit:*` in for real — no stub.
+- **Constraint (found during M1):** CodeRabbit **cannot review private repos** — the repo must
+  be **public** for `coderabbit:code-review` to work. The M1 testbed `radroid/t1-expense-tracker`
+  was switched to public on 2026-05-14 for this reason.
+- **Fallback when CodeRabbit can't run** (private repo, or CLI unavailable): Anthropic's `review`
+  skill or `superpowers:requesting-code-review`. Documented in
+  `autonomous-build-loop/references/feature-pr-mode.md` step 7. The per-PR super-reviewer is the
+  floor regardless.
 
 ## Tooling for M1
 
