@@ -1,10 +1,11 @@
-Latest: iter-000 (bootstrap). No iters have run yet. The autonomous build loop will write `logs/iter-001.md` on its first wake-up.
+Latest: iter-000 (bootstrap) — no iters have run yet.
 
-Wake-up handoff (initial):
+Phase: 1
+Next step: iter-001 — pick the first 1–4 items from GOALS.md § Phase 1 and start.
+Open first: GOALS.md, ARCHITECTURE.md
+Open blocks: none
+Carry-forward: none
+Last-iter shipped: nothing yet — the first iter writes logs/iter-001.md.
 
-- Current phase: 1
-- Next step: iter-001 — read `CLAUDE.md`, `GOALS.md`, `ARCHITECTURE.md`, then pick the first 1–4 items from `GOALS.md` § Phase 1 and start.
-- Open first: `GOALS.md` (review the backlog), `ARCHITECTURE.md` (confirm tech-stack matches what you're about to build).
-- Open questions: none yet — first iter will surface them.
-- Carry-forward to next iter: none.
-- Scheduled: external (driven by `scripts/auto-loop.py`).
+<!-- Tier 1: read every iter. Hard cap 30 lines. This file IS the handoff —
+     keep it self-contained, overwrite (do not append) each iter. -->

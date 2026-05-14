@@ -2,18 +2,22 @@
 
 Run this top-to-bottom every time the loop wakes up. Each iteration is ONE bounded turn that ends by scheduling the next.
 
-## 1. Read state (in order)
+## 1. Read state — by tier, not by habit
 
-1. Project root `CLAUDE.md` — protocol, conventions
-2. `AGENTS.md` if present
-3. `GOALS.md` — backlog with status
-4. `ARCHITECTURE.md` — canonical architecture. **Re-read only the section(s) relevant to today's goal.** Full re-read is required ONCE per phase boundary, not per iter.
-5. `docs/workflow/`, `docs/dictionary.md`, `docs/brand.md` — only the relevant exhibit
-6. `logs/latest.md` — most recent iter + wake-up handoff
-7. `logs/blocks.md` — open blocks / signals
-8. `PLAN.md` — current build sequence
+Each iter is a fresh session; the prompt cache does NOT carry across iters, so every
+iter pays cache-creation rate on its whole cold-boot read. Read the tiered manifest
+in `references/read-manifest.md` — do not read every file every iter.
 
-Any missing → create a stub in this iter before doing other work.
+- **Tier 1 (always):** `CLAUDE.md`, `logs/latest.md` (the state file — phase, next
+  features, files to open, open blocks, last-iter summary), `GOALS.md`. That is the
+  default read.
+- **Tier 2 (on trigger only):** `ARCHITECTURE.md` section (when the goal touches that
+  subsystem; full read only at a phase boundary), `PLAN.md` (when phase/sequence is in
+  question), `docs/brand.md` / `docs/workflow/*` (when touching UI / that workflow),
+  `logs/blocks.md` (when `latest.md`'s "Open blocks" line is non-empty).
+- **Tier 3 (never read back):** archived iter logs, `logs/summary-*.md`, `logs/archive/**`.
+
+Any Tier-1 file missing → create a stub in this iter before doing other work.
 
 ## 2. Tooling preflight
 

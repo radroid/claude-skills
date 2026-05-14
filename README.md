@@ -6,7 +6,7 @@ Skills for [Claude Code](https://claude.com/claude-code).
 
 | Skill | Purpose |
 |-------|---------|
-| [`autonomous-build-loop`](./autonomous-build-loop/) | Run a long-horizon autonomous build loop that ships features iteratively across many sessions. Per-iteration checklist, fat-iter parallel-dispatch protocol, Class A/B sub-agent discipline, peer-review triggers, phase-boundary arch passes, token-runway management, log hygiene, no-halt continuous loop semantics. |
+| [`autonomous-build-loop`](./autonomous-build-loop/) | Run a long-horizon autonomous build loop that ships features iteratively across many sessions. Per-iteration checklist, tiered read manifest (shrink the per-iter cold-boot cost), fat-iter parallel-dispatch protocol, Class A/B sub-agent discipline, peer-review triggers, frontend-critique gate, phase-boundary arch passes, token-runway management, log hygiene, no-halt continuous loop semantics. |
 | [`auto-loop-bootstrap`](./auto-loop-bootstrap/) | Bootstrap a repo for autonomous build looping. Scaffolds `CLAUDE.md`, `GOALS.md`, `ARCHITECTURE.md`, `PLAN.md`, `logs/`, and drops in the `auto-loop.py` driver script. Invokes `grill-me` to extract a backlog when one doesn't exist. Pairs with `autonomous-build-loop`. |
 
 ## Install

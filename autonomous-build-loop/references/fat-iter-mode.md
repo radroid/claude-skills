@@ -55,7 +55,7 @@ Sequentially, in this order:
 2. Type check (`npx tsc --noEmit`)
 3. Contract drift check (project-specific, e.g. `npm run check:contracts`)
 4. E2E nightly if backend touched
-5. UI smoke if user-visible UI touched (chrome-MCP screenshot to `docs/screenshots/iter-NNN-<feature>.png`)
+5. **UI smoke + critique gate** if user-visible UI touched. Screenshot via chrome-MCP to `docs/screenshots/iter-NNN-<feature>.png`, then do a forced critique pass: open the screenshot and judge it against the design reference — mobile viewport, ≥44px touch targets, hierarchy, AA contrast. A green test suite is a binary signal the loop gets for free; frontend quality has none unless you manufacture one. **Do not close the iter on "it rendered."** Design-sensitive surface → dispatch a Class A `design-review` sub-agent instead of self-critiquing.
 
 Fix any breaks **here**, not by re-dispatching a sub-agent. The integrated state is the main agent's responsibility.
 

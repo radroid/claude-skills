@@ -18,16 +18,28 @@ This repo runs a long-running autonomous build loop driven by `scripts/auto-loop
 
 Use the `autonomous-build-loop` skill for the full per-iter protocol. Quick reference below.
 
-### Inputs to read at the start of every iteration (in order)
+### Inputs to read — by tier (not all every iter)
 
-1. `CLAUDE.md` (this file)
-2. `GOALS.md` — backlog with status
-3. `ARCHITECTURE.md` — canonical architecture (section-scoped; full re-read only at phase boundaries)
-4. `logs/latest.md` — most recent iter + wake-up handoff
-5. `logs/blocks.md` — open blocks / signals
-6. `PLAN.md` — current build sequence
+Each iteration is a fresh `claude -p` session; the prompt cache does not carry across
+iters, so every iter pays cache-creation rate on its whole cold-boot read. Read by
+tier — see the `autonomous-build-loop` skill's `read-manifest.md` for the rationale.
 
-If any are missing, create stubs in this iteration before doing anything else.
+**Tier 1 — always, every iter (keep small):**
+
+1. `CLAUDE.md` (this file) — protocol, conventions
+2. `logs/latest.md` — the state file: phase, next features, files to open, open blocks, last-iter summary. This IS the carried-forward context.
+3. `GOALS.md` — backlog with status
+
+**Tier 2 — only when the trigger fires:**
+
+- `ARCHITECTURE.md` — section-scoped, when the picked goal touches that subsystem (full read only at a phase boundary)
+- `PLAN.md` — when phase/sequence is genuinely in question
+- `logs/blocks.md` — when `latest.md`'s "Open blocks" line is non-empty
+- `docs/*` — when touching that surface
+
+**Tier 3 — never read back:** archived iter logs, `logs/summary-*.md`, `logs/archive/**`.
+
+If any Tier-1 file is missing, create a stub in this iteration before doing anything else.
 
 ### Per-iteration loop
 

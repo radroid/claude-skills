@@ -9,7 +9,7 @@ description: Run a long-horizon autonomous build loop that ships features iterat
 
 This skill codifies the patterns that keep a long-horizon autonomous build loop healthy: one bounded turn per iteration, scheduled wake-ups in between, parallel sub-agent dispatch when work is independent, and structured logs the user can review at their own pace. The loop NEVER halts on a semantic event — blocks, failures, and user-decision-needed all become log entries while the next iteration is scheduled.
 
-Read `references/per-iteration-checklist.md` at the start of every iteration. Use `references/fat-iter-mode.md` when picking 2+ features. Use `references/sub-agent-protocol.md` when dispatching sub-agents. Use `references/log-hygiene.md` when writing the iter log + handoff. Use `references/continuous-loop.md` when something would normally halt the loop.
+Read `references/per-iteration-checklist.md` at the start of every iteration. Use `references/read-manifest.md` to decide what to read on wake-up (tiered — not every file every iter). Use `references/fat-iter-mode.md` when picking 2+ features. Use `references/sub-agent-protocol.md` when dispatching sub-agents. Use `references/log-hygiene.md` when writing the iter log + handoff. Use `references/continuous-loop.md` when something would normally halt the loop.
 
 ## Two operating modes
 
@@ -26,7 +26,7 @@ Every mention of `ScheduleWakeup` below is conditional on in-session mode. In ex
 
 1. **One iteration = one bounded turn.** End by scheduling the next wake-up via `ScheduleWakeup` (in-session mode) OR by exiting cleanly (external-scheduler mode). Never start a second iteration in the same turn.
 
-2. **Read state before acting.** Every iter starts by reading: project-root `CLAUDE.md`, `GOALS.md`, `ARCHITECTURE.md` (section-scoped, not full re-read per iter), `logs/latest.md` (includes prior wake-up handoff), `logs/blocks.md`, `PLAN.md`. Missing files → create stubs in the current iter before doing other work.
+2. **Read state by tier, not by habit.** Each iter is a fresh session — the prompt cache does NOT carry across iters, so every iter pays cache-creation rate on its whole cold-boot read. Read the tiered manifest (`references/read-manifest.md`): **Tier 1 always** (`CLAUDE.md`, `logs/latest.md`, `GOALS.md`), **Tier 2 on trigger** (`ARCHITECTURE.md` section, `PLAN.md`, `docs/*`, `logs/blocks.md`), **Tier 3 never read back** (archived iter logs + summaries). Missing Tier-1 file → create a stub before doing other work.
 
 3. **Continuous loop, never halt.** A sub-agent `block` verdict, a smoke failure, a user-decision blocker, a contract-drift signal — all become a structured entry in `logs/blocks.md` or `GOALS.md`, then the agent picks the next non-conflicting item and proceeds. The only legitimate halt is process-level (token-runway → schedule a longer wake-up).
 
@@ -39,6 +39,8 @@ Every mention of `ScheduleWakeup` below is conditional on in-session mode. In ex
 7. **Phase boundary = mandatory arch-pass.** Invoke the `Skill` tool with `skill: "improve-codebase-architecture"`. This is a real tool call, not a concept — reading the doc and doing manual refactors is NOT compliance. Log result to `logs/blocks.md` with `**Source:** arch-pass`.
 
 8. **Token-runway awareness.** Eyeball remaining context budget at end of iter. Approaching limits → slow the next wake-up (1800s–3600s instead of 600s) and note the slowdown in the iter log. Better to space than compact mid-build. If runway is critical (>80% used), the iter log should explicitly recommend user restart Claude Code — the loop resumes from the next `ScheduleWakeup` after relaunch.
+
+9. **Frontend has no free signal.** TDD gets a binary pass/fail in-context — the loop knows instantly whether it succeeded. UI quality has no such signal. Any iter touching user-visible UI must MANUFACTURE one: screenshot via chrome-MCP + a forced critique pass against the design reference (mobile viewport, ≥44px touch targets, hierarchy, AA contrast) before commit. Never close a UI iter on "it rendered." Design-sensitive surface → dispatch a Class A `design-review` sub-agent instead of self-critiquing. See `references/fat-iter-mode.md` Phase 3.
 
 ## Quick-start: starting an iteration
 
@@ -85,6 +87,7 @@ If the same `issue-id` is raised across 3 consecutive iterations without resolut
 ## Resources
 
 - `references/per-iteration-checklist.md` — the 13-step per-iter procedure.
+- `references/read-manifest.md` — tiered context-loading rules; what to read every iter vs. on-trigger vs. never.
 - `references/fat-iter-mode.md` — parallel feature dispatch protocol with disjoint allowlists.
 - `references/sub-agent-protocol.md` — Class A vs Class B charters, prompt boilerplate.
 - `references/log-hygiene.md` — iter log format, growth control, archive cadence.
