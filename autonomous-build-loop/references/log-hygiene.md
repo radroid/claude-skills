@@ -62,7 +62,13 @@ The handoff is a CONTRACT with the next iter (potentially in a fresh session). I
 
 `latest.md` is Tier 1 of the read manifest — read every iter, in every fresh session.
 It IS the carried-forward "compacted knowledge"; treat it as the handoff contract, not
-a log. **Overwrite it each iter (never append). Hard cap: 30 lines.** Structure:
+a log. **Overwrite it each iter (never append). Hard cap: 30 lines.**
+
+The format is **prettier-stable** and must stay that way — the loop regenerates this
+file every iter and a markdown formatter runs on commit. Every field is a single
+`Label: value` line; the one multi-line section (`Last-iter shipped:`) comes LAST with
+a blank line on each side. **Never put a `Label:` line directly after a bullet list** —
+a formatter folds it into the list. Reproduce this shape exactly:
 
 ```
 Latest: iter-NNN (YYYY-MM-DD) — <one-phrase summary>
@@ -70,10 +76,12 @@ Latest: iter-NNN (YYYY-MM-DD) — <one-phrase summary>
 Phase: <phase>
 Next step: <one sentence — name the 3–4 features for the next iter>
 Open first: <exact file paths>
-Open blocks: <1-line each, or "none" — this line lets the next iter skip logs/blocks.md>
-Carry-forward: <≤2 short items, or "none">
+Open blocks: <1-line, or "none" — lets the next iter skip logs/blocks.md>
+Carry-forward: <≤2 items, semicolon-separated, or "none">
+
 Last-iter shipped:
-  - <≤3 bullets — the compacted knowledge the next iter needs>
+
+- <≤3 bullets — the compacted knowledge the next iter needs>
 ```
 
 If `latest.md` is creeping over 30 lines, that is the signal Tier 1 has gone fat and
