@@ -23,6 +23,15 @@ Gated by `.loop/state.json`:
   size, not bundling.
 - **`scoped`** (S4, set in M4) — repo has grown; PRs must be narrow and single-purpose.
 
+## Prerequisites (one-time repo setup)
+
+- **Auto-merge must be enabled on the GitHub repo:** `gh repo edit <owner/repo> --enable-auto-merge`.
+  Without it, step 9's `gh pr merge --auto` fails with
+  `Auto merge is not allowed for this repository`. It is **off by default** on new repos — enable
+  it once when the repo is set up for `pr_mode: true`.
+- **CodeRabbit** (optional reviewer, step 7) needs a **public** repo + an authenticated
+  `coderabbit` CLI. Private repo → use the fallback reviewer instead.
+
 ## Per-feature flow
 
 For each feature in the iter (one feature, or each feature of a fat-iter):
@@ -44,8 +53,7 @@ For each feature in the iter (one feature, or each feature of a fat-iter):
 6. **Open the PR.** `gh pr create` — title `iter NNN: <feature>`, body lists the slice
    (files, contract, tests) and links the scoping `plan/<feature>.md`.
 7. **Automated PR review.** Pick the reviewer by what is available — findings are always
-   *suggestions to evaluate*, not orders (`superpowers:receiving-code-review`). Resolving a noisy
-   review may legitimately take its own follow-up iter; that is expected.
+   *suggestions to evaluate*, not orders (`superpowers:receiving-code-review`).
    - **CodeRabbit** — requires the repo be **public** *and* the `coderabbit` CLI authenticated.
      CodeRabbit **cannot review private repos.** When both hold: `coderabbit:code-review` on the
      PR, then resolve threads via `coderabbit:autofix`.
@@ -53,11 +61,22 @@ For each feature in the iter (one feature, or each feature of a fat-iter):
      `superpowers:requesting-code-review` against the PR diff. Same discipline as above.
    - Whichever path runs, the per-PR **super-reviewer** (step 8) still runs — it is the floor and
      is never skipped.
+   - **Stop rule — don't chase an escalating review.** Resolve the **critical + warning** findings
+     from the *first* review pass. Re-review **once** to confirm those are cleared. Any *new-scope*
+     findings the re-review surfaces (a reviewer like CodeRabbit will keep proposing more —
+     input validation, extra edge cases, defensive guards) are evaluated under YAGNI: apply them
+     only if genuinely warranted for this code's contract, otherwise **decline with a one-line
+     reason logged to `logs/blocks.md`** and move on. Do not loop review→fix→review indefinitely;
+     two passes is the cap. A genuinely noisy PR may carry its remaining findings into a
+     follow-up iter — that is expected, an infinite review loop is not.
 8. **Super-reviewer.** Dispatch the fresh-context reviewer (`super-reviewer.md`; for M1, a Class A
    peer-review sub-agent is the floor) against the PR diff + scoping plan. Verdict →
    `logs/blocks.md` regardless of outcome.
 9. **Merge decision:**
-   - **APPROVE + green checks** → `gh pr merge --squash --auto`. `main` advances.
+   - **APPROVE + green checks** → `gh pr merge --squash --auto` (requires repo auto-merge enabled —
+     see Prerequisites). `--auto` queues the merge until required checks pass; on a repo with **no
+     required status checks** it merges immediately. If auto-merge cannot be enabled on the repo,
+     the manual equivalent after APPROVE + locally-verified green is plain `gh pr merge --squash`.
    - **`request_changes`** → fix on the same branch this iter or the next; re-review; do not
      leave half-reviewed PRs merged.
    - **`block`** → log to `logs/blocks.md`, leave the PR open, re-queue the feature in `GOALS.md`,
