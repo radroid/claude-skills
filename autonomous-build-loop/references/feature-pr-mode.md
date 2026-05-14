@@ -29,7 +29,7 @@ Gated by `.loop/state.json`:
   Without it, step 9's `gh pr merge --auto` fails with
   `Auto merge is not allowed for this repository`. It is **off by default** on new repos — enable
   it once when the repo is set up for `pr_mode: true`.
-- **CodeRabbit** (optional reviewer, step 7) needs a **public** repo + an authenticated
+- **CodeRabbit** (the pre-push reviewer, step 5) needs a **public** repo + an authenticated
   `coderabbit` CLI. Private repo → use the fallback reviewer instead.
 
 ## Per-feature flow
@@ -49,33 +49,35 @@ For each feature in the iter (one feature, or each feature of a fat-iter):
 4. **Verify before claiming done.** Invoke `superpowers:verification-before-completion`: run the
    real commands (test suite, `tsc`, contract check), read the output, confirm green. No "should
    pass" — evidence only.
-5. **Push the branch.** `git push -u origin loop/iter-NNN-<feature-slug>`.
-6. **Open the PR.** `gh pr create` — title `iter NNN: <feature>`, body lists the slice
-   (files, contract, tests) and links the scoping `plan/<feature>.md`.
-7. **Automated PR review.** Pick the reviewer by what is available — findings are always
-   *suggestions to evaluate*, not orders (`superpowers:receiving-code-review`).
-   - **CodeRabbit** — requires the repo be **public** *and* the `coderabbit` CLI authenticated.
-     CodeRabbit **cannot review private repos.** When both hold: run `coderabbit:code-review`
-     **scoped to the feature's committed diff** — `--type committed --base main` — then resolve
-     threads via `coderabbit:autofix`. **Always scope it.** An unscoped review also ingests every
-     uncommitted file in the working tree (e.g. sibling features' files carried along on the
-     branch in fat-iter mode) and can hang for tens of minutes with no output. A scoped review of
-     one feature's diff completes in ~1–2 min.
+5. **Automated review — pre-push.** The `coderabbit` CLI reviews the *local committed diff* — it
+   does **not** need a PR to exist. Run it now, before pushing, so the branch is review-clean by
+   the time anyone sees the PR. Findings are always *suggestions to evaluate*, not orders
+   (`superpowers:receiving-code-review`).
+   - **CodeRabbit** — requires the repo be **public** *and* the `coderabbit` CLI authenticated
+     (it **cannot review private repos**). When both hold: run `coderabbit:code-review` **scoped to
+     the committed diff** — `--type committed --base main`. **Always scope it.** An unscoped review
+     also ingests every uncommitted file in the working tree (e.g. sibling features' files carried
+     along on the branch in fat-iter mode) and can hang for tens of minutes with no output; a
+     scoped review of one feature's diff completes in ~1–2 min. Resolve findings locally and
+     amend/commit before pushing.
    - **Private repo, or CodeRabbit unavailable** → fall back to Anthropic's `review` skill, or
-     `superpowers:requesting-code-review` against the PR diff. Same discipline as above.
-   - Whichever path runs, the per-PR **super-reviewer** (step 8) still runs — it is the floor and
-     is never skipped.
+     `superpowers:requesting-code-review` against the branch diff. Same discipline.
    - **Stop rule — don't chase an escalating review.** Resolve the **critical + warning** findings
      from the *first* review pass. Re-review **once** to confirm those are cleared. Any *new-scope*
      findings the re-review surfaces (a reviewer like CodeRabbit will keep proposing more —
      input validation, extra edge cases, defensive guards) are evaluated under YAGNI: apply them
      only if genuinely warranted for this code's contract, otherwise **decline with a one-line
-     reason logged to `logs/blocks.md`** and move on. Do not loop review→fix→review indefinitely;
-     two passes is the cap. A genuinely noisy PR may carry its remaining findings into a
-     follow-up iter — that is expected, an infinite review loop is not.
+     reason logged to `logs/blocks.md`** and move on. Two passes is the cap — an infinite
+     review→fix→review loop is the anti-pattern.
+6. **Push the branch.** `git push -u origin loop/iter-NNN-<feature-slug>`.
+7. **Open the PR.** `gh pr create` — title `iter NNN: <feature>`, body lists the slice
+   (files, contract, tests) and links the scoping `plan/<feature>.md`. On a public repo,
+   CodeRabbit's GitHub app also auto-reviews the PR — a visible public audit trail on top of the
+   pre-push CLI pass. It should be clean since step 5 already ran; if it flags something new,
+   resolve via `coderabbit:autofix` under the same stop rule.
 8. **Super-reviewer.** Dispatch the fresh-context reviewer (`super-reviewer.md`; for M1, a Class A
-   peer-review sub-agent is the floor) against the PR diff + scoping plan. Verdict →
-   `logs/blocks.md` regardless of outcome.
+   peer-review sub-agent is the floor) against the PR diff + scoping plan — it is the floor and is
+   never skipped. Verdict → `logs/blocks.md` regardless of outcome.
 9. **Merge decision:**
    - **APPROVE + green checks** → `gh pr merge --squash --auto` (requires repo auto-merge enabled —
      see Prerequisites). `--auto` queues the merge until required checks pass; on a repo with **no
