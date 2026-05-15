@@ -23,8 +23,9 @@ Run every check below before touching any file. Any failure → halt with a clea
 6. **Check `.archive/` isn't already a user-tracked directory.** Run `git ls-files -- .archive 2>/dev/null | head -1`. If non-empty, the user already uses `.archive/` for something else — halt and ask them to nominate a different archive root (e.g. `.archive-loop/`); fall back to that name throughout the run if they agree.
 7. **No symlinks among artifacts.** For each artifact path that exists, `test -L` must be false. If any is a symlink, surface it and skip — never follow.
 8. **No nested git repos / submodules / worktrees inside artifact dirs.** For each artifact directory, fail-safe if `find <dir> -name .git -maxdepth 3` finds anything, or if `git worktree list` shows a worktree path inside any artifact path.
-9. **Dry-run first.** Build the move plan, print it, wait for an explicit "yes". Silence is not consent.
-10. **Never auto-commit.** Leave the working tree dirty for the user to review.
+9. **No `--assume-unchanged` / `--skip-worktree` on artifact paths.** Run `git ls-files -v` and check the leading flag for each artifact. If any artifact line starts with `h`, `S`, or `s` (lowercase variants too), refuse — moves against such files behave surprisingly and the archive would not be cleanly reversible.
+10. **Dry-run first.** Build the move plan, print it, wait for an explicit "yes". Silence is not consent.
+11. **Never auto-commit.** Leave the working tree dirty for the user to review.
 
 ## Loop artifacts
 
@@ -67,7 +68,7 @@ The bootstrap *appends* a `## Autonomous build loop protocol` section to a possi
 
 **Locate the section:**
 
-1. Read CLAUDE.md and normalize line endings to LF in memory (don't write back yet).
+1. Read CLAUDE.md. Keep two buffers in memory: `original` (the bytes as read, preserving CRLF and any BOM) and `normalized` (LF-only, BOM stripped). Use `normalized` for matching and computation; use `original` when saving the excised fragment to the archive.
 2. Find lines matching the regex `^##[ \t]+Autonomous build loop protocol[ \t]*$` (case-sensitive on the title; tolerates extra spaces/tabs and trailing whitespace).
 3. **Zero matches** → leave CLAUDE.md completely alone.
 4. **More than one match** → halt and ask the user. The skill never guesses which one is the loop-managed one.
@@ -97,7 +98,7 @@ If the section contains `### ` headings whose titles are NOT in this known-templ
 
 **Apply the excision:**
 
-1. Save the excised lines verbatim (pre-normalization) to `.archive/<timestamp>/CLAUDE.md.loop-section`.
+1. Save the excised lines from the `original` buffer (CRLF and BOM preserved) to `.archive/<timestamp>/CLAUDE.md.loop-section`.
 2. Concatenate the lines before the match with the lines after the terminator.
 3. Collapse any run of more than two consecutive blank lines at the join seam down to one blank line.
 4. Ensure the file ends with exactly one `\n`.
@@ -110,7 +111,7 @@ If the section contains `### ` headings whose titles are NOT in this known-templ
 2. Locate any line whose stripped content matches one of these semantic equivalents:
    - `/.auto-loop/`, `.auto-loop/`, `/.auto-loop`, `.auto-loop`
    - `/.loop/claims/`, `.loop/claims/`, `/.loop/claims`, `.loop/claims`
-3. For each matched line, also archive the immediately preceding line if it is a comment line (`^\s*#`) that names the loop — match heuristics: contains "auto-loop", "loop", "autonomous", or "scaffold". Do not archive non-adjacent comments.
+3. For each matched line, also archive the immediately preceding line if it is a comment line (`^\s*#`) that unambiguously names the loop. Treat as a match only if it contains the literal `auto-loop`, OR both `autonomous` AND `loop`, OR both `loop` AND `scaffold`. Bare `loop` alone is too broad (`# Loop through results` would false-match) and must NOT match. Do not archive non-adjacent comments.
 4. Save the archived lines, in original order with original whitespace, to `.archive/<timestamp>/.gitignore.loop-entries`.
 5. Append a single line `.archive/` to the trimmed `.gitignore` if not already present (idempotent). If the user agreed to an alternative archive root in safety-check #6, append that name instead.
 6. Write back. Do not touch any other line.
@@ -135,8 +136,8 @@ root:      .archive/<timestamp>/
 Move (pristine loop artifacts):
   GOALS.md
   logs/ (N files)
-  .loop/
-  .auto-loop/
+  .loop/ (M files)
+  .auto-loop/ (K files)
 
 Per-file decision needed:
   ARCHITECTURE.md   [classified: customized, 7 hunks vs template]   archive / skip / show diff?
@@ -163,7 +164,7 @@ Pick `<timestamp>` = current UTC time as `YYYYMMDD-HHMMSS`. If `.archive/<timest
 2. For each whole-file or whole-dir artifact approved in the preview: use plain `mv` for everything. Let git see the operation as delete + add — the user can review the diff. (Skipping `git mv` keeps the semantics simple for partially-tracked dirs like `.loop/` where `state.json` is tracked but `claims/` is gitignored.) Preserve original relative paths under `.archive/<timestamp>/`.
 3. Apply the CLAUDE.md and `.gitignore` excisions per the procedures above.
 4. Ensure `.archive/` (or the user's nominated alternative) is present in the trimmed `.gitignore`.
-5. Write `.archive/<timestamp>/MANIFEST.md` containing: target cwd, branch, UTC timestamp, exact list of moves with original paths, excision details (file → byte offsets), classification report, and the literal "restore" instructions: "to restore, copy each path back to its original location and re-append the saved CLAUDE.md and .gitignore fragments."
+5. Write `.archive/<timestamp>/MANIFEST.md` containing: target cwd, branch, UTC timestamp, exact list of moves with original paths, excision details for each partial-file edit (file → start_line–end_line and the section title that was excised), classification report (pristine vs. customized for `ARCHITECTURE.md` / `PLAN.md` / `auto-loop.py`), and the literal "restore" instructions: "to restore, copy each path back to its original location and re-append the saved CLAUDE.md and .gitignore fragments."
 
 ### Step 4 — Report
 
@@ -192,7 +193,6 @@ Print:
 
 The skill does not handle these — surface them to the user if relevant rather than silently proceeding:
 
-- **`git update-index --assume-unchanged` / `--skip-worktree`** on artifact paths. Pre-check `git ls-files -v` for `h`/`S`/`s` flags and refuse the affected file.
 - **Git LFS pointers / `.gitattributes` clean-smudge filters** on artifact files. `mv` preserves the content but a later `.archive/` cleanup can orphan LFS objects.
 - **Restoring CLAUDE.md / `.gitignore` excisions** is not mechanical — the saved fragments must be merged back by hand if those files have changed in the meantime. Full-file restores ARE mechanical (`mv` back).
 - **Identifying loop-related keys inside `.claude/settings.local.json`** — the skill refuses to touch it; the user cleans it manually.
