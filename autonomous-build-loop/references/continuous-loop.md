@@ -18,13 +18,22 @@
 | **Pre-commit hook failure** | Fix the underlying issue. Re-stage. Create a NEW commit (never `--amend` after hook failure — the commit didn't happen, so `--amend` would modify the previous commit). |
 | **`git push` failure** (auth / network / pre-push hook) | Append one line to iter log (`Push: failed — <reason>`). Append to `logs/blocks.md` if persists across iters. Fix tests and retry next iter. Never `push --no-verify` without explicit authorization. |
 
-## The only legitimate halt
+## There is no halt
 
-**Process-level token-runway exhaustion** is the only legitimate halt cause in in-session mode — and even that isn't a halt, it's a longer wake-up + explicit user-restart recommendation in the iter log.
+The loop has **no halt cause at all** — not even a process-level one.
 
-When the iter log says "restart Claude Code at earliest opportunity," the `ScheduleWakeup` is still placed (typically 3600s) so the loop resumes from the next wake-up after relaunch. The session ending is the user's decision, not the agent's.
+**Context budget is never a halt, a slowdown, or a restart trigger.** In-session mode runs
+on a large-context model with harness auto-compaction (configured to compact around 50% of
+the context window). The loop is built to survive compaction: `logs/latest.md` + the tiered
+read manifest make every iter self-contained, so the loop resumes seamlessly on the other
+side of a compaction. Do NOT eyeball context usage, do NOT space out wake-ups for it, and do
+NOT write "restart Claude Code" into the iter log — the agent never recommends ending the
+session for token reasons.
 
-In **external-scheduler mode** (`EXTERNAL_SCHEDULER=1`), token-runway exhaustion is impossible by construction — every iter is a fresh `claude -p` process with zero accumulated context. The driver script enforces budget at the OS level (rolling 5h window, per-iter `--max-budget-usd`); the agent just exits after committing.
+In **external-scheduler mode** (`EXTERNAL_SCHEDULER=1`), context never accumulates either —
+every iter is a fresh `claude -p` process with zero carried context. The driver script
+enforces budget at the OS level (rolling 5h window, per-iter `--max-budget-usd`); the agent
+just exits after committing.
 
 ## Repeated-issue counter
 

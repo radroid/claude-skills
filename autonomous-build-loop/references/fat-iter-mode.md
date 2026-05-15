@@ -13,7 +13,10 @@ The legacy 4-iter arc per feature (scope → backend → client → closeout) sp
 - `git status` clean (no leftover changes from a prior iter)
 - Project dev watchers running where required (e.g. `npx convex dev` for Convex projects)
 - MCP preflight reports all critical servers healthy
-- Token runway is healthy (<70% used) — if approaching limits, drop to 1–2 features instead
+
+Feature count per iter is gated by disjoint-file availability and the hard cap of 4 — never
+by context budget. Do not scope a fat-iter down for token reasons (see `continuous-loop.md`
+§ "There is no halt").
 
 ### Phase 1: Scoping (main agent, ~10–20% budget)
 

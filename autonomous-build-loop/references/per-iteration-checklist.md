@@ -94,18 +94,20 @@ From the git repo root: if HEAD is ahead of upstream AND **either** (a) ≥5 ite
 - Never `push --no-verify`, `--force`, or amend pushed commits without explicit `GOALS.md` authorization.
 - Record `Push: ok` / `Push: skipped — <reason>` / `Push: failed — <reason>` in the iter log.
 
-## 12. Token-runway check
+## 12. Next-iter cadence
 
-Eyeball remaining context budget.
+Cadence is driven by **work type only** — never by context usage.
 
-| Runway | Next wake-up |
-|--------|--------------|
-| Healthy (<50% used) | Default (600s Phase 2+ impl; 1500s Phase 1 plan) |
-| Tight (50–70%) | 1200–1800s |
-| Approaching limit (70–80%) | 1800–3600s + note slowdown in iter log |
-| Critical (>80%) | 3600s + iter log explicitly recommends user restart Claude Code; loop resumes from next wake-up after relaunch |
+| Work type | Next wake-up |
+|-----------|--------------|
+| Phase 2+ implementation iter | 600s default |
+| Phase 1 planning iter | 1500s default |
 
-Better to space than compact mid-build.
+Do NOT inspect or ration context budget. In-session mode relies on harness
+auto-compaction (configured to compact around 50% of the context window); the loop is
+built to survive it — `logs/latest.md` + the tiered read manifest make every iter
+self-contained. There is no "compact mid-build" hazard to avoid, no runway to slow down
+for, and no token-driven restart recommendation.
 
 ## 13. Schedule next iter — OR exit cleanly
 
