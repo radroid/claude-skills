@@ -20,7 +20,10 @@ Run every check below before touching any file. Any failure → halt with a clea
 3. **Require a clean git tree.** `git status --porcelain` must be empty.
 4. **Require a normal git state.** Refuse if any of these exist under `.git/`: `MERGE_HEAD`, `REBASE_HEAD`, `rebase-merge/`, `rebase-apply/`, `CHERRY_PICK_HEAD`, `REVERT_HEAD`, `BISECT_LOG`. A mid-rebase / mid-merge archive is not reversible.
 5. **Refuse if a loop is running.** Run `pgrep -f 'scripts/auto-loop\.py'`. If anything matches, halt and tell the user to stop the loop first. A live driver will recreate files mid-archive.
-6. **Check `.archive/` isn't already a user-tracked directory.** Run `git ls-files -- .archive 2>/dev/null | head -1`. If non-empty, the user already uses `.archive/` for something else — halt and ask them to nominate a different archive root (e.g. `.archive-loop/`); fall back to that name throughout the run if they agree.
+6. **Check `.archive/` isn't already in use.** Two checks, both must pass:
+   - Tracked: `git ls-files -- .archive 2>/dev/null | head -1` must be empty.
+   - On disk: `test -e .archive` must be false.
+   If EITHER check fails, the user already uses `.archive/` for something (a tracked dir, or a gitignored build-output dir, etc.). Halt and ask them to nominate a different archive root (e.g. `.archive-loop/`); fall back to that name throughout the run — including the path used in safety check / preview / MANIFEST.md and the line appended to `.gitignore` — if they agree.
 7. **No symlinks among artifacts.** For each artifact path that exists, `test -L` must be false. If any is a symlink, surface it and skip — never follow.
 8. **No nested git repos / submodules / worktrees inside artifact dirs.** For each artifact directory, fail-safe if `find <dir> -name .git -maxdepth 3` finds anything, or if `git worktree list` shows a worktree path inside any artifact path.
 9. **No `--assume-unchanged` / `--skip-worktree` on artifact paths.** Run `git ls-files -v` and check the leading flag for each artifact. If any artifact line starts with `h`, `S`, or `s` (lowercase variants too), refuse — moves against such files behave surprisingly and the archive would not be cleanly reversible.
@@ -113,7 +116,7 @@ If the section contains `### ` headings whose titles are NOT in this known-templ
    - `/.loop/claims/`, `.loop/claims/`, `/.loop/claims`, `.loop/claims`
 3. For each matched line, also archive the immediately preceding line if it is a comment line (`^\s*#`) that unambiguously names the loop. Treat as a match only if it contains the literal `auto-loop`, OR both `autonomous` AND `loop`, OR both `loop` AND `scaffold`. Bare `loop` alone is too broad (`# Loop through results` would false-match) and must NOT match. Do not archive non-adjacent comments.
 4. Save the archived lines, in original order with original whitespace, to `.archive/<timestamp>/.gitignore.loop-entries`.
-5. Append a single line `.archive/` to the trimmed `.gitignore` if not already present (idempotent). If the user agreed to an alternative archive root in safety-check #6, append that name instead.
+5. Append `.archive/` (or the nominated alternative root from safety-check #6) to the trimmed `.gitignore`, only if not already present under any semantic-equivalent form. Treat these as already-present and skip the append: `.archive/`, `/.archive/`, `.archive`, `/.archive` (and the same variants for any nominated alternative). If absent, append the canonical form `.archive/` (with the leading dot, no leading slash, with trailing slash).
 6. Write back. Do not touch any other line.
 
 ## Workflow
