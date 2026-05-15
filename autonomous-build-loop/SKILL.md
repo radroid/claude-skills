@@ -9,7 +9,7 @@ description: Run a long-horizon autonomous build loop that ships features iterat
 
 This skill codifies the patterns that keep a long-horizon autonomous build loop healthy: one bounded turn per iteration, scheduled wake-ups in between, parallel sub-agent dispatch when work is independent, and structured logs the user can review at their own pace. The loop NEVER halts on a semantic event — blocks, failures, and user-decision-needed all become log entries while the next iteration is scheduled.
 
-Read `references/per-iteration-checklist.md` at the start of every iteration. Use `references/read-manifest.md` to decide what to read on wake-up (tiered — not every file every iter). Use `references/fat-iter-mode.md` when picking 2+ features. Use `references/feature-pr-mode.md` when `.loop/state.json` has `pr_mode: true` (branch + PR per feature instead of commit-to-one-branch). Use `references/sub-agent-protocol.md` when dispatching sub-agents. Use `references/log-hygiene.md` when writing the iter log + handoff. Use `references/continuous-loop.md` when something would normally halt the loop.
+Read `references/per-iteration-checklist.md` at the start of every iteration. Use `references/tiered-read-strategy.md` to decide what to read on wake-up (tiered — not every file every iter). Use `references/fat-iter-mode.md` when picking 2+ features. Use `references/feature-pr-mode.md` when `.loop/state.json` has `pr_mode: true` (branch + PR per feature instead of commit-to-one-branch). Use `references/sub-agent-protocol.md` when dispatching sub-agents. Use `references/log-hygiene.md` when writing the iter log + handoff. Use `references/continuous-loop.md` when something would normally halt the loop.
 
 ## Two operating modes
 
@@ -26,7 +26,7 @@ Every mention of `ScheduleWakeup` below is conditional on in-session mode. In ex
 
 1. **One iteration = one bounded turn.** End by scheduling the next wake-up via `ScheduleWakeup` (in-session mode) OR by exiting cleanly (external-scheduler mode). Never start a second iteration in the same turn.
 
-2. **Read state by tier, not by habit.** Each iter is a fresh session — the prompt cache does NOT carry across iters, so every iter pays cache-creation rate on its whole cold-boot read. Read the tiered manifest (`references/read-manifest.md`): **Tier 1 always** (`CLAUDE.md`, `logs/latest.md`, `GOALS.md`), **Tier 2 on trigger** (`ARCHITECTURE.md` section, `PLAN.md`, `docs/*`, `logs/blocks.md`), **Tier 3 never read back** (archived iter logs + summaries). Missing Tier-1 file → create a stub before doing other work.
+2. **Read state by tier, not by habit.** Each iter is a fresh session — the prompt cache does NOT carry across iters, so every iter pays cache-creation rate on its whole cold-boot read. Read the tiered strategy (`references/tiered-read-strategy.md`): **Tier 1 always** (`CLAUDE.md`, `logs/latest.md`, `GOALS.md`), **Tier 2 on trigger** (`ARCHITECTURE.md` section, `PLAN.md`, `docs/*`, `logs/blocks.md`), **Tier 3 never read back** (archived iter logs + summaries). Missing Tier-1 file → create a stub before doing other work.
 
 3. **Continuous loop, never halt.** A sub-agent `block` verdict, a smoke failure, a user-decision blocker, a contract-drift signal — all become a structured entry in `logs/blocks.md` or `GOALS.md`, then the agent picks the next non-conflicting item and proceeds. There is no halt: in-session mode keeps running across auto-compaction boundaries; external-scheduler mode runs each iter as a fresh process.
 
@@ -89,7 +89,7 @@ If the same `issue-id` is raised across 3 consecutive iterations without resolut
 ## Resources
 
 - `references/per-iteration-checklist.md` — the 13-step per-iter procedure.
-- `references/read-manifest.md` — tiered context-loading rules; what to read every iter vs. on-trigger vs. never.
+- `references/tiered-read-strategy.md` — tiered context-loading rules; what to read every iter vs. on-trigger vs. never.
 - `references/fat-iter-mode.md` — parallel feature dispatch protocol with disjoint allowlists.
 - `references/feature-pr-mode.md` — branch + PR + review + auto-merge per feature, gated by `.loop/state.json` `pr_mode`.
 - `references/sub-agent-protocol.md` — Class A vs Class B charters, prompt boilerplate.

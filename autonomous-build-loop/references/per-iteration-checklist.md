@@ -6,7 +6,7 @@ Run this top-to-bottom every time the loop wakes up. Each iteration is ONE bound
 
 Each iter is a fresh session; the prompt cache does NOT carry across iters, so every
 iter pays cache-creation rate on its whole cold-boot read. Read the tiered manifest
-in `references/read-manifest.md` — do not read every file every iter.
+in `references/tiered-read-strategy.md` — do not read every file every iter.
 
 - **Tier 1 (always):** `CLAUDE.md`, `.loop/state.json` (machine state — stage, iter,
   `pr_mode`, `pr_size_policy`; absent → legacy non-PR mode), `logs/latest.md` (the

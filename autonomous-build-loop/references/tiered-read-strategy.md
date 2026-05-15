@@ -1,4 +1,4 @@
-# Read manifest — tiered context loading
+# Tiered read strategy
 
 Each iter runs in a fresh session (`claude -p`, no session persistence — or a new
 in-session wake-up). **The prompt cache does NOT carry across iters.** Every iter
@@ -13,7 +13,8 @@ only lever is **shrink the cold-boot payload**. Read by tier, not by habit.
 | File | Why | Cap |
 |------|-----|-----|
 | `CLAUDE.md` | Protocol + conventions. Unavoidable. | project-controlled |
-| `logs/latest.md` | The state file — phase, next features, files to open, open blocks, last-iter summary. This IS the carried-forward "compacted knowledge." | **30 lines hard** |
+| `.loop/state.json` | Machine state — stage, iter, `pr_mode`, `pr_size_policy`. Absent → legacy non-PR mode. | small JSON |
+| `logs/latest.md` | Human handoff — next features, files to open, open blocks, last-iter summary. This IS the carried-forward "compacted knowledge." | **30 lines hard** |
 | `GOALS.md` | Backlog with status. | project-controlled |
 
 That is the whole default read. Everything else is conditional.

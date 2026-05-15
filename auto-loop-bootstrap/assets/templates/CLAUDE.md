@@ -22,7 +22,7 @@ Use the `autonomous-build-loop` skill for the full per-iter protocol. Quick refe
 
 Each iteration is a fresh `claude -p` session; the prompt cache does not carry across
 iters, so every iter pays cache-creation rate on its whole cold-boot read. Read by
-tier — see the `autonomous-build-loop` skill's `read-manifest.md` for the rationale.
+tier — see the `autonomous-build-loop` skill's `tiered-read-strategy.md` for the rationale.
 
 **Tier 1 — always, every iter (keep small):**
 
