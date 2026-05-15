@@ -1,6 +1,6 @@
 ---
 name: autonomous-build-loop
-description: Run a long-horizon autonomous build loop that ships features iteratively across many sessions. Use when the user wants Claude to keep building on its own — phrases like "autonomous loop", "/loop", "/auto", "keep building", "wake yourself up", "self-pace iterations", "iter-NNN logs", "fat-iter mode", "scheduled iteration"; or when the project has an `iter-NNN.md` log directory, a `GOALS.md` backlog, a `ScheduleWakeup`/cron resume contract, or a CLAUDE.md "autonomous build loop protocol" section. Provides per-iteration checklist, fat-iter parallel-dispatch protocol, Class A/B sub-agent discipline, peer-review triggers, phase-boundary arch passes, token-runway management, log hygiene, and continuous-loop (no-halt) semantics.
+description: Run a long-horizon autonomous build loop that ships features iteratively across many sessions. Use when the user wants Claude to keep building on its own — phrases like "autonomous loop", "/loop", "/auto", "keep building", "wake yourself up", "self-pace iterations", "iter-NNN logs", "fat-iter mode", "scheduled iteration"; or when the project has an `iter-NNN.md` log directory, a `GOALS.md` backlog, a `ScheduleWakeup`/cron resume contract, or a CLAUDE.md "autonomous build loop protocol" section. Provides per-iteration checklist, fat-iter parallel-dispatch protocol, Class A/B sub-agent discipline, peer-review triggers, phase-boundary arch passes, log hygiene, and continuous-loop (no-halt) semantics.
 ---
 
 # Autonomous Build Loop
@@ -28,7 +28,7 @@ Every mention of `ScheduleWakeup` below is conditional on in-session mode. In ex
 
 2. **Read state by tier, not by habit.** Each iter is a fresh session — the prompt cache does NOT carry across iters, so every iter pays cache-creation rate on its whole cold-boot read. Read the tiered manifest (`references/read-manifest.md`): **Tier 1 always** (`CLAUDE.md`, `logs/latest.md`, `GOALS.md`), **Tier 2 on trigger** (`ARCHITECTURE.md` section, `PLAN.md`, `docs/*`, `logs/blocks.md`), **Tier 3 never read back** (archived iter logs + summaries). Missing Tier-1 file → create a stub before doing other work.
 
-3. **Continuous loop, never halt.** A sub-agent `block` verdict, a smoke failure, a user-decision blocker, a contract-drift signal — all become a structured entry in `logs/blocks.md` or `GOALS.md`, then the agent picks the next non-conflicting item and proceeds. The only legitimate halt is process-level (token-runway → schedule a longer wake-up).
+3. **Continuous loop, never halt.** A sub-agent `block` verdict, a smoke failure, a user-decision blocker, a contract-drift signal — all become a structured entry in `logs/blocks.md` or `GOALS.md`, then the agent picks the next non-conflicting item and proceeds. There is no halt: in-session mode keeps running across auto-compaction boundaries; external-scheduler mode runs each iter as a fresh process.
 
 4. **Fat-iter by default in implementation phases.** Target 3–4 FULL features per iter using parallel Class B sub-agents with disjoint file allowlists. Phase target: 3–5 iters. Hard cap: 4 features per iter — beyond that integration risk grows non-linearly.
 
@@ -38,7 +38,7 @@ Every mention of `ScheduleWakeup` below is conditional on in-session mode. In ex
 
 7. **Phase boundary = mandatory arch-pass.** Invoke the `Skill` tool with `skill: "improve-codebase-architecture"`. This is a real tool call, not a concept — reading the doc and doing manual refactors is NOT compliance. Log result to `logs/blocks.md` with `**Source:** arch-pass`.
 
-8. **Token-runway awareness.** Eyeball remaining context budget at end of iter. Approaching limits → slow the next wake-up (1800s–3600s instead of 600s) and note the slowdown in the iter log. Better to space than compact mid-build. If runway is critical (>80% used), the iter log should explicitly recommend user restart Claude Code — the loop resumes from the next `ScheduleWakeup` after relaunch.
+8. **Trust auto-compaction — do not manage tokens.** In-session mode runs on a large-context model with harness auto-compaction (configured to compact around 50% of the context window). The loop is designed to survive compaction: `logs/latest.md` + the tiered read manifest make every iter self-contained, so a mid-loop compaction is safe and expected. Do NOT eyeball context budget, do NOT scope work down, do NOT space out wake-ups, and do NOT recommend the user restart Claude Code for token reasons — context is not a scarce runway to ration. Wake-up cadence is driven by work type only (impl vs. plan), never by context usage. In external-scheduler mode each iter is already a fresh `claude -p` process, so context never accumulates either.
 
 9. **Frontend has no free signal.** TDD gets a binary pass/fail in-context — the loop knows instantly whether it succeeded. UI quality has no such signal. Any iter touching user-visible UI must MANUFACTURE one: screenshot via chrome-MCP + a forced critique pass against the design reference (mobile viewport, ≥44px touch targets, hierarchy, AA contrast) before commit. Never close a UI iter on "it rendered." Design-sensitive surface → dispatch a Class A `design-review` sub-agent instead of self-critiquing. See `references/fat-iter-mode.md` Phase 3.
 
@@ -53,7 +53,7 @@ Every mention of `ScheduleWakeup` below is conditional on in-session mode. In ex
 7. Write `logs/iter-NNN.md` (cap 50 lines fat-iter / 40 lines otherwise — see `references/log-hygiene.md`).
 8. Commit `iter NNN: <one-line summary>`.
 9. Push if push cadence triggers (default: 5 iters since last push OR ≥8 commits ahead).
-10. **In-session mode:** `ScheduleWakeup` for next iter (default: 600s impl, 1500s plan, 1800s+ if token-runway tight). **External-scheduler mode (`EXTERNAL_SCHEDULER=1`):** exit cleanly — driver handles cadence.
+10. **In-session mode:** `ScheduleWakeup` for next iter (default: 600s impl, 1500s plan — cadence is work-type-driven, never adjusted for context usage). **External-scheduler mode (`EXTERNAL_SCHEDULER=1`):** exit cleanly — driver handles cadence.
 
 ## When NOT to fat-iter
 

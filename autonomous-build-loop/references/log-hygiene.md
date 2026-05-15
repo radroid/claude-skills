@@ -121,6 +121,6 @@ The dashboard surfaces "Iters since last peer review" and "Iters since last arch
 | Sub-agent verdicts | Implementation detail |
 | Carry-forward parking lot | Code that's already in the diff |
 | Repeated-issue counters | LoC counts (the diff has these) |
-| Token-runway state | Anything the file content already shows |
+| Phase-boundary / arch-pass notes | Anything the file content already shows |
 
 Don't duplicate the diff into the iter log. The log is for context the diff doesn't capture.
