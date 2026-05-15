@@ -21,9 +21,11 @@ before it. Research into senior-dev AI workflows — Arjay McCandless (Design �
 → Deploy) and Matt Pocock (Grill → PRD + vertical-slice Kanban → TDD AFK loops → human QA +
 automated review) — plus a read of the installed skill library exposes concrete gaps:
 
-1. **No lifecycle model.** No alignment/scope stage, no tech-stack *selection*, no
-   "scaffold-and-wire until the bare-bones app runs" stage. `auto-loop-bootstrap` only *captures*
-   a pre-decided stack and never verifies the scaffolded app is runnable.
+1. **No greenfield path.** No alignment/scope stage, no tech-stack *selection*, no
+   "scaffold-and-wire until the bare-bones app runs" stage. `auto-loop-bootstrap` is intentionally
+   scoped to **existing repos** (capture a pre-decided stack and stand up loop machinery on top);
+   the greenfield path — idea → PRD → stack → scaffold → loop handoff — needs a separate skill
+   (`idea-to-loop`, introduced in M2).
 2. **No branch/PR model.** The loop commits straight to one branch. PRs should be vertical-slice
    feature implementations.
 3. **The rich skill library is unused.** Grilling, prototyping, TDD, fresh-context review,
@@ -51,13 +53,17 @@ concept: **Stage** — a coarse lifecycle position. Waterfall *between* stages, 
 
 | Stage | Name | Human | Owning skill | Exit gate |
 |---|---|---|---|---|
-| **S0** | Alignment & Scope | Heavy | `auto-loop-bootstrap` | Scope/PRD doc + `GOALS.md` backlog; **human accepts scope** |
-| **S1** | System Design & Tech Stack | Checkpoint | `auto-loop-bootstrap` | `ARCHITECTURE.md` filled (stack + data model + bottlenecks); **human accepts stack** (or pre-delegates "auto") |
-| **S2** | Scaffold & Wire | Light (keys/accounts) | `auto-loop-bootstrap` | Bare-bones app **actually runs** + integrations wired |
+| **S0** | Alignment & Scope | Heavy | `idea-to-loop` *(new, M2)* | Scope/PRD doc + `GOALS.md` backlog; **human accepts scope** |
+| **S1** | System Design & Tech Stack | Checkpoint | `idea-to-loop` *(new, M2)* | `ARCHITECTURE.md` filled (stack + data model + bottlenecks); **human accepts stack** (or pre-delegates "auto") |
+| **S2** | Scaffold & Wire | Light (keys/accounts) | `idea-to-loop` *(new, M2)* | Bare-bones app **actually runs** + integrations wired; loop machinery laid down (invokes `auto-loop-bootstrap`) |
 | **S3** | Vertical-Slice Feature Dev | AFK | `autonomous-build-loop` | Backlog drained; each feature = a DB+backend+frontend slice shipped as one PR. Fat PRs OK here. |
 | **S4** | Layer-Specialized Scale | AFK | `autonomous-build-loop` | Triggered by composite complexity signal; sub-agents specialize by layer, slices stay vertical, PRs become smaller/scoped |
 | **S5** | Deploy / CI-CD | Checkpoint | `autonomous-build-loop` | CI/CD live; merged PRs deploy |
 | *S6* | Maintenance / backlog mode | — | future scope | — |
+
+**Two entry paths into the loop:**
+- **Greenfield (idea → product):** `idea-to-loop` runs S0 → S1 → S2, then hands off to `autonomous-build-loop` for S3+.
+- **Brownfield (existing repo, drain the backlog):** `auto-loop-bootstrap` skips S0–S2 and lays down the loop machinery on an existing codebase, then `autonomous-build-loop` takes over. This is the path M1 proved on `t1-expense-tracker`.
 
 ### 2. Stage flow
 
@@ -83,9 +89,10 @@ flowchart LR
     state -.drives.-> S0 & S1 & S2 & S3 & S4 & S5
 ```
 
-`auto-loop-bootstrap` owns S0→S2; `autonomous-build-loop` owns S3→S5. The canonical stage
-definitions live in one new file — `autonomous-build-loop/references/lifecycle-stages.md` — and
-`auto-loop-bootstrap` references it (no duplication).
+`idea-to-loop` owns S0→S2 (greenfield path); `auto-loop-bootstrap` skips S0–S2 and stands up
+loop machinery on an existing repo (brownfield path); `autonomous-build-loop` owns S3→S5 either
+way. The canonical stage definitions live in one new file — `autonomous-build-loop/references/
+lifecycle-stages.md` — and all three skills reference it cross-skill (no duplication).
 
 ### 3. Loop State file — split model (machine state + human handoff)
 
@@ -228,24 +235,35 @@ Keep M1 small — it validates the branch/PR/TDD/review spine before the heavier
 - **Prove:** a loop branches + TDD + PRs + (CodeRabbit if available) + auto-merges per feature on
   a real app.
 
-### M2 — Lifecycle stages S0–S2 — *user-confirmed priority after M1*
-- **Skills-repo:** expand `auto-loop-bootstrap/SKILL.md` (thin-S0 → full S0→S1→S2 pipeline;
-  writes the initial `.loop/state.json`). New references in `auto-loop-bootstrap/`:
-  `tech-stack-selection.md`, `scaffold-and-wire.md`. New references in `autonomous-build-loop/`:
-  `lifecycle-stages.md` (canonical stage defs), `auto-research-mode.md`, `super-reviewer.md`,
-  `decision-log.md`. Rename `read-manifest.md` → `tiered-read-strategy.md` (+ fix all 5
-  referencing files). Reframe `grilling-guide.md` as S0. Update `log-hygiene.md` for the
-  `latest.md` split (drop `Phase:` line, add `Stage:` to the iter-log header). Full
-  `.loop/state.json` schema + checkpoint/parking logic. New template assets:
-  `assets/templates/.loop/state.json`, `assets/templates/.claude/commands/loop.md`,
-  `assets/templates/docs/decision-log.md`. Update `assets/templates/CLAUDE.md` (Loop State +
-  lifecycle-stage + checkpoint + decision-log sections) and `assets/templates/ARCHITECTURE.md`
-  (S1 fills stack + data model + bottlenecks). Rebuild `dist/`.
-- **Testbed (local):** point bootstrap at an empty repo; run S0→S1→S2→S3.
+### M2 — Greenfield skill `idea-to-loop` (S0–S2) — *user-confirmed priority after M1*
+
+**Scope correction (2026-05-15):** M2 creates a **new third skill** rather than expanding the
+existing two. `auto-loop-bootstrap` stays scoped to its brownfield (existing-repo) purpose;
+the greenfield (idea → product) path is a separate workflow with a separate skill.
+
+- **Skills-repo — new skill:** create `idea-to-loop/` with `SKILL.md` (the S0→S1→S2 pipeline
+  that ends by invoking `auto-loop-bootstrap` to lay down loop machinery, then handing off to
+  `autonomous-build-loop`). New references in `idea-to-loop/references/`:
+  `s0-alignment-and-scope.md`, `s1-tech-stack-selection.md`, `s2-scaffold-and-wire.md`,
+  `auto-research-mode.md`, `decision-log.md`. New template assets under
+  `idea-to-loop/assets/templates/`: scope/PRD skeleton, decision-log skeleton.
+- **Skills-repo — touch existing two:** new references in `autonomous-build-loop/`:
+  `lifecycle-stages.md` (canonical stage defs, cross-skill referenced),
+  `super-reviewer.md` (used in greenfield checkpoints AND every S3+ feature PR). Update
+  `log-hygiene.md` for the `latest.md` split (drop `Phase:` line, add `Stage:` to iter-log
+  header). Full `.loop/state.json` schema (stage_status, checkpoints, complexity_signal) +
+  checkpoint/parking logic in `per-iteration-checklist.md`. `auto-loop-bootstrap` stays scoped:
+  audit its templates for `Stage:` awareness only (no S0/S1 expansion). Note: M2's prerequisite
+  rename (`read-manifest.md` → `tiered-read-strategy.md`) already landed in PR #11. Rebuild
+  `dist/` (3 skills now).
+- **Skills-repo — repo-level:** update `README.md` (add `idea-to-loop` to the skill table, document
+  the two entry paths); update `scripts/build.sh` to package the third skill.
+- **Testbed (local):** point `idea-to-loop` at an empty repo; run S0→S1→S2 → loop handoff → S3.
 - **Prove:** S0 produces a scope doc + backlog (+ a `prototype` runnable); S1 auto-researches +
   recommends a stack with rationale + parks at the accept gate; on accept/auto, S2 scaffolds and
-  the **bare-bones app actually serves** before `.loop/state.json` flips to S3; the super-reviewer
-  vets any auto-delegated decision.
+  the **bare-bones app actually serves**; `idea-to-loop` invokes `auto-loop-bootstrap` cleanly
+  at the S2→S3 boundary, `.loop/state.json` flips to S3, and `autonomous-build-loop` takes over;
+  the super-reviewer vets any auto-delegated decision.
 
 ### M3 — Multi-loop / task queue
 - **Skills-repo:** `autonomous-build-loop/references/multi-loop-mode.md`; task-queue +
@@ -282,30 +300,37 @@ Skill invocation. No copy step. ARK stays on its current protocol, **untouched**
 
 ## Critical files
 
-**`autonomous-build-loop/` (modify):**
-- `SKILL.md` — lifecycle-stage awareness; `.loop/state.json` as Tier-1; `read-manifest` → rename.
-- `references/per-iteration-checklist.md` — `.loop/state.json` in step 1; TDD + branch/PR/review/
-  verify steps; rename reference.
-- `references/fat-iter-mode.md` — feature → branch + PR; stage-dependent PR size.
+**`idea-to-loop/` (NEW skill — M2):**
+- `SKILL.md` — the S0→S1→S2 pipeline; invokes `auto-loop-bootstrap` at the S2 exit gate
+  to lay down loop machinery; hands off to `autonomous-build-loop` for S3+.
+- `references/s0-alignment-and-scope.md` — grill / brainstorm / PRD / prototype workflow.
+- `references/s1-tech-stack-selection.md` — auto-research-driven stack pick with human-accept gate.
+- `references/s2-scaffold-and-wire.md` — scaffold + runnable-app exit gate.
+- `references/auto-research-mode.md` — multi-agent research pattern (Anthropic-style).
+- `references/decision-log.md` — append-only judgment-call log workflow.
+- `assets/templates/` — scope/PRD skeleton, decision-log skeleton.
+
+**`autonomous-build-loop/` (modify in M2):**
+- `SKILL.md` — `Stage:` awareness; `.loop/state.json` as Tier-1 (already done in M1).
+- `references/per-iteration-checklist.md` — full `.loop/state.json` schema; checkpoint/parking logic.
 - `references/log-hygiene.md` — `latest.md` split (drop `Phase:`); `Stage:` in iter-log header.
-- `references/read-manifest.md` → **rename** `references/tiered-read-strategy.md`.
+- **Done in earlier M2 prep PRs:** `references/read-manifest.md` → `tiered-read-strategy.md` (PR #11).
 
-**`autonomous-build-loop/` (new):** `references/feature-pr-mode.md`, `multi-loop-mode.md`,
-`lifecycle-stages.md`, `auto-research-mode.md`, `super-reviewer.md`, `decision-log.md`.
+**`autonomous-build-loop/` (new in M2):**
+- `references/lifecycle-stages.md` — canonical stage defs (cross-skill referenced by `idea-to-loop`).
+- `references/super-reviewer.md` — used in greenfield checkpoints AND every S3+ feature PR.
+- (Existing M-era files already shipped: `feature-pr-mode.md`.)
 
-**`auto-loop-bootstrap/` (modify):** `SKILL.md` (full S0→S1→S2 pipeline; writes initial
-`.loop/state.json`), `references/grilling-guide.md` (frame as S0; produce a scope/PRD doc),
-`references/audit-checklist.md` (audit `.loop/state.json`), `assets/templates/ARCHITECTURE.md`
-(S1 fills stack + data model + bottlenecks), `assets/templates/CLAUDE.md` (Loop State +
-lifecycle-stage + checkpoint + decision-log sections; fix `read-manifest` reference).
+**`auto-loop-bootstrap/` (light M2 touch only):**
+- `assets/templates/CLAUDE.md` + `assets/templates/.loop/state.json` — initial stage is `"S3"`
+  (the loop's first iter starts in S3 — there's no separate brownfield-vs-greenfield stage label;
+  the distinction is which skill *got the repo to S3*, not a state-file field). Audit the templates
+  for the same `Stage:` field surface that `idea-to-loop`'s S2 exit writes.
+- (No S0/S1 expansion. Skill stays scoped to existing-repo bootstrap.)
 
-**`auto-loop-bootstrap/` (new):** `references/tech-stack-selection.md`,
-`references/scaffold-and-wire.md`, `assets/templates/.loop/state.json`,
-`assets/templates/.claude/commands/loop.md`, `assets/templates/docs/decision-log.md`.
-
-**Repo-level (modify):** `README.md` (rename `read-manifest` reference; update skill blurbs),
-`.gitignore` template handling for `/.loop/claims/`, `dist/*.skill` (rebuilt via
-`./scripts/build.sh` at the end of every skills-repo milestone).
+**Repo-level (modify in M2):** `README.md` (add `idea-to-loop` row + document the two entry
+paths), `scripts/build.sh` (package the third skill), `.gitignore` template handling for
+`/.loop/claims/`, `dist/*.skill` (rebuilt per milestone).
 
 **New testbed (local, not this repo):** `loop-lab/t1-expense-tracker/` (M1), empty bootstrap
 target (M2), T2/T3 (M4/M5).
