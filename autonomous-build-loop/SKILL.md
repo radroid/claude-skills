@@ -42,6 +42,8 @@ Every mention of `ScheduleWakeup` below is conditional on in-session mode. In ex
 
 9. **Frontend has no free signal.** TDD gets a binary pass/fail in-context — the loop knows instantly whether it succeeded. UI quality has no such signal. Any iter touching user-visible UI must MANUFACTURE one: screenshot via chrome-MCP + a forced critique pass against the design reference (mobile viewport, ≥44px touch targets, hierarchy, AA contrast) before commit. Never close a UI iter on "it rendered." Design-sensitive surface → dispatch a Class A `design-review` sub-agent instead of self-critiquing. See `references/fat-iter-mode.md` Phase 3.
 
+10. **Scaffolded defaults are not safe defaults.** In the first iter of any new project, audit framework-generated config (`tsconfig` strict flags, ESLint rules, persistence-layer connection lifecycle, parse-boundary validation) and harden it before building features. Modern scaffolders (`npm create vite`, `create-next-app`, etc.) ship intentionally minimal defaults that lag the community's best-practice posture — e.g. Vite's current React+TS template does not enable `tsconfig "strict": true`, IndexedDB tutorials show per-op `open()`+`close()` instead of a cached singleton-promise, and JSON-parse boundaries habitually `as unknown as T` without entity validation. Downstream code inherits every gap silently. When in doubt about the canonical posture for a stack, web-research it before locking the config in.
+
 ## Quick-start: starting an iteration
 
 1. Read `references/per-iteration-checklist.md` — the 13-step procedure.
