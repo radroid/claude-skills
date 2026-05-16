@@ -1,0 +1,9 @@
+{
+  "stage": "S0",
+  "stage_status": "in-progress",
+  "iter": 0,
+  "pr_mode": false,
+  "checkpoints": {
+    "scope-accepted": "pending"
+  }
+}
