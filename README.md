@@ -6,8 +6,18 @@ Skills for [Claude Code](https://claude.com/claude-code).
 
 | Skill | Purpose |
 |-------|---------|
-| [`autonomous-build-loop`](./autonomous-build-loop/) | Run a long-horizon autonomous build loop that ships features iteratively across many sessions. Per-iteration checklist, tiered read manifest (shrink the per-iter cold-boot cost), fat-iter parallel-dispatch protocol, Class A/B sub-agent discipline, peer-review triggers, frontend-critique gate, phase-boundary arch passes, log hygiene, no-halt continuous loop semantics. |
-| [`auto-loop-bootstrap`](./auto-loop-bootstrap/) | Bootstrap a repo for autonomous build looping. Scaffolds `CLAUDE.md`, `GOALS.md`, `ARCHITECTURE.md`, `PLAN.md`, `logs/`, and drops in the `auto-loop.py` driver script. Invokes `grill-me` to extract a backlog when one doesn't exist. Pairs with `autonomous-build-loop`. |
+| [`idea-to-loop`](./idea-to-loop/) | **Greenfield bootstrap** — idea → PRD → tech stack → runnable scaffold → hands off to the loop. Runs lifecycle stages S0 (Alignment & Scope) → S1 (System Design & Tech Stack) → S2 (Scaffold & Wire). New in M2. |
+| [`auto-loop-bootstrap`](./auto-loop-bootstrap/) | **Brownfield bootstrap** — stands up loop machinery on an **existing repo** (skips S0–S2). Scaffolds `CLAUDE.md`, `GOALS.md`, `ARCHITECTURE.md`, `PLAN.md`, `logs/`, and drops in the `auto-loop.py` driver script. Invokes `grill-me` to extract a backlog when one doesn't exist. Pairs with `autonomous-build-loop`. |
+| [`autonomous-build-loop`](./autonomous-build-loop/) | The **loop runtime** — runs S3+ (feature dev). Per-iteration checklist, tiered read strategy (shrink the per-iter cold-boot cost), fat-iter parallel-dispatch protocol, Class A/B sub-agent discipline, peer-review triggers, frontend-critique gate, phase-boundary arch passes, log hygiene, no-halt continuous loop semantics. |
+
+### Two entry paths into the loop
+
+Both paths converge at S3 where `autonomous-build-loop` takes over.
+
+- **Greenfield (idea → product):** `idea-to-loop` runs S0 → S1 → S2, then invokes `auto-loop-bootstrap` to lay down loop machinery, then hands off
+- **Brownfield (existing codebase):** `auto-loop-bootstrap` directly. Skips S0–S2 — your repo's existing structure stands in for the scaffolded-app gate
+
+Canonical stage defs: [`autonomous-build-loop/references/lifecycle-stages.md`](./autonomous-build-loop/references/lifecycle-stages.md).
 
 ## Roadmap
 
@@ -21,8 +31,9 @@ Skills for [Claude Code](https://claude.com/claude-code).
 git clone https://github.com/radroid/claude-skills.git ~/Documents/claude-skills
 
 # Link each skill into ~/.claude/skills/
-ln -s ~/Documents/claude-skills/autonomous-build-loop ~/.claude/skills/autonomous-build-loop
+ln -s ~/Documents/claude-skills/idea-to-loop ~/.claude/skills/idea-to-loop
 ln -s ~/Documents/claude-skills/auto-loop-bootstrap ~/.claude/skills/auto-loop-bootstrap
+ln -s ~/Documents/claude-skills/autonomous-build-loop ~/.claude/skills/autonomous-build-loop
 ```
 
 Restart Claude Code. Run `/skills` to confirm the skills are loaded.
@@ -34,14 +45,17 @@ Updates: `git pull` in the cloned dir — symlinks always reflect the latest com
 Grab the latest release from [GitHub Releases](https://github.com/radroid/claude-skills/releases):
 
 ```bash
-curl -L -o /tmp/autonomous-build-loop.skill \
-  https://github.com/radroid/claude-skills/releases/latest/download/autonomous-build-loop.skill
+curl -L -o /tmp/idea-to-loop.skill \
+  https://github.com/radroid/claude-skills/releases/latest/download/idea-to-loop.skill
 curl -L -o /tmp/auto-loop-bootstrap.skill \
   https://github.com/radroid/claude-skills/releases/latest/download/auto-loop-bootstrap.skill
+curl -L -o /tmp/autonomous-build-loop.skill \
+  https://github.com/radroid/claude-skills/releases/latest/download/autonomous-build-loop.skill
 
 # .skill files are zip archives — extract into your skills dir
-unzip /tmp/autonomous-build-loop.skill -d ~/.claude/skills/
+unzip /tmp/idea-to-loop.skill -d ~/.claude/skills/
 unzip /tmp/auto-loop-bootstrap.skill -d ~/.claude/skills/
+unzip /tmp/autonomous-build-loop.skill -d ~/.claude/skills/
 ```
 
 ## Quick start — run your own build loop
@@ -51,8 +65,22 @@ optional unattended alternative.
 
 ### 1. Bootstrap the repo
 
+Pick the path that matches your starting point:
+
+**Greenfield (no code yet, just an idea):**
+
 ```
-cd <your-project>          # an existing repo, OR: mkdir my-app && cd my-app && git init
+mkdir my-app && cd my-app && git init
+claude
+> I have an idea for <X>, run idea-to-loop to build it
+```
+
+`idea-to-loop` grills you for scope, picks the tech stack (auto-research by default, super-reviewer-vetted), scaffolds a runnable bare-bones app, then invokes `auto-loop-bootstrap` to lay down loop machinery and hand off.
+
+**Brownfield (existing repo):**
+
+```
+cd <your-project>
 claude
 > bootstrap this repo for the autonomous build loop
 ```
