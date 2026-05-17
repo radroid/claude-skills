@@ -35,6 +35,12 @@ Fallbacks if any skill is absent: a structured Q&A bank (manual grilling) for th
 a freeform spec doc for `brainstorming`; a hand-written PRD for `to-prd`. `prototype` has no
 fallback — if it can't run, you don't exit S0.
 
+> **Consolidated path (preferred when installed):** `grill-to-prd` implements the
+> `grill-with-docs → grill-me → brainstorming → to-prd` chain end-to-end with persona-aware
+> question banks (Technical / Designer / Vibe) and writes `docs/PRD.md` directly. If it's
+> installed, invoke `Skill: grill-to-prd` in place of the four chain steps and proceed straight
+> to `Skill: prototype`. Falls back to the chain above if the consolidated skill is absent.
+
 ## Decision: S1 stack pick — `auto` or manual?
 
 Before exiting S0, **ask the human one question**:
