@@ -17,7 +17,7 @@ screen.
 
 Per-screen format:
 
-```markdown
+````markdown
 ## `<slug>` — <Name>
 
 **Reachable from:** <list of slugs / "entry">
@@ -26,7 +26,7 @@ Per-screen format:
 
 ### Layout
 
-```
+```text
 +--------------------------------------------------+
 | TOPNAV: logo · Invoices · Clients · [+New] · 👤  |
 +--------------------------------------------------+
@@ -42,6 +42,7 @@ Per-screen format:
 ```
 
 ### Sections
+
 - **TopNav** — global. Logo links home; primary nav links per workflows; "+ New" opens
   invoice-new; avatar opens settings menu.
 - **KPI row** — three cards. Currency formatted. Empty state: all $0 with hint "Send your
@@ -49,14 +50,16 @@ Per-screen format:
 - **Recent invoices** — table, last 10. Row click → invoice-detail. Status uses pill colors.
 
 ### CTAs
+
 - "+ New" → `invoice-new.html`
 - Row click → `invoice-detail.html?id=<id>`
 - "View all" link → `invoices.html`
 
 ### Design notes
+
 - Dense, business-utility feel
 - KPI cards muted unless highlighted (e.g., overdue count in red if > 0)
-```
+````
 
 ASCII boxes are good enough — fancier sketches don't pay back in clarity at this stage.
 

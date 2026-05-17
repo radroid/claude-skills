@@ -25,7 +25,7 @@ resumable across turns via `.screens/state.json`.
 
 This skill is **optional but high-leverage** between S0 and S1:
 
-```
+```text
 S0 (PRD)  →  prd-to-screens  →  S1 (tech stack)  →  S2 (scaffold)  →  S3+ (loop builds against the approved HTML)
 ```
 

@@ -72,15 +72,26 @@ short, kebab-case, and stable — they show up in URLs and cross-links from here
 6. **Present the table to the human** and ask explicitly: "Anything missing? Anything you'd
    cut? Any renames or regroupings?" Iterate until they're satisfied.
 
-7. **Write the final `screens` array into `.screens/state.json`** in approval order. P4 and
-   P5 will iterate over this array.
+7. **Write the final `screens` array into `.screens/state.json`** in approval order. The
+   schema is a simple **array of slug strings** — the inventory table is the source of
+   truth for richer metadata (name, purpose, group, CTAs), so don't duplicate it into
+   state. P4 and P5 iterate over this array and look up details in
+   `docs/screens/inventory.md` by slug:
+
+   ```json
+   {
+     "screens": ["login", "signup", "dashboard", "invoices", "invoice-detail", "..."]
+   }
+   ```
 
 ## Worked example (mini)
 
 PRD says: "tool for freelancers to send invoices and track payments". Intake says: primary
 user = solo freelancer, entities = invoice, client, payment.
 
-Derived inventory (abridged):
+Derived inventory (abridged — the "Entered from" and "Primary CTA" columns are dropped
+here purely to keep this readable on the page; the real `docs/screens/inventory.md` keeps
+all five template columns):
 
 | Slug | Name | Purpose | Group |
 |---|---|---|---|
@@ -95,8 +106,8 @@ Derived inventory (abridged):
 | settings | Settings | Profile + payment provider + tax info | Settings |
 | 404 | Not found | Hard-link fallback | Errors |
 
-15 screens isn't there; this is the abridged version. Real list would round out with
-client-new, signup-onboarding, error, password-reset, and maybe a payments tab.
+Ten screens here; the real list lands around 15 once you round out with client-new,
+signup-onboarding, generic error, password-reset, and maybe a payments tab.
 
 ## What NOT to do
 

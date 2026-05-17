@@ -45,8 +45,8 @@
 
     // --- Helpers consumed across screens ---
     helpers: {
-      formatMoney(cents) {
-        const v = typeof cents === 'number' ? cents : 0;
+      formatMoney(amount) {
+        const v = typeof amount === 'number' ? amount : 0;
         return v.toLocaleString('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 });
       },
       formatDate(iso) {

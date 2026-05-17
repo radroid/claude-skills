@@ -58,6 +58,8 @@ Grab the latest release from [GitHub Releases](https://github.com/radroid/claude
 ```bash
 curl -L -o /tmp/idea-to-loop.skill \
   https://github.com/radroid/claude-skills/releases/latest/download/idea-to-loop.skill
+curl -L -o /tmp/prd-to-screens.skill \
+  https://github.com/radroid/claude-skills/releases/latest/download/prd-to-screens.skill
 curl -L -o /tmp/auto-loop-bootstrap.skill \
   https://github.com/radroid/claude-skills/releases/latest/download/auto-loop-bootstrap.skill
 curl -L -o /tmp/autonomous-build-loop.skill \
@@ -65,6 +67,7 @@ curl -L -o /tmp/autonomous-build-loop.skill \
 
 # .skill files are zip archives — extract into your skills dir
 unzip /tmp/idea-to-loop.skill -d ~/.claude/skills/
+unzip /tmp/prd-to-screens.skill -d ~/.claude/skills/
 unzip /tmp/auto-loop-bootstrap.skill -d ~/.claude/skills/
 unzip /tmp/autonomous-build-loop.skill -d ~/.claude/skills/
 ```

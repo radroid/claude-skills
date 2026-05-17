@@ -11,7 +11,7 @@ as P4. On full acceptance, set `checkpoints.P5: "passed"` and flip `phase` to `"
 
 ## Required artifacts at exit
 
-```
+```text
 docs/screens/html/
 ├── index.html              # landing page that links to every screen (built in P6)
 ├── assets/
@@ -90,7 +90,7 @@ For each screen in the next batch of ≤ 5:
 
 6. **Present the batch to the human.** Give them the path to each file in the batch:
 
-   ```
+   ```bash
    open docs/screens/html/dashboard.html
    open docs/screens/html/invoices.html
    ```
