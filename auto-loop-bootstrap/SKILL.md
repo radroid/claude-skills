@@ -60,6 +60,8 @@ If `grill-me` isn't available, fall back to `superpowers:brainstorming` or run a
 
 The interview output becomes the seed for `GOALS.md` in Phase 4. Format per `references/backlog-format.md`.
 
+> **PRD-grilling is a separate skill.** If the brownfield repo also lacks `docs/PRD.md` (or it's stub/sparse) and the user wants a written PRD as part of bootstrap, invoke `grill-to-prd` **before** this Phase 2 backlog grill. The PRD-grill writes `docs/PRD.md` via a persona-aware interview (Technical / Designer / Vibe); the backlog-grill (this Phase 2) writes `GOALS.md`. They produce different artifacts and can both run on the same repo. Order: PRD first (scope), then backlog (drain order).
+
 ### Phase 3 — Capture plan tier + budget preferences
 
 Ask the user (only if not already known from session context):
