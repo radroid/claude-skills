@@ -1,0 +1,9 @@
+{
+  "skill": "screen-design-loop",
+  "iter": 0,
+  "platform": "mobile",
+  "current": null,
+  "screens_root": "docs/screens/html",
+  "research_root": "docs/research/design",
+  "screens": []
+}

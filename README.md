@@ -9,12 +9,13 @@ Skills for [Claude Code](https://claude.com/claude-code).
 | [`grill-to-prd`](./grill-to-prd/) | **Builder interview → PRD.** Detects greenfield vs. brownfield, probes builder expertise (Technical / Designer / Vibe lanes), runs a persona-specific inline grill, then writes `docs/PRD.md` from a lane-matching template. Implements the `grill-me` / `to-prd` chain referenced by `idea-to-loop` S0 — callable standalone or as the S0 PRD-production step. Optional brainstorming pass on request. |
 | [`idea-to-loop`](./idea-to-loop/) | **Greenfield bootstrap** — idea → PRD → tech stack → runnable scaffold → hands off to the loop. Runs lifecycle stages S0 (Alignment & Scope) → S1 (System Design & Tech Stack) → S2 (Scaffold & Wire). New in M2. |
 | [`prd-to-screens`](./prd-to-screens/) | **PRD → approved HTML mockups** — phased conversation that turns an existing PRD into the baseline frontend: P1 intake → P2 screen inventory → P3 user workflows → P4 wireframes → P5 self-contained HTML with shared mock data → P6 cross-link & walkthrough. Optional but high-leverage between S0 and S1 — the approved HTML becomes the spec the loop builds against. Runs standalone too. |
+| [`screen-design-loop`](./screen-design-loop/) | **Mobbin-powered design refinement loop** — iterative loop that grounds HTML mockups in real shipped-app references via the Mobbin MCP server. One screen per iter: Mobbin research → HTML synthesis → chrome-devtools render + Class A design-critique gate → commit. Refines the baseline `prd-to-screens` produces (same `docs/screens/html/` output dir, artifacts stack); runs standalone too. Targets mobile or desktop. |
 | [`auto-loop-bootstrap`](./auto-loop-bootstrap/) | **Brownfield bootstrap** — stands up loop machinery on an **existing repo** (skips S0–S2). Scaffolds `CLAUDE.md`, `GOALS.md`, `ARCHITECTURE.md`, `PLAN.md`, `logs/`, and drops in the `auto-loop.py` driver script. Invokes `grill-me` to extract a backlog when one doesn't exist. Pairs with `autonomous-build-loop`. |
 | [`autonomous-build-loop`](./autonomous-build-loop/) | The **loop runtime** — runs S3+ (feature dev). Per-iteration checklist, tiered read strategy (shrink the per-iter cold-boot cost), fat-iter parallel-dispatch protocol, Class A/B sub-agent discipline, peer-review triggers, frontend-critique gate, phase-boundary arch passes, log hygiene, no-halt continuous loop semantics. |
 
 ### How the skills fit together
 
-Five skills covering the product lifecycle from idea → running app → continuous build.
+Six skills covering the product lifecycle from idea → running app → continuous build.
 Each works standalone; together they form a pipeline:
 
 ```text
@@ -26,13 +27,19 @@ Greenfield (no code yet):
   grill-to-prd                  ──►  docs/PRD.md
    │
    ▼  (optional but high-leverage — catches missing UX before any code)
-  prd-to-screens                ──►  docs/screens/html/*.html
+  prd-to-screens                ──►  docs/screens/html/*.html  (baseline)
+   │
+   ▼  (optional — grounds mockups in real shipped-app references via Mobbin)
+  screen-design-loop            ──►  refines docs/screens/html/*.html
+                                     adds docs/research/design/*.md
    │
    ▼
   idea-to-loop  (S0 → S1 → S2)  ──►  runnable scaffolded app
    │
    ▼
   autonomous-build-loop (S3+)   ──►  drains GOALS.md continuously
+                                     (principle 9 critiques live UI against
+                                      docs/screens/html/* — the design reference)
 
 
 Brownfield (existing repo):
@@ -44,6 +51,10 @@ Brownfield (existing repo):
    │                                   from GOALS.md; the two grills complement)
    ▼
   autonomous-build-loop (S3+)   ──►  drains GOALS.md continuously
+
+  (screen-design-loop also runs standalone on brownfield repos — point it at
+   existing docs/screens/html/ mockups and it'll keep refining them with Mobbin
+   research between feature iters)
 ```
 
 Standalone entry points are first-class: bring a PRD from elsewhere (Notion, Linear, a
@@ -68,6 +79,7 @@ git clone https://github.com/radroid/claude-skills.git ~/Documents/claude-skills
 ln -s ~/Documents/claude-skills/grill-to-prd ~/.claude/skills/grill-to-prd
 ln -s ~/Documents/claude-skills/idea-to-loop ~/.claude/skills/idea-to-loop
 ln -s ~/Documents/claude-skills/prd-to-screens ~/.claude/skills/prd-to-screens
+ln -s ~/Documents/claude-skills/screen-design-loop ~/.claude/skills/screen-design-loop
 ln -s ~/Documents/claude-skills/auto-loop-bootstrap ~/.claude/skills/auto-loop-bootstrap
 ln -s ~/Documents/claude-skills/autonomous-build-loop ~/.claude/skills/autonomous-build-loop
 ```
@@ -87,6 +99,8 @@ curl -L -o /tmp/idea-to-loop.skill \
   https://github.com/radroid/claude-skills/releases/latest/download/idea-to-loop.skill
 curl -L -o /tmp/prd-to-screens.skill \
   https://github.com/radroid/claude-skills/releases/latest/download/prd-to-screens.skill
+curl -L -o /tmp/screen-design-loop.skill \
+  https://github.com/radroid/claude-skills/releases/latest/download/screen-design-loop.skill
 curl -L -o /tmp/auto-loop-bootstrap.skill \
   https://github.com/radroid/claude-skills/releases/latest/download/auto-loop-bootstrap.skill
 curl -L -o /tmp/autonomous-build-loop.skill \
@@ -96,6 +110,7 @@ curl -L -o /tmp/autonomous-build-loop.skill \
 unzip /tmp/grill-to-prd.skill -d ~/.claude/skills/
 unzip /tmp/idea-to-loop.skill -d ~/.claude/skills/
 unzip /tmp/prd-to-screens.skill -d ~/.claude/skills/
+unzip /tmp/screen-design-loop.skill -d ~/.claude/skills/
 unzip /tmp/auto-loop-bootstrap.skill -d ~/.claude/skills/
 unzip /tmp/autonomous-build-loop.skill -d ~/.claude/skills/
 ```
@@ -209,6 +224,10 @@ claude-skills/
 │   ├── SKILL.md
 │   ├── assets/templates/         page.html, mock-data.js, etc
 │   └── references/               p1-intake … p6-walkthrough
+├── screen-design-loop/           skill source — Mobbin-powered design refinement loop
+│   ├── SKILL.md
+│   ├── assets/templates/         .design-loop/state.json seed
+│   └── references/               per-iter checklist, mobbin patterns, critique, integration
 ├── scripts/
 │   └── build.sh                  package all skills into dist/
 └── dist/                         packaged .skill files (built from source)
@@ -216,7 +235,8 @@ claude-skills/
     ├── autonomous-build-loop.skill
     ├── grill-to-prd.skill
     ├── idea-to-loop.skill
-    └── prd-to-screens.skill
+    ├── prd-to-screens.skill
+    └── screen-design-loop.skill
 ```
 
 ## Development workflow
