@@ -6,6 +6,7 @@ Skills for [Claude Code](https://claude.com/claude-code).
 
 | Skill | Purpose |
 |-------|---------|
+| [`grill-to-prd`](./grill-to-prd/) | **Builder interview → PRD.** Detects greenfield vs. brownfield, probes builder expertise (Technical / Designer / Vibe lanes), runs a persona-specific inline grill, then writes `docs/PRD.md` from a lane-matching template. Implements the `grill-me` / `to-prd` chain referenced by `idea-to-loop` S0 — callable standalone or as the S0 PRD-production step. Optional brainstorming pass on request. |
 | [`idea-to-loop`](./idea-to-loop/) | **Greenfield bootstrap** — idea → PRD → tech stack → runnable scaffold → hands off to the loop. Runs lifecycle stages S0 (Alignment & Scope) → S1 (System Design & Tech Stack) → S2 (Scaffold & Wire). New in M2. |
 | [`auto-loop-bootstrap`](./auto-loop-bootstrap/) | **Brownfield bootstrap** — stands up loop machinery on an **existing repo** (skips S0–S2). Scaffolds `CLAUDE.md`, `GOALS.md`, `ARCHITECTURE.md`, `PLAN.md`, `logs/`, and drops in the `auto-loop.py` driver script. Invokes `grill-me` to extract a backlog when one doesn't exist. Pairs with `autonomous-build-loop`. |
 | [`autonomous-build-loop`](./autonomous-build-loop/) | The **loop runtime** — runs S3+ (feature dev). Per-iteration checklist, tiered read strategy (shrink the per-iter cold-boot cost), fat-iter parallel-dispatch protocol, Class A/B sub-agent discipline, peer-review triggers, frontend-critique gate, phase-boundary arch passes, log hygiene, no-halt continuous loop semantics. |
@@ -16,6 +17,10 @@ Both paths converge at S3 where `autonomous-build-loop` takes over.
 
 - **Greenfield (idea → product):** `idea-to-loop` runs S0 → S1 → S2, then invokes `auto-loop-bootstrap` to lay down loop machinery, then hands off
 - **Brownfield (existing codebase):** `auto-loop-bootstrap` directly. Skips S0–S2 — your repo's existing structure stands in for the scaffolded-app gate
+
+### Need a PRD first?
+
+If your idea hasn't been scoped yet, run [`grill-to-prd`](./grill-to-prd/) on its own. It interviews you (Technical / Designer / Vibe lane) and writes `docs/PRD.md`. Drop the resulting PRD into `idea-to-loop` (greenfield) or `auto-loop-bootstrap` (brownfield) when you're ready to build.
 
 Canonical stage defs: [`autonomous-build-loop/references/lifecycle-stages.md`](./autonomous-build-loop/references/lifecycle-stages.md).
 
@@ -31,6 +36,7 @@ Canonical stage defs: [`autonomous-build-loop/references/lifecycle-stages.md`](.
 git clone https://github.com/radroid/claude-skills.git ~/Documents/claude-skills
 
 # Link each skill into ~/.claude/skills/
+ln -s ~/Documents/claude-skills/grill-to-prd ~/.claude/skills/grill-to-prd
 ln -s ~/Documents/claude-skills/idea-to-loop ~/.claude/skills/idea-to-loop
 ln -s ~/Documents/claude-skills/auto-loop-bootstrap ~/.claude/skills/auto-loop-bootstrap
 ln -s ~/Documents/claude-skills/autonomous-build-loop ~/.claude/skills/autonomous-build-loop
@@ -45,6 +51,8 @@ Updates: `git pull` in the cloned dir — symlinks always reflect the latest com
 Grab the latest release from [GitHub Releases](https://github.com/radroid/claude-skills/releases):
 
 ```bash
+curl -L -o /tmp/grill-to-prd.skill \
+  https://github.com/radroid/claude-skills/releases/latest/download/grill-to-prd.skill
 curl -L -o /tmp/idea-to-loop.skill \
   https://github.com/radroid/claude-skills/releases/latest/download/idea-to-loop.skill
 curl -L -o /tmp/auto-loop-bootstrap.skill \
@@ -53,6 +61,7 @@ curl -L -o /tmp/autonomous-build-loop.skill \
   https://github.com/radroid/claude-skills/releases/latest/download/autonomous-build-loop.skill
 
 # .skill files are zip archives — extract into your skills dir
+unzip /tmp/grill-to-prd.skill -d ~/.claude/skills/
 unzip /tmp/idea-to-loop.skill -d ~/.claude/skills/
 unzip /tmp/auto-loop-bootstrap.skill -d ~/.claude/skills/
 unzip /tmp/autonomous-build-loop.skill -d ~/.claude/skills/
@@ -142,6 +151,13 @@ claude-skills/
 ├── README.md
 ├── ROADMAP.md                    strategic plan of record (milestones M0–M5)
 ├── LICENSE                       (CC BY 4.0)
+├── grill-to-prd/                 skill source
+│   ├── SKILL.md
+│   ├── assets/templates/         persona-specific PRD templates
+│   └── references/               persona probe + question banks + synthesis
+├── idea-to-loop/                 skill source
+│   ├── SKILL.md
+│   └── references/
 ├── autonomous-build-loop/        skill source
 │   ├── SKILL.md
 │   └── references/
@@ -152,6 +168,8 @@ claude-skills/
 ├── scripts/
 │   └── build.sh                  package all skills into dist/
 └── dist/                         packaged .skill files (built from source)
+    ├── grill-to-prd.skill
+    ├── idea-to-loop.skill
     ├── autonomous-build-loop.skill
     └── auto-loop-bootstrap.skill
 ```
