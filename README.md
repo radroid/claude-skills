@@ -12,27 +12,46 @@ Skills for [Claude Code](https://claude.com/claude-code).
 | [`auto-loop-bootstrap`](./auto-loop-bootstrap/) | **Brownfield bootstrap** — stands up loop machinery on an **existing repo** (skips S0–S2). Scaffolds `CLAUDE.md`, `GOALS.md`, `ARCHITECTURE.md`, `PLAN.md`, `logs/`, and drops in the `auto-loop.py` driver script. Invokes `grill-me` to extract a backlog when one doesn't exist. Pairs with `autonomous-build-loop`. |
 | [`autonomous-build-loop`](./autonomous-build-loop/) | The **loop runtime** — runs S3+ (feature dev). Per-iteration checklist, tiered read strategy (shrink the per-iter cold-boot cost), fat-iter parallel-dispatch protocol, Class A/B sub-agent discipline, peer-review triggers, frontend-critique gate, phase-boundary arch passes, log hygiene, no-halt continuous loop semantics. |
 
-### Two entry paths into the loop
+### How the skills fit together
 
-Both paths converge at S3 where `autonomous-build-loop` takes over.
+Five skills covering the product lifecycle from idea → running app → continuous build.
+Each works standalone; together they form a pipeline:
 
-- **Greenfield (idea → product):** `idea-to-loop` runs S0 → S1 → S2, then invokes `auto-loop-bootstrap` to lay down loop machinery, then hands off
-- **Brownfield (existing codebase):** `auto-loop-bootstrap` directly. Skips S0–S2 — your repo's existing structure stands in for the scaffolded-app gate
+```text
+Greenfield (no code yet):
 
-### Need a PRD first?
+  Idea
+   │
+   ▼
+  grill-to-prd                  ──►  docs/PRD.md
+   │
+   ▼  (optional but high-leverage — catches missing UX before any code)
+  prd-to-screens                ──►  docs/screens/html/*.html
+   │
+   ▼
+  idea-to-loop  (S0 → S1 → S2)  ──►  runnable scaffolded app
+   │
+   ▼
+  autonomous-build-loop (S3+)   ──►  drains GOALS.md continuously
 
-If your idea hasn't been scoped yet, run [`grill-to-prd`](./grill-to-prd/) on its own. It interviews you (Technical / Designer / Vibe lane) and writes `docs/PRD.md`. Drop the resulting PRD into `idea-to-loop` (greenfield) or `auto-loop-bootstrap` (brownfield) when you're ready to build.
+
+Brownfield (existing repo):
+
+  auto-loop-bootstrap           ──►  loop machinery (CLAUDE.md, GOALS.md, logs/, …)
+   │                                  ↑
+   │                                  (optionally run grill-to-prd first if the
+   │                                   repo lacks docs/PRD.md — different artifact
+   │                                   from GOALS.md; the two grills complement)
+   ▼
+  autonomous-build-loop (S3+)   ──►  drains GOALS.md continuously
+```
+
+Standalone entry points are first-class: bring a PRD from elsewhere (Notion, Linear, a
+doc) and start at `prd-to-screens` or `idea-to-loop`. Already have HTML mockups and just
+want the loop wired up? Drop into `auto-loop-bootstrap` directly. Each skill defends its
+own exit gate, so cherry-picking the pipeline is safe.
 
 Canonical stage defs: [`autonomous-build-loop/references/lifecycle-stages.md`](./autonomous-build-loop/references/lifecycle-stages.md).
-
-### Optional design pass: `prd-to-screens` (slots between S0 and S1)
-
-`prd-to-screens` is an optional but high-leverage detour after the PRD is written and
-before the tech stack is picked. It walks you through screen inventory → user workflows →
-wireframes → approved HTML mockups with shared mock data. The approved HTML becomes the
-visual spec S1/S2/S3 build against — drastically cheaper than catching missing surfaces or
-broken journeys after real code is written. Runs standalone if you brought a PRD from
-elsewhere (Notion, Linear, a doc).
 
 ## Roadmap
 
@@ -98,7 +117,7 @@ claude
 > I have an idea for <X>, run idea-to-loop to build it
 ```
 
-`idea-to-loop` grills you for scope, picks the tech stack (auto-research by default, super-reviewer-vetted), scaffolds a runnable bare-bones app, then invokes `auto-loop-bootstrap` to lay down loop machinery and hand off.
+Under the hood, `idea-to-loop` invokes `grill-to-prd` to produce `docs/PRD.md` via a persona-aware interview (Technical / Designer / Vibe lanes), then optionally runs `prd-to-screens` for an approved set of HTML mockups before tech-stack pick, then picks the stack (auto-research by default, super-reviewer-vetted), scaffolds a runnable bare-bones app, and invokes `auto-loop-bootstrap` to lay down loop machinery and hand off.
 
 **Brownfield (existing repo):**
 
@@ -112,6 +131,11 @@ The `auto-loop-bootstrap` skill audits the repo, interviews you for a backlog (v
 `grill-me`) when `GOALS.md` is missing, and scaffolds `CLAUDE.md`, `GOALS.md`,
 `ARCHITECTURE.md`, `.loop/state.json`, and `logs/`. **Review the generated `GOALS.md`** —
 that backlog is what the loop drains, top to bottom.
+
+If the brownfield repo also lacks `docs/PRD.md` and you want one as part of bootstrap,
+run `grill-to-prd` **before** `auto-loop-bootstrap` — the two grills produce different
+artifacts (PRD = what this thing is, GOALS.md = drain order for what to build next) and
+both can run on the same repo.
 
 ### 2. Push to a public GitHub repo
 
@@ -165,35 +189,34 @@ claude-skills/
 ├── README.md
 ├── ROADMAP.md                    strategic plan of record (milestones M0–M5)
 ├── LICENSE                       (CC BY 4.0)
-├── grill-to-prd/                 skill source
+├── CLAUDE.md                     repo-level agent guidance (use gh for GitHub)
+├── auto-loop-bootstrap/          skill source — brownfield loop bootstrap
+│   ├── SKILL.md
+│   ├── assets/
+│   └── references/
+├── autonomous-build-loop/        skill source — the loop runtime (S3+)
+│   ├── SKILL.md
+│   └── references/
+├── grill-to-prd/                 skill source — persona-aware PRD interview
 │   ├── SKILL.md
 │   ├── assets/templates/         persona-specific PRD templates
 │   └── references/               persona probe + question banks + synthesis
-├── idea-to-loop/                 skill source
-│   ├── SKILL.md
-│   └── references/
-├── autonomous-build-loop/        skill source
-│   ├── SKILL.md
-│   └── references/
-├── auto-loop-bootstrap/          skill source
+├── idea-to-loop/                 skill source — greenfield S0 → S1 → S2
 │   ├── SKILL.md
 │   ├── assets/
 │   └── references/
-├── idea-to-loop/                 skill source
-│   ├── SKILL.md
-│   ├── assets/
-│   └── references/
-├── prd-to-screens/               skill source — PRD → HTML mockups
+├── prd-to-screens/               skill source — PRD → approved HTML mockups
 │   ├── SKILL.md
 │   ├── assets/templates/         page.html, mock-data.js, etc
 │   └── references/               p1-intake … p6-walkthrough
 ├── scripts/
 │   └── build.sh                  package all skills into dist/
 └── dist/                         packaged .skill files (built from source)
+    ├── auto-loop-bootstrap.skill
+    ├── autonomous-build-loop.skill
     ├── grill-to-prd.skill
     ├── idea-to-loop.skill
-    ├── autonomous-build-loop.skill
-    └── auto-loop-bootstrap.skill
+    └── prd-to-screens.skill
 ```
 
 ## Development workflow
