@@ -4,14 +4,22 @@
 
 ## What was built
 
-A fourth skill (`grill-to-prd`) that fills the gap referenced by `idea-to-loop`'s S0 stage — the missing implementation of the `grill-me` / `to-prd` chain. Adds **persona-aware** interviewing across three lanes (Technical / Designer / Vibe) and writes `docs/PRD.md` from a lane-matching template. Two commits land it:
+A fourth skill (`grill-to-prd`) that fills the gap referenced by `idea-to-loop`'s S0 stage — the missing implementation of the `grill-me` / `to-prd` chain. Adds **persona-aware** interviewing across three lanes (Technical / Designer / Vibe) and writes `docs/PRD.md` from a lane-matching template.
 
-| Commit | What it shipped |
-|---|---|
-| `89b444f` | `grill-to-prd/SKILL.md`, 6 references (`codebase-context`, `persona-probe`, three question banks, `prd-synthesis`), 3 PRD templates, README update, `idea-to-loop/s0` discoverability note, dist rebuild |
-| `4f4cc3b` | Phase 3 flow fix — inline grill is the default; brainstorming is opt-in with a brief that prevents its `writing-plans` terminal state from short-circuiting Phase 4; Phase 6 decision-log clarification |
+Landed as PR [#29](https://github.com/radroid/claude-skills/pull/29), squash-merged to `main` as commit [`795a88f`](https://github.com/radroid/claude-skills/commit/795a88f). What shipped:
+
+- `grill-to-prd/SKILL.md` — 6-phase workflow (context → persona → grill → synth → review → handoff)
+- `grill-to-prd/references/` — `codebase-context`, `persona-probe`, three question banks (technical/designer/vibe), `prd-synthesis`
+- `grill-to-prd/assets/templates/` — three PRD shapes (Technical / Designer / Vibe)
+- `README.md` — skill table + install paths + standalone quick-start
+- `idea-to-loop/references/s0-alignment-and-scope.md` — discoverability note pointing at the consolidated path
+- `dist/grill-to-prd.skill` — built artifact
 
 The repo now ships **four skills**: `grill-to-prd` (this PRD-production interview), `idea-to-loop` (greenfield), `auto-loop-bootstrap` (brownfield), `autonomous-build-loop` (loop runtime, S3+). All three downstream skills now have a real, callable PRD-producer instead of a chain of aspirational skill names.
+
+### Phase 3 flow conflict — caught pre-merge
+
+Initial draft of Phase 3 invoked `superpowers:brainstorming` as the default. Advisor review caught the conflict: brainstorming's terminal state is `Invoke writing-plans skill` (see brainstorming SKILL.md, step 9). Wrapping it as default would have caused brainstorming to write its own spec to `docs/superpowers/specs/YYYY-MM-DD-*.md` (a second artifact the user didn't ask for) and short-circuited Phase 4 by jumping into `writing-plans` before `grill-to-prd` could synthesize `docs/PRD.md`. Pre-merge fix: inline grill becomes the default; brainstorming is opt-in only when the user explicitly asks for a design pass, and gets a brief that suppresses both the spec-write and the `writing-plans` transition. Documented in `SKILL.md` § "Required skill check" and Phase 3 § "Optional — brainstorming pass before synthesis."
 
 ## Trace-through — three hypothetical builders
 
@@ -143,17 +151,6 @@ $ grep -A1 "grill-to-prd" idea-to-loop/references/s0-alignment-and-scope.md | he
 
 Annotation added; existing S0 workflow remains intact as fallback.
 
-## Phase 3 flow conflict — caught and fixed
-
-Initial draft (commit `89b444f`) had Phase 3 invoking `superpowers:brainstorming` as the default. Advisor review caught the conflict: brainstorming's terminal state is `Invoke writing-plans skill` (see brainstorming SKILL.md, step 9, and the explicit *"The terminal state is invoking writing-plans"* assertion). Wrapping it as default would have:
-
-1. Caused brainstorming to write its own spec to `docs/superpowers/specs/YYYY-MM-DD-*.md` — second artifact the user didn't ask for.
-2. Short-circuited Phase 4 by jumping into `writing-plans` before `grill-to-prd` could synthesize `docs/PRD.md`.
-
-Fix (commit `4f4cc3b`): inline grill becomes the default; brainstorming is opt-in only when the user explicitly requests a design pass, and gets a brief that suppresses both the spec-write and the `writing-plans` transition.
-
-Documented in `SKILL.md` § "Required skill check" and Phase 3 § "Optional — brainstorming pass before synthesis."
-
 ## Known gaps / follow-ups
 
 None are M-grill-to-prd blockers; all are reasonable next-iter work.
@@ -167,7 +164,8 @@ None are M-grill-to-prd blockers; all are reasonable next-iter work.
 ## What's next
 
 - **Live trial run.** Pick a real idea (yours or anyone's) and run `grill-to-prd` end-to-end. Diff the output PRD against what the human would've written cold. Tighten question banks based on what got asked vs. what mattered.
-- **Update `auto-loop-bootstrap` to invoke `grill-to-prd` for PRD work** (separate from its current `grill-me` invocation for backlog work). The two grills serve different purposes — PRD vs. GOALS.md backlog — and both can coexist.
+- ~~Update `auto-loop-bootstrap` to invoke `grill-to-prd` for PRD work.~~ **Done in PR #30** — added a discoverability blockquote to `auto-loop-bootstrap/SKILL.md` Phase 2 and `references/grilling-guide.md`, distinguishing the PRD-grill from the backlog-grill.
+- **Build-script hygiene.** `./scripts/build.sh` rebuilds every skill on every run, which dirties unrelated dist binaries any time one skill is edited. Worth a small enhancement to skip skills whose source hasn't changed since the existing dist file's mtime.
 - **Roadmap slot.** This skill isn't in the current ROADMAP milestones (M0–M5). If it stabilises via live runs, add a row under M3 or M4 — wherever PRD-production discipline becomes load-bearing for the multi-loop work.
 
 ## Regression guard
