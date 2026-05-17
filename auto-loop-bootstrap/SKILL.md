@@ -11,6 +11,20 @@ Prepare a repo so the autonomous build loop can run. The output is a self-drivin
 
 Pairs with the `autonomous-build-loop` skill (which defines per-iter behavior). This skill sets up the static files; the other skill defines the runtime protocol.
 
+## Two invocation modes
+
+**Detect mode BEFORE Phase 1.** Either signal sets greenfield-handoff mode:
+
+- `.loop/state.json` exists with `"stage": "S2"` (idea-to-loop wrote it on entry to S2)
+- `docs/PRD.md` exists AND `ARCHITECTURE.md` (at repo root) is non-trivial (not a template stub)
+
+| Mode | Trigger | Behavior |
+|---|---|---|
+| **Brownfield** (default) | Neither signal present | Existing 8-phase workflow below — grill for backlog, scaffold all templates, smoke-test |
+| **Greenfield handoff** | Either signal present | **Skip Phase 2** (grilling — backlog already exists). **Skip Phase 4 substitutions for** `GOALS.md` / `ARCHITECTURE.md` / `PLAN.md` (idea-to-loop wrote them). DO run remaining Phase 4 actions (CLAUDE.md protocol-section append, `logs/` skeleton, `.loop/state.json` S2→S3 rewrite, `scripts/auto-loop.py` drop), 5 (.gitignore + settings), 6 (initial commit), 7 (smoke), 8 (hand-off). State transition: rewrite `.loop/state.json` → `"stage": "S3"`, `"pr_mode": true`, `"pr_size_policy": "fat"`, `"iter": 0`. |
+
+In both modes, the exit state is identical: a loop-ready repo with `.loop/state.json` at `"stage": "S3"`.
+
 ## Workflow
 
 Run these phases in order. Stop early if a phase exit-criterion isn't met.
@@ -36,6 +50,8 @@ Report the audit to the user as a checklist. Anything missing → flag as needin
 
 ### Phase 2 — Extract requirements (only if GOALS.md missing or sparse)
 
+**Skip entirely in greenfield-handoff mode** — idea-to-loop already produced GOALS.md.
+
 If GOALS.md is missing OR has fewer than 3 actionable items, the loop has nothing to do on wake-up. Before scaffolding, run an interview to extract a real backlog.
 
 **Invoke the `grill-me` skill** with a brief like: "Interview me to flesh out a build backlog for autonomous looping in this repo. We need 8–15 concrete, independently-shippable features ordered roughly by phase. Stress-test for: dependencies between features, MVP scope vs. nice-to-haves, what's already done vs. truly remaining, and any external blockers (API keys, design decisions, third-party signoffs)."
@@ -43,6 +59,8 @@ If GOALS.md is missing OR has fewer than 3 actionable items, the loop has nothin
 If `grill-me` isn't available, fall back to `superpowers:brainstorming` or run a manual Q&A loop covering: (1) what the project IS, (2) what's already built, (3) what the next 2–3 phases of features look like, (4) any external blockers. See `references/grilling-guide.md` for question banks.
 
 The interview output becomes the seed for `GOALS.md` in Phase 4. Format per `references/backlog-format.md`.
+
+> **PRD-grilling is a separate skill.** If the brownfield repo also lacks `docs/PRD.md` (or it's stub/sparse) and the user wants a written PRD as part of bootstrap, invoke `grill-to-prd` **before** this Phase 2 backlog grill. The PRD-grill writes `docs/PRD.md` via a persona-aware interview (Technical / Designer / Vibe); the backlog-grill (this Phase 2) writes `GOALS.md`. They produce different artifacts and can both run on the same repo. Order: PRD first (scope), then backlog (drain order).
 
 ### Phase 3 — Capture plan tier + budget preferences
 
@@ -55,6 +73,8 @@ Ask the user (only if not already known from session context):
 ### Phase 4 — Scaffold missing files
 
 For each missing file, copy from `assets/templates/` into the repo and substitute placeholders. **Never clobber existing content** — if the file exists, leave it; only fill in gaps. For CLAUDE.md specifically: if it exists but lacks the protocol section, APPEND the section (do not rewrite the file).
+
+In greenfield-handoff mode, `GOALS.md` / `ARCHITECTURE.md` / `PLAN.md` already exist from idea-to-loop — the never-clobber rule already protects them. For `.loop/state.json`, **rewrite** rather than skip: idea-to-loop wrote it at `"stage": "S2"`; this skill flips it to `"stage": "S3"` and fills in `pr_mode` + `pr_size_policy` + resets `iter` to 0. This rewrite is the atomic handoff documented in `idea-to-loop/SKILL.md`.
 
 Templates to copy (with substitutions):
 

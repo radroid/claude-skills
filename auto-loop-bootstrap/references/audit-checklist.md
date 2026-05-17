@@ -2,6 +2,22 @@
 
 Run these from the repo root and report findings as a checklist before scaffolding.
 
+## Greenfield-handoff detection (run FIRST)
+
+Determines whether this is a direct brownfield bootstrap or the S2→S3 handoff from `idea-to-loop`. Sets behavior for Phase 2 (skip grilling if handoff) and Phase 4 (preserve existing GOALS / ARCHITECTURE / PLAN; rewrite `.loop/state.json` to S3).
+
+```bash
+# Signal 1: idea-to-loop wrote .loop/state.json at S2
+test -f .loop/state.json && grep -q '"stage": *"S2"' .loop/state.json && echo "HANDOFF (signal: state.json S2)"
+
+# Signal 2: PRD + non-trivial ARCHITECTURE (repo root)
+if [ -f docs/PRD.md ] && [ -f ARCHITECTURE.md ] && [ "$(wc -l < ARCHITECTURE.md)" -gt 20 ]; then
+  echo "HANDOFF (signal: PRD.md + ARCHITECTURE.md > 20 lines)"
+fi
+```
+
+Either signal → greenfield-handoff mode. Neither → brownfield (default). See `SKILL.md` "Two invocation modes."
+
 ## File existence
 
 ```bash

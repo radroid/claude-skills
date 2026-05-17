@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{{PAGE_TITLE}} · {{APP_NAME}}</title>
+
+  <!--
+    prd-to-screens baseline mockup.
+    Self-contained: open in browser, no build step.
+    Replace {{PLACEHOLDERS}} per screen.
+  -->
+
+  <!-- Tailwind via CDN — fine for mockups; swap for real config in S2. -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- Shared mock data — read MOCK.* from any screen. -->
+  <script src="./assets/mock-data.js"></script>
+
+  <!-- Optional shared overrides; mostly empty. -->
+  <link rel="stylesheet" href="./assets/styles.css">
+
+  <style>
+    :root {
+      --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+    }
+    html, body { font-family: var(--font-sans); }
+  </style>
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'] },
+          colors: {
+            // Override per intake design vibe. Defaults are a neutral B2B palette.
+            brand: {
+              50:  '#f5f7fa',
+              100: '#e4e9f0',
+              500: '#3b5bdb',
+              600: '#3247b3',
+              700: '#28398f',
+            }
+          }
+        }
+      }
+    }
+  </script>
+</head>
+<body class="min-h-screen bg-slate-50 text-slate-900">
+
+  <!-- TOPNAV — keep consistent across screens; edit nav items per inventory -->
+  <header class="border-b border-slate-200 bg-white">
+    <div class="mx-auto max-w-7xl px-6 h-14 flex items-center justify-between">
+      <a href="./index.html" class="font-semibold text-slate-900">{{APP_NAME}}</a>
+      <nav class="flex items-center gap-6 text-sm text-slate-600">
+        <a href="./dashboard.html" class="hover:text-slate-900">Dashboard</a>
+        <a href="./invoices.html" class="hover:text-slate-900">Invoices</a>
+        <a href="./clients.html" class="hover:text-slate-900">Clients</a>
+      </nav>
+      <div class="flex items-center gap-3">
+        <a href="./invoice-new.html"
+           class="rounded-md bg-brand-500 px-3 py-1.5 text-sm font-medium text-white hover:bg-brand-600">
+          + New
+        </a>
+        <a href="./settings.html"
+           class="h-8 w-8 rounded-full bg-slate-200 flex items-center justify-center text-sm">
+          👤
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <!-- PAGE BODY — replace per screen. -->
+  <main class="mx-auto max-w-7xl px-6 py-8">
+    <h1 class="text-2xl font-semibold mb-6">{{PAGE_TITLE}}</h1>
+    <div id="content" class="text-slate-700">
+      <!-- per-screen content goes here -->
+    </div>
+  </main>
+
+  <!-- per-screen script: read MOCK.* and render. -->
+  <script>
+    // Example pattern. Replace per screen.
+    document.getElementById('content').textContent =
+      'Replace this page body — wire data from window.MOCK.';
+  </script>
+</body>
+</html>

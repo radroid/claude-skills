@@ -2,6 +2,8 @@
 
 When GOALS.md is missing or sparse, the loop has nothing to do. Run a focused interview to extract 8–15 shippable features before scaffolding.
 
+> **Backlog vs. PRD — different grills.** This doc is about the **backlog grill** (output: GOALS.md, 8–15 vertical-slice features). For the **PRD grill** (output: `docs/PRD.md` via a persona-aware interview across Technical / Designer / Vibe lanes), use the `grill-to-prd` skill instead. The two grills serve different artifacts and can both run for the same project — backlog grill for what-to-build-next, PRD grill for what-this-thing-is.
+
 ## How to invoke the `grill-me` skill
 
 Open with this brief (substitute project name):
