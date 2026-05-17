@@ -1,6 +1,6 @@
 ---
 name: grill-to-prd
-description: Interview a builder end-to-end to produce a PRD they can hand to an autonomous build loop. Use when the user says "/grill-to-prd", "grill me about my idea", "interview me", "help me write a PRD", "I have an idea but need to flesh it out", "turn my idea into a spec", or asks for a Technical / Designer / Vibe PRD. Detects greenfield vs brownfield, probes builder expertise (Technical / Designer / Vibe lanes), audits the existing codebase when present, wraps superpowers:brainstorming with persona-specific framing, then writes docs/PRD.md from the lane-matching template. Also serves as the missing implementation of the grill-me / to-prd chain referenced by idea-to-loop's S0 stage — callable standalone or as S0's PRD-production step. Never clobbers an existing PRD without offering update vs. replace.
+description: Interview a builder end-to-end to produce a PRD they can hand to an autonomous build loop. Use when the user says "/grill-to-prd", "grill me about my idea", "interview me", "help me write a PRD", "I have an idea but need to flesh it out", "turn my idea into a spec", or asks for a Technical / Designer / Vibe PRD. Detects greenfield vs brownfield, probes builder expertise (Technical / Designer / Vibe lanes), audits the existing codebase when present, runs a persona-specific inline grill, then writes docs/PRD.md from the lane-matching template. Also serves as the missing implementation of the grill-me / to-prd chain referenced by idea-to-loop's S0 stage — callable standalone or as S0's PRD-production step. Optionally invokes superpowers:brainstorming for a structured design pass when the user requests one. Never clobbers an existing PRD without offering update vs. replace.
 ---
 
 # Grill to PRD
@@ -31,7 +31,7 @@ Output: `docs/PRD.md` (handed off to the loop or to the human for review).
 
 ## Required skill check
 
-This skill assumes `superpowers:brainstorming` is available — it does the per-question iteration loop and the HARD-GATE on user approval. If it's missing, fall back to the inline Q&A loop described under "Fallback mode" below. Do not block on it.
+No external skill is load-bearing. The grill runs inline by default — see Phase 3. `superpowers:brainstorming` is **optional**, and only invoked when the user explicitly asks for a design-pass before synthesis (covered under "Optional brainstorming pass" in Phase 3). Treating it as required would create a flow conflict: brainstorming's terminal state is `writing-plans`, which would short-circuit this skill's own PRD synthesis.
 
 ## Workflow
 
@@ -53,24 +53,33 @@ Ask the three classifier questions from `references/persona-probe.md`. Output: a
 
 Mixed signals are normal — pick the dominant lane and note the secondary one. The dominant lane picks the template; secondary lane questions get sprinkled into Phase 3.
 
-### Phase 3 — Grill loop
+### Phase 3 — Grill loop (inline by default)
 
-**Preferred path: invoke `superpowers:brainstorming`** with a brief that pins down the persona lane, the context summary from Phase 1, and the persona-specific framing. Example brief:
+Read `references/question-bank-{persona_lane}.md` and walk it top-to-bottom **in this same conversation**, asking 1–3 questions per turn. Mix in secondary-lane questions where they came up in Phase 2. Use multiple-choice via `AskUserQuestion` where the harness supports it and the answer space is enumerable; otherwise ask in plain text.
+
+Stop when the **exit checklist** at the bottom of the question bank is satisfied. Don't run every question if the user is fluent — the checklist is the goal, not the questionnaire.
+
+Hard rules:
+- **Never** ask a question whose answer is already in the Phase 1 context summary.
+- One question bank per run — do not switch lanes mid-grill. (If the user redirects lanes, restart Phase 3 with the new bank.)
+- One conversation, one PRD — don't spawn subagents for the grill itself; the user is interactive and the back-and-forth matters.
+
+#### Optional — brainstorming pass before synthesis
+
+Only when the user explicitly asks for a structured design pass (e.g. "let's brainstorm the architecture before you write the PRD"), invoke `superpowers:brainstorming` with this brief:
 
 ```
-You are running grill-to-prd Phase 3 for a {persona_lane} builder.
-Context summary from Phase 1: {summary}
-Use the question bank in references/question-bank-{persona_lane}.md as the question
-spine — ask one question at a time, multiple choice when possible. Do NOT propose
-an implementation. Goal: produce enough material for the Phase 4 PRD synthesis.
-End the brainstorming pass when the question bank's exit checklist is satisfied.
+grill-to-prd has already grilled the user on {persona_lane}. Context summary:
+{summary}. Grill captures so far: {captures}.
+
+Run a focused brainstorming pass on the architecture / approach only. DO NOT
+write a design doc to docs/superpowers/specs/ — grill-to-prd writes its own
+PRD to docs/PRD.md. DO NOT invoke writing-plans at the end — return control
+to grill-to-prd. Your terminal state is "design discussion concluded";
+grill-to-prd will fold the conclusions into the PRD.
 ```
 
-`superpowers:brainstorming` will iterate one question at a time and gate on user approval before letting you advance — that's the whole point of wrapping it.
-
-**Fallback mode: if `superpowers:brainstorming` is unavailable**, run the loop inline. Read `references/question-bank-{persona_lane}.md` and walk it top-to-bottom, asking 1–3 questions per turn, mixing in secondary-lane questions where they came up in Phase 2. Stop when the exit checklist at the bottom of the question bank is satisfied.
-
-Hard rule across both paths: **never** ask a question whose answer is already in the Phase 1 context summary.
+This is opt-in because brainstorming's default terminal state is `writing-plans`, which would short-circuit Phase 4. The opt-in brief above tells brainstorming explicitly not to advance.
 
 ### Phase 4 — Synthesize the PRD
 
@@ -107,7 +116,7 @@ Three handoff modes — pick based on how this skill was invoked:
 | Called from `idea-to-loop` S0 | Return control to `idea-to-loop` — it owns the next step (`prototype` skill invocation). Do not invoke `prototype` yourself. |
 | Called from `auto-loop-bootstrap` Phase 2 | Return control — bootstrap owns the `GOALS.md` derivation from this PRD. |
 
-If `.loop/state.json` exists, record `checkpoints.prd-accepted: "passed"` and append a one-line entry to `docs/decision-log.md` ("PRD accepted at iter N, persona lane: X") before returning.
+If `.loop/state.json` exists, record `checkpoints.prd-accepted: "passed"`. If a project-level `docs/decision-log.md` already exists (the append-only judgment-call log seeded by `idea-to-loop/references/decision-log.md`), append a one-line entry — "PRD accepted at iter N, persona lane: X". **Do not create** the decision log if it doesn't exist; that's a downstream skill's job, not this one's.
 
 ## Hard rules
 
@@ -137,4 +146,4 @@ If `.loop/state.json` exists, record `checkpoints.prd-accepted: "passed"` and ap
 
 - `idea-to-loop/references/s0-alignment-and-scope.md` — the S0 stage this skill plugs into
 - `auto-loop-bootstrap/references/grilling-guide.md` — the backlog-grilling sibling (not PRD-shaped; complements this skill)
-- `superpowers:brainstorming` — the one-question-at-a-time engine this skill wraps in Phase 3
+- `superpowers:brainstorming` — optionally invoked in Phase 3 only when the user explicitly asks for a structured design pass before synthesis
