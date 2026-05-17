@@ -1,6 +1,8 @@
 # Mobbin research patterns
 
-How to query the Mobbin MCP server effectively. Mobbin exposes a **unified natural-language search** across 600k+ shipped app screens — there are no discrete `get_paywall(app=X)`-style tools. You ask in plain language; the server returns curated screen references, app metadata, and pattern annotations.
+How to query the Mobbin MCP server effectively. Per the official docs (`docs.mobbin.com/mcp`), the interaction model is **natural language** — you "ask Claude to search Mobbin directly" with prompts like *"Search Mobbin for onboarding screens from banking apps"*; Claude routes your request through whatever tools the MCP server exposes and inlines image responses. The user-facing surface is plain English over 600k+ shipped app screens, with curated pattern annotations and app metadata in the response.
+
+Don't try to construct synthetic tool-call payloads — Mobbin's docs don't enumerate the underlying tool schema, and your job is to phrase the *query* well, not to call a specific tool. The patterns below are about *how to ask*, not *what to call*.
 
 ## Setup (one-time, per machine)
 
