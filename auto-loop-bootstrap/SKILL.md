@@ -21,7 +21,7 @@ Pairs with the `autonomous-build-loop` skill (which defines per-iter behavior). 
 | Mode | Trigger | Behavior |
 |---|---|---|
 | **Brownfield** (default) | Neither signal present | Existing 8-phase workflow below — grill for backlog, scaffold all templates, smoke-test |
-| **Greenfield handoff** | Either signal present | **Skip Phase 2** (grilling — backlog already exists). **Skip Phase 4 substitutions for** `GOALS.md` / `ARCHITECTURE.md` / `PLAN.md` (idea-to-loop wrote them). DO run remaining Phase 4 actions (CLAUDE.md protocol-section append, `logs/` skeleton, `.loop/state.json` S2→S3 rewrite, `scripts/auto-loop.py` drop), 5 (.gitignore + settings), 6 (initial commit), 7 (smoke), 8 (hand-off). State transition: rewrite `.loop/state.json` → `"stage": "S3"`, `"pr_mode": true`, `"pr_size_policy": "fat"`, `"iter": 0`. |
+| **Greenfield handoff** | Either signal present | **Skip Phase 2** (grilling — backlog already exists). **Skip Phase 4 substitutions for** `GOALS.md` / `ARCHITECTURE.md` / `PLAN.md` (idea-to-loop wrote them). DO run remaining Phase 4 actions (CLAUDE.md protocol-section append, `logs/` skeleton, `.loop/state.json` S2→S3 rewrite, `scripts/auto-loop.py` drop), 5 (.gitignore + settings), 6 (initial commit), 7 (smoke), 8 (hand-off). State transition: rewrite `.loop/state.json` → `"stage": "S3"`, `"pr_mode": false`, `"pr_size_policy": "fat"`, `"iter": 0`. Phase 3 can still flip `pr_mode` to `true` if the user opts in. |
 
 In both modes, the exit state is identical: a loop-ready repo with `.loop/state.json` at `"stage": "S3"`.
 
@@ -96,11 +96,20 @@ Auto-detect, then confirm:
 
 Ask the user to confirm. Brownfield repos with existing app code + a plan default to `S3` — that's the case for most real-world bootstraps. If the repo is past S3 territory but no M4 complexity-signal infra exists yet, stay at S3; M4 will retro-detect.
 
-**Base branch** (the integration target for PRs):
+**Commit mode** (write the chosen value into `.loop/state.json` `pr_mode`):
+
+| Mode | `pr_mode` | Behavior |
+|---|---|---|
+| **Direct-commit (default, recommended)** | `false` | Loop commits straight to the active branch. Push cadence: every 5 iters or 8 commits ahead. One linear history, no PR overhead, no auto-merge churn. Best for solo / small-team repos and for any repo where the active branch *is* the integration target. |
+| **Per-feature PR** | `true` | Each feature lands on its own `loop/iter-NNN-<slug>` branch, gets reviewed by `coderabbit` (or the fallback reviewer) + the super-reviewer, then merges into `$BASE`. Best for repos with required CI checks, multiple humans reviewing, or branch protection rules. |
+
+Default to direct-commit unless the user explicitly wants PR mode. Ask if you're unsure. Record the choice in `.loop/state.json`.
+
+**Base branch** (the integration target — either the branch the loop commits to in direct-commit mode, or the PR target in `pr_mode: true`):
 
 1. Default to the current branch if it is not `main` (e.g. `development`); otherwise default to `main`.
 2. Cross-check with the GitHub default branch if a remote exists (`gh repo view --json defaultBranchRef`). If they differ, surface both and confirm with the user.
-3. Record the chosen branch as `.loop/state.json` `base_branch`.
+3. Record the chosen branch as `.loop/state.json` `base_branch`. In direct-commit mode, the loop runs on this branch directly.
 
 **Plan tier + budget** (only if not known from session context): Max 20x / Max 5x / Pro / API. Sets the driver budget defaults — see `references/plan-tier-defaults.md`.
 

@@ -6,19 +6,17 @@ auto-merged on its own.
 
 ## When it applies
 
+**Opt-in mode.** The bootstrap default is `pr_mode: false` (direct-commit to the active branch). This file applies only when the user explicitly enabled PR mode — typically for repos with required CI checks, multiple reviewers, or branch protection rules.
+
 Gated by `.loop/state.json`:
 
 ```jsonc
 { "pr_mode": true, "pr_size_policy": "fat", "base_branch": "main" }   // fat (S3) | scoped (S4)
 ```
 
-- `pr_mode: false` or no `.loop/state.json` → **legacy mode**: commit to the active branch per
-  `per-iteration-checklist.md` steps 10–11. Nothing below applies.
-- `pr_mode: true` → this file replaces steps 10–11 of the per-iteration checklist and Phase 5 of
-  `fat-iter-mode.md`.
-- `base_branch` — the integration branch PRs target. Defaults to `main`. The env var
-  `LOOP_BASE_BRANCH` (set by `auto-loop.py`) overrides; if unset, read `base_branch` from
-  `.loop/state.json`; if absent, fall back to `main`. Below, `$BASE` refers to this branch.
+- `pr_mode: false` or no `.loop/state.json` (**default**) → direct-commit to the active branch per `per-iteration-checklist.md` steps 10–11. Nothing below applies.
+- `pr_mode: true` (opt-in) → this file replaces steps 10–11 of the per-iteration checklist and Phase 5 of `fat-iter-mode.md`.
+- `base_branch` — the integration branch PRs target. Defaults to `main`. The env var `LOOP_BASE_BRANCH` (set by `auto-loop.py`) overrides; if unset, read `base_branch` from `.loop/state.json`; if absent, fall back to `main`. Below, `$BASE` refers to this branch.
 
 `pr_size_policy` is the PR-size contract, not a feature cap:
 - **`fat`** (S3 default) — lots to build, repo is young; a PR may carry a whole multi-file slice.

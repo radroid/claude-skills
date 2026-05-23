@@ -54,10 +54,10 @@ Update the configured backlog source with `[done|wip|blocked]` for each item tou
 
 Read `pr_mode` from `.loop/state.json`:
 
-- **`pr_mode: true`** → use `feature-pr-mode.md` for steps 10–11 (branch + PR + review + merge per feature against `$BASE`, the configured base branch). Resume at step 12.
-- **`pr_mode: false` / absent** → legacy: `git add -A && git commit -m "iter NNN: <summary>"`. Pre-commit hook fails → fix, re-stage, NEW commit (no `--amend`).
+- **`pr_mode: false` / absent (default)** → direct-commit to the active branch: `git add -A && git commit -m "iter NNN: <summary>"`. Pre-commit hook fails → fix, re-stage, NEW commit (no `--amend`). Push cadence handled in step 11.
+- **`pr_mode: true`** (opt-in) → use `feature-pr-mode.md` for steps 10–11 (branch + PR + review + merge per feature against `$BASE`). Resume at step 12.
 
-## 11. Push cadence (legacy mode only)
+## 11. Push cadence (direct-commit mode only)
 
 If HEAD ahead of upstream AND (≥5 iters since last push OR ≥8 commits ahead) → `git push`. Don't push a dirty tree. Never `--force` / `--no-verify` / amend pushed commits without explicit backlog authorization. Record `Push: ok|skipped|failed — <reason>` in the iter log.
 
