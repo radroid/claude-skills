@@ -29,6 +29,8 @@ Otherwise: warm iter. Default to warm — if uncertain, the cost of an extra che
 
 That is the whole cold-boot read.
 
+After the Tier 1 reads, invoke **`Skill: caveman`** once. This sets the narration style (model-to-model prose, sub-agent prompts) for the rest of the session — warm iters inherit it until auto-compaction. See SKILL.md principle 11 for the carve-out (on-disk artifacts the human reads are NEVER caveman).
+
 ## Tier 1 — warm iter (minimal delta)
 
 The previous iter already read CLAUDE.md, `.loop/state.json`, and the backlog source. Re-reading them costs cache-creation tokens that auto-compact will later have to summarize. Skip them unless you have reason to believe they changed:

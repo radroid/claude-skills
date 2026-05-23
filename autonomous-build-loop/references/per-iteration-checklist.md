@@ -6,8 +6,8 @@ Top-to-bottom every wake-up. One bounded turn → schedule the next via `Schedul
 
 See `tiered-read-strategy.md` — the canonical split.
 
-- **Cold-boot iter** (first iter of session OR first iter after auto-compaction): full Tier 1 read — `CLAUDE.md`, `.loop/state.json`, `logs/latest.md`, and the backlog source named in `.loop/state.json` `backlog_source` (default `GOALS.md`).
-- **Warm iter** (subsequent iter in the same session, pre-compaction): minimal read — `logs/latest.md` (your previous handoff) + the backlog source (supervisor may have edited it). Skip `CLAUDE.md` and `.loop/state.json` unless `latest.md` signals they changed (stage transition, mode flip, etc.).
+- **Cold-boot iter** (first iter of session OR first iter after auto-compaction): full Tier 1 read — `CLAUDE.md`, `.loop/state.json`, `logs/latest.md`, and the backlog source named in `.loop/state.json` `backlog_source` (default `GOALS.md`). After the reads, invoke `Skill: caveman` once to set narration style for the rest of the session (see SKILL.md principle 11 + `tiered-read-strategy.md`).
+- **Warm iter** (subsequent iter in the same session, pre-compaction): minimal read — `logs/latest.md` (your previous handoff) + the backlog source (supervisor may have edited it). Skip `CLAUDE.md` and `.loop/state.json` unless `latest.md` signals they changed (stage transition, mode flip, etc.). Caveman style is retained — do NOT re-invoke.
 - **Tier 2 on trigger. Tier 3 never.** Missing Tier-1 file on a cold boot → create a stub before doing other work.
 
 ## 2. Tooling preflight

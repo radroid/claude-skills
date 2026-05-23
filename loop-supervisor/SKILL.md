@@ -53,6 +53,8 @@ The supervisor's tiered read overlaps with the impl agent's but is narrower (no 
 
 **Tier 3 (never):** archived iter logs.
 
+**Cold-boot iter only** (first iter of the session OR first iter after auto-compaction): after the Tier 1 reads, invoke `Skill: caveman` once. This compresses model-to-model narration (in-iter prose between tool calls) for the rest of the session — warm iters retain the style. **Carve-out:** the backlog source, `logs/supervisor/iter-NNN.md`, and `logs/blocks.md` entries are all human-read — NEVER caveman. Caveman the agent's reasoning prose, not the artifacts.
+
 ### 2. Reconcile: what shipped vs. what was claimed
 
 Compare `logs/iter-NNN.md` "Features landed" against the backlog source. Discrepancies to flag:

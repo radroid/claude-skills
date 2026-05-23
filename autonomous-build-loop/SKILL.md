@@ -35,6 +35,8 @@ Read `references/per-iteration-checklist.md` at the start of every iteration. Us
 
 10. **Scaffolded defaults are not safe defaults.** In the first iter of any new project, audit framework-generated config (`tsconfig` strict flags, ESLint rules, persistence-layer connection lifecycle, parse-boundary validation) and harden it before building features. Modern scaffolders (`npm create vite`, `create-next-app`, etc.) ship intentionally minimal defaults that lag the community's best-practice posture — e.g. Vite's current React+TS template does not enable `tsconfig "strict": true`, IndexedDB tutorials show per-op `open()`+`close()` instead of a cached singleton-promise, and JSON-parse boundaries habitually `as unknown as T` without entity validation. Downstream code inherits every gap silently. When in doubt about the canonical posture for a stack, web-research it before locking the config in.
 
+11. **Narrate in caveman mode; write artifacts in normal English.** The agent's in-iter prose (between tool calls, sub-agent dispatch prompts, internal reasoning narration) is model-to-model — the user is AFK and isn't reading it, but it bloats the running context until auto-compaction. Invoke `Skill: caveman` on the cold-boot iter (see `references/tiered-read-strategy.md`); warm iters retain the style until compaction. **Carve-out — these are human-read, never caveman:** `logs/latest.md`, `logs/iter-NNN.md`, `logs/blocks.md`, `GOALS.md` (or any other backlog source the human edits), commit messages, PR titles/bodies. On-disk artifacts follow their format references (`log-hygiene.md`, etc.), not caveman.
+
 ## Quick-start: starting an iteration
 
 1. Read `references/per-iteration-checklist.md` — the 13-step procedure.
