@@ -87,4 +87,4 @@ M2 extends it with `stage_status`, `checkpoints`, `complexity_signal`. Full sche
 - `super-reviewer.md` — what vets every auto-delegated checkpoint and every S3+ feature PR.
 - `feature-pr-mode.md` — how PRs are shaped per stage (`pr_size_policy`).
 - `per-iteration-checklist.md` — full `.loop/state.json` schema + step-by-step iter procedure.
-- `tiered-read-strategy.md` — `.loop/state.json` is Tier 1 (read every iter).
+- `tiered-read-strategy.md` — `.loop/state.json` is Tier 1 on cold-boot iters (full read); warm iters skip it unless `latest.md` signals a change.

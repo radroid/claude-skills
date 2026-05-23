@@ -1,94 +1,35 @@
-# Auto-loop budget defaults per Claude plan
+# Cadence and model guidance by Claude plan
 
-Claude Code limits are plan-specific and reset on rolling 5-hour windows. Anthropic doesn't expose exact caps via API — these are conservative defaults the auto-loop driver enforces. Adjust after observing real burn rate.
+Claude Code usage limits are plan-specific and reset on rolling 5-hour windows. Anthropic doesn't publish exact caps. Because the loop now runs **in-session** — one Claude Code session, `ScheduleWakeup` between iters — every iter is a warm session that reuses the prompt cache until auto-compact fires. That makes per-iter cost much lower than the previous fresh-session driver, but plan caps still matter.
 
-## Recommended `auto-loop.py` flags by plan
+Use the guidance below to pick a cadence and (optionally) a default model. Tune after observing real burn rate in your CC harness — every message shows its own cost on the status line.
 
-### Max 20x ($200/mo)
+## Max 20x ($200/mo)
 
-```bash
-python3 scripts/auto-loop.py
-```
+**Run continuously.** Self-pace the loop (no fixed `ScheduleWakeup` interval) or use a tight 5–10 minute interval. Opus on every iter is fine. This plan is built for long-horizon agentic work — the loop is the use case.
 
-Built-in defaults work. `--msgs-per-5h 800` (~10% margin under ~900 plan cap), `--min-interval 600`, `--max-interval 3600`, `--max-budget-usd-per-iter 5`.
+> "Start the autonomous build loop." → the skill self-paces.
 
-### Max 5x ($100/mo)
+## Max 5x ($100/mo)
 
-```bash
-python3 scripts/auto-loop.py \
-  --msgs-per-5h 200 \
-  --min-interval 1200 \
-  --max-budget-usd-per-iter 3
-```
+**Use Sonnet for iters, Opus for phase-boundary arch passes.** Set a 15-minute `ScheduleWakeup` cadence so the loop fits comfortably inside the 5-hour rolling cap. The skill's phase-boundary detection can opt up to Opus when the iter is a planning iter rather than a feature iter.
 
-Plan cap is ~225 msgs/5h. Tighter min-interval (20 min) keeps the loop comfortably within bounds and gives more headroom for ad-hoc usage outside the loop.
+## Pro ($20/mo)
 
-### Pro ($20/mo)
+**Tight cadence, Sonnet only.** A 30–60 minute `ScheduleWakeup` interval, capped at ~5 iters per 5-hour window. Pro will throttle aggressively under continuous loop pressure — if you want serious autonomous build velocity, upgrade to Max 5x or 20x. Pro works for overnight runs with conservative scoping.
 
-```bash
-python3 scripts/auto-loop.py \
-  --msgs-per-5h 40 \
-  --min-interval 3600 \
-  --max-budget-usd-per-iter 1.5 \
-  --max-iters 10
-```
+## API pay-as-you-go
 
-Plan cap is ~45 msgs/5h. With 1-hour min-interval, the loop fits ~5 iters per 5h window. Use Max plan if you want to seriously autonomous-build — Pro will throttle aggressively.
+**Token cost-conscious.** Sonnet by default; switch to Opus only when the agent flags a phase boundary or hard architectural iter. Per-iter cost in warm-session mode is typically $0.50–$2 on Sonnet (cache reads dominate), $1.50–$4 on Opus. Watch the harness's per-message cost display and stop the loop when your wallet says so — the loop doesn't track spend.
 
-### API pay-as-you-go
+For API mode, prefer a 10–15 minute `ScheduleWakeup` cadence so the cache stays warm but you don't waste a full input-token bootstrap on each iter.
 
-Use `--max-budget-usd-per-iter` as the primary control. The driver still tracks msg counts, but you'll likely set them very high and let dollar cap be the throttle:
+## How to watch burn rate
 
-```bash
-python3 scripts/auto-loop.py \
-  --msgs-per-5h 10000 \
-  --msgs-per-week 100000 \
-  --max-budget-usd-per-iter 5 \
-  --min-interval 300
-```
+Claude Code's status line shows per-message input/output/cache token counts and a running cost estimate. After the first 3–5 iters of a fresh loop, eyeball:
 
-Add a daily wallet cap by stopping the script at the end of the day and capping `--max-iters` based on `target_daily_dollars / max_budget_usd_per_iter`.
+- **Cache-read ratio.** Should be 60–90% of input tokens once the loop is warm. If it's near 0%, the harness is auto-compacting too often — bump the auto-compact threshold above 40% temporarily.
+- **Output token volume per iter.** Healthy feature iter: 5k–20k. A 1k iter is probably a bookkeeping iter (backlog read, nothing shipped). A 50k+ iter is a fat-iter with parallel sub-agents — expected, but watch cumulative cost.
+- **Iter wall-clock duration.** 4–15 minutes for feature iters, 15–40 minutes for fat-iters. Anything longer often means the agent is stuck in a verification loop.
 
-## Observed burn rate
-
-**CRITICAL — fresh sessions and warm sessions cost very differently. Calibrate before deciding cadence.**
-
-### Warm-session (in-session `ScheduleWakeup` loop, where prompt cache reuses across iters)
-
-- Per-iter cost: $1.50–$4 (Opus 4.x)
-- Cache reads: 70–90% of input tokens
-- This is what the original ARK loop reported
-
-### Fresh-session (`scripts/auto-loop.py`, `claude -p` per iter — DEFAULT FOR THIS REPO)
-
-- Per-iter cost: **$4–$8** on Opus, **$1–$2** on Sonnet 4.x
-- Cache reads: ~0% (each `claude -p` invocation has its own cache window)
-- Cache-creation tokens are paid every iter on the full CLAUDE.md + GOALS.md + ARCHITECTURE.md + logs read. At Opus's $18.75/MTok cache-creation rate, a typical 200–400K-token bootstrap is $3.75–$7.50 BEFORE the iter does any actual work.
-- Per-iter input tokens: 250k–500k (most is the per-iter context bootstrap)
-- Per-iter output tokens: 5k–20k
-- Per-iter duration: 4–15 minutes wall-clock
-
-**Implication:** the script's default `--max-budget-usd-per-iter 10` is intentionally generous to cover Opus iters that bootstrap heavy projects. If you hit "3 consecutive failed iters" and the recorded `cost_usd` values are near 5, your iters are getting truncated by an old (too-low) budget cap.
-
-**Cost reduction lever — switch the per-iter prompt to use Sonnet:** the easiest 4–6× cost cut is to drop `--model sonnet` into the cmd args in `scripts/auto-loop.py`. Sonnet 4.x handles most autonomous-loop iters fine; reserve Opus for phase-boundary arch passes or hard architectural iters that the agent can request mid-loop.
-
-## Tuning loop after first 5 iters
-
-Read `.auto-loop/usage.jsonl` and compute:
-
-```bash
-python3 -c '
-import json, sys
-records = [json.loads(l) for l in open(".auto-loop/usage.jsonl")]
-total_cost = sum(r["cost_usd"] for r in records)
-total_dur = sum(r["duration_s"] for r in records)
-print(f"iters: {len(records)}")
-print(f"total cost: ${total_cost:.2f}")
-print(f"avg cost/iter: ${total_cost/len(records):.2f}")
-print(f"avg duration: {total_dur/len(records):.0f}s")
-print(f"commit rate: {sum(1 for r in records if r[\"committed\"])}/{len(records)}")
-'
-```
-
-If avg cost > budget × 0.8 → drop `--max-budget-usd-per-iter` to force tighter scoping per iter.
-If commit rate < 70% → iters are failing; investigate (likely a CLAUDE.md gap, missing test config, or the agent is hitting permission prompts).
+If the loop is burning faster than you want, stop it (Ctrl-C / new prompt), tighten the cadence, or switch the default model down a tier.

@@ -23,14 +23,14 @@ If the supervisor finds itself wanting to write code, that's a backlog item, not
 
 Run the supervisor in a SECOND Claude Code window on the same repo, after the implementation loop is running. Both share the same git checkout and `.loop/state.json`.
 
-- One window: `python3 scripts/auto-loop.py` (the implementation loop)
-- Other window: this skill on a `/loop 10m /supervise` cadence (or self-paced)
+- One window: the `autonomous-build-loop` skill, in-session (self-paced or `/loop`)
+- Other window: this skill on a `/loop 15m /supervise` cadence (or `ScheduleWakeup` self-pacing)
 
 The supervisor's cadence is independent. A typical interval is 10–30 minutes — long enough that a fresh impl iter has likely landed, short enough to keep the backlog responsive.
 
 ## Per-supervisor-iter procedure
 
-Run this top-to-bottom every wake-up. One bounded turn → exit (or `ScheduleWakeup` if running `/loop`).
+Run this top-to-bottom every wake-up. One bounded turn → `ScheduleWakeup` to continue, or exit if running one-shot.
 
 ### 1. Read state — by tier
 
@@ -95,7 +95,7 @@ Path: `logs/supervisor/iter-NNN.md` (separate iter counter from the impl loop). 
 
 ### 6. End turn
 
-- If running under `/loop` → call `ScheduleWakeup` with the same prompt verbatim (or `<<autonomous-loop-dynamic>>` for the autonomous variant).
+- Default: call `ScheduleWakeup` with the same prompt verbatim (or `<<autonomous-loop-dynamic>>` for the autonomous variant) to continue the supervision loop. Cadence is typically 15 minutes.
 - If running one-shot → exit. The user can re-invoke when desired.
 
 Never start a second supervisor iter in the same turn.
@@ -104,7 +104,7 @@ Never start a second supervisor iter in the same turn.
 
 - **Read-only on code.** No `Edit` / `Write` / `NotebookEdit` against any path under typical source roots. If a denylist is wired up in `.claude/settings.local.json` for this window, the harness enforces it.
 - **Backlog and supervisor logs are the only writeable surfaces.** That's the line.
-- **Never invoke or schedule the implementation loop.** No `claude -p`, no `auto-loop.py` calls. The supervisor and the impl agent share state on disk; they don't call each other.
+- **Never invoke or schedule the implementation loop.** The supervisor and the impl agent share state on disk; they don't call each other. The supervisor only schedules ITSELF via `ScheduleWakeup`.
 - **Never delete impl agent's logs.** Even bad iter logs are evidence; archive (don't delete) at decade rollups.
 - **Never resolve impl-agent decisions for it.** If the impl agent is stuck on a coin-toss-able A vs. B, log a recommendation to `logs/blocks.md` with `**Recommendation:** A — <reason>`. Let the impl agent's tiebreaker rule decide.
 - **Never write code "just this once."** That's how the supervisor becomes a second impl agent. Anything urgent goes into the backlog with `**URGENT**` prefix.
@@ -115,7 +115,7 @@ In the user's second Claude Code window:
 
 1. `cd` to the same repo as the impl loop
 2. Optionally tighten the denylist for THIS window — add `Edit(src/**)`, `Write(src/**)`, etc. — to enforce read-only at the harness layer
-3. Invoke this skill or run `/loop 10m /supervise`
+3. Invoke this skill or run `/loop 15m /supervise`
 
 The impl loop and supervisor must not write the same file in the same iter. The backlog source is the only shared writeable; impl writes `[done]` / `[wip]` markers and the supervisor writes structural curation. A merge race shows up as a git conflict on the backlog file — resolve by re-reading both intentions.
 

@@ -9,7 +9,7 @@ Skills for [Claude Code](https://claude.com/claude-code).
 | [`grill-to-prd`](./grill-to-prd/) | **Builder interview → PRD.** Detects greenfield vs. brownfield, probes builder expertise (Technical / Designer / Vibe lanes), runs a persona-specific inline grill, then writes `docs/PRD.md` from a lane-matching template. Implements the `grill-me` / `to-prd` chain referenced by `idea-to-loop` S0 — callable standalone or as the S0 PRD-production step. Optional brainstorming pass on request. |
 | [`idea-to-loop`](./idea-to-loop/) | **Greenfield bootstrap** — idea → PRD → tech stack → runnable scaffold → hands off to the loop. Runs lifecycle stages S0 (Alignment & Scope) → S1 (System Design & Tech Stack) → S2 (Scaffold & Wire). New in M2. |
 | [`prd-to-screens`](./prd-to-screens/) | **PRD → approved HTML mockups** — phased conversation that turns an existing PRD into the baseline frontend: P1 intake → P2 screen inventory → P3 user workflows → P4 wireframes → P5 self-contained HTML with shared mock data → P6 cross-link & walkthrough. Optional but high-leverage between S0 and S1 — the approved HTML becomes the spec the loop builds against. Runs standalone too. |
-| [`auto-loop-bootstrap`](./auto-loop-bootstrap/) | **Brownfield bootstrap** — stands up loop machinery on an **existing repo** (skips S0–S2). Scaffolds `CLAUDE.md`, `GOALS.md`, `ARCHITECTURE.md`, `PLAN.md`, `logs/`, and drops in the `auto-loop.py` driver script. Invokes `grill-me` to extract a backlog when one doesn't exist. Pairs with `autonomous-build-loop`. |
+| [`auto-loop-bootstrap`](./auto-loop-bootstrap/) | **Brownfield bootstrap** — stands up loop machinery on an **existing repo** (skips S0–S2). Scaffolds `CLAUDE.md`, `GOALS.md`, `ARCHITECTURE.md`, `PLAN.md`, `logs/`, and `.loop/state.json`. Invokes `grill-me` to extract a backlog when one doesn't exist. Pairs with `autonomous-build-loop`. |
 | [`autonomous-build-loop`](./autonomous-build-loop/) | The **loop runtime** — runs S3+ (feature dev). Per-iteration checklist, tiered read strategy (shrink the per-iter cold-boot cost), fat-iter parallel-dispatch protocol, Class A/B sub-agent discipline, peer-review triggers, frontend-critique gate, phase-boundary arch passes, log hygiene, no-halt continuous loop semantics. |
 | [`loop-supervisor`](./loop-supervisor/) | **Read-only oversight** — runs in a parallel Claude Code window alongside `autonomous-build-loop`. Reconciles shipped diff vs. claimed backlog, curates the TODO list (re-order, split, mark blocked, add discovered), escalates serious issues to `logs/blocks.md`. Never writes production code. |
 
@@ -159,27 +159,19 @@ Open a **dedicated** Claude Code session in the repo and kick it off with the bu
 /loop run one iteration of the autonomous-build-loop skill
 ```
 
-The loop runs **interactively** — it stays on your Claude subscription and schedules its
-own next iteration via `ScheduleWakeup` (the Claude Code tool that wakes the session back
-up after a delay). Walk away. Check progress any time in
-`logs/latest.md` (the handoff state) and `logs/blocks.md` (anything that needs you). It
-never halts — blockers become log entries, not stops.
+Or just type "start the autonomous build loop" — the skill self-paces from there.
+
+The loop runs **in-session** — one Claude Code window stays open and schedules its own
+next iteration via `ScheduleWakeup` (the Claude Code tool that wakes the session back up
+after a delay). Walk away. Check progress any time in `logs/latest.md` (the handoff state)
+and `logs/blocks.md` (anything that needs you). It never halts — blockers become log
+entries, not stops.
+
+Stop conditions: Ctrl-C in CC, type a new prompt that overrides, the backlog source goes
+empty (the agent decides), or review and stop manually.
 
 > Running a second loop on another repo in parallel? Just repeat steps 1–3 in a separate
 > session and directory — each loop is fully independent.
-
-### 4. Optional — unattended external-driver mode
-
-`auto-loop-bootstrap` also drops in `scripts/auto-loop.py` for runs with no live session:
-
-```bash
-python3 scripts/auto-loop.py
-```
-
-Each iteration spawns a fresh `claude -p` process with no carried context. Stop with Ctrl-C,
-`touch .auto-loop/stop`, an empty backlog, or 3 consecutive failures. Note: from
-2026-06-15, `claude -p` usage bills against a separate API-rate credit pool — the
-interactive `/loop` path in step 3 does not.
 
 See each skill's `SKILL.md` for the full protocol.
 

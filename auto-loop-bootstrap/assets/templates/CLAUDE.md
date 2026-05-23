@@ -14,7 +14,7 @@ If a dev server is part of the workflow: assume the user starts it on port `{{DE
 
 ## Autonomous build loop protocol
 
-This repo runs a long-horizon autonomous build loop driven by `scripts/auto-loop.py`. Each iteration is ONE bounded `claude -p` invocation — fresh session, no accumulated context, state on disk.
+This repo runs a long-horizon autonomous build loop **in-session**. One Claude Code session ships features iteratively across many wake-ups; `ScheduleWakeup` carries the loop between iters. State lives on disk in `.loop/state.json` and `logs/`.
 
 **Invoke the `autonomous-build-loop` skill** at the start of every iter — it carries the full per-iter procedure, fat-iter dispatch, peer-review, log hygiene, and PR-mode rules. This file is the repo-specific anchor.
 
@@ -38,8 +38,8 @@ Archived iter logs, `logs/summary-*.md`, `logs/archive/**`. Everything next-iter
 
 ### Base branch + PR mode
 
-- `LOOP_BASE_BRANCH` env (set by the driver) or `.loop/state.json` `base_branch` names the integration branch for PRs. The skill's `feature-pr-mode.md` reads it.
-- In `claude -p` sessions, `EXTERNAL_SCHEDULER=1` is set — do NOT call `ScheduleWakeup`. The driver handles cadence; exit cleanly after commit.
+- `.loop/state.json` `base_branch` names the integration branch for PRs. The skill's `feature-pr-mode.md` reads it.
+- At the end of every iter, the agent calls `ScheduleWakeup` to continue the loop. The skill's per-iter procedure spells out cadence and how to stop.
 
 ### Hard rules
 

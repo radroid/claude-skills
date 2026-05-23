@@ -1,10 +1,14 @@
 # Per-iteration checklist
 
-Top-to-bottom every wake-up. One bounded turn → schedule next (in-session) OR exit (external-scheduler).
+Top-to-bottom every wake-up. One bounded turn → schedule the next via `ScheduleWakeup` (or `CronCreate` for fixed cadence).
 
-## 1. Read state — by tier
+## 1. Read state — by tier, warm vs. cold
 
-See `tiered-read-strategy.md`. **Tier 1 always:** `CLAUDE.md`, `.loop/state.json`, `logs/latest.md`, and the backlog source named in `.loop/state.json` `backlog_source` (resolve via `$LOOP_BACKLOG_PATH` env when set; default `GOALS.md`). **Tier 2 on trigger.** **Tier 3 never.** Missing Tier-1 file → create a stub before doing other work.
+See `tiered-read-strategy.md` — the canonical split.
+
+- **Cold-boot iter** (first iter of session OR first iter after auto-compaction): full Tier 1 read — `CLAUDE.md`, `.loop/state.json`, `logs/latest.md`, and the backlog source named in `.loop/state.json` `backlog_source` (default `GOALS.md`).
+- **Warm iter** (subsequent iter in the same session, pre-compaction): minimal read — `logs/latest.md` (your previous handoff) + the backlog source (supervisor may have edited it). Skip `CLAUDE.md` and `.loop/state.json` unless `latest.md` signals they changed (stage transition, mode flip, etc.).
+- **Tier 2 on trigger. Tier 3 never.** Missing Tier-1 file on a cold boot → create a stub before doing other work.
 
 ## 2. Tooling preflight
 
@@ -70,10 +74,9 @@ If HEAD ahead of upstream AND (≥5 iters since last push OR ≥8 commits ahead)
 | Phase 2+ implementation | 600s |
 | Phase 1 planning | 1500s |
 
-## 13. Schedule next OR exit
+## 13. Schedule next
 
-- `EXTERNAL_SCHEDULER` unset → `ScheduleWakeup` (dynamic) / `CronCreate` (fixed). Pass the same prompt back verbatim, or `<<autonomous-loop-dynamic>>` for the autonomous variant.
-- `EXTERNAL_SCHEDULER=1` → do NOT call `ScheduleWakeup`. Exit cleanly. Driver handles cadence.
+Call `ScheduleWakeup` (dynamic) — or `CronCreate` for fixed-interval cadence. Pass the same prompt back verbatim, or `<<autonomous-loop-dynamic>>` for the autonomous-loop sentinel.
 
 No semantic halt — see `continuous-loop.md`.
 
