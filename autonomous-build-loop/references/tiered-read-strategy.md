@@ -13,9 +13,9 @@ only lever is **shrink the cold-boot payload**. Read by tier, not by habit.
 | File | Why | Cap |
 |------|-----|-----|
 | `CLAUDE.md` | Protocol + conventions. Unavoidable. | project-controlled |
-| `.loop/state.json` | Machine state — stage, iter, `pr_mode`, `pr_size_policy`. Absent → legacy non-PR mode. | small JSON |
+| `.loop/state.json` | Machine state — `stage`, `iter`, `pr_mode`, `pr_size_policy`, `base_branch`, `backlog_source`. Absent → legacy non-PR mode against `main`. | small JSON |
 | `logs/latest.md` | Human handoff — next features, files to open, open blocks, last-iter summary. This IS the carried-forward "compacted knowledge." | **30 lines hard** |
-| `GOALS.md` | Backlog with status. | project-controlled |
+| **Backlog source** | Whatever `.loop/state.json` `backlog_source` points at — a file (`GOALS.md`, `TODO.md`, `ROADMAP.md`, etc.), GitHub Issues, or Linear. The driver exposes `$LOOP_BACKLOG_PATH` for file sources. | project-controlled |
 
 That is the whole default read. Everything else is conditional.
 

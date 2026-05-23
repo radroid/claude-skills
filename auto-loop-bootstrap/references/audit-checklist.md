@@ -21,10 +21,12 @@ Either signal → greenfield-handoff mode. Neither → brownfield (default). See
 ## File existence
 
 ```bash
-for f in CLAUDE.md GOALS.md ARCHITECTURE.md PLAN.md .gitignore scripts/auto-loop.py logs/latest.md logs/blocks.md; do
+for f in CLAUDE.md ARCHITECTURE.md PLAN.md .gitignore scripts/auto-loop.py logs/latest.md logs/blocks.md; do
   if [ -e "$f" ]; then echo "ok    $f"; else echo "MISS  $f"; fi
 done
 ```
+
+`GOALS.md` is no longer required at this layer — Phase 2 of the SKILL discovers the canonical backlog source. Don't pre-flag it as missing.
 
 ## Git state
 
@@ -74,15 +76,18 @@ grep -ci "autonomous build loop\|per-iteration loop\|iter-NNN" CLAUDE.md 2>/dev/
 
 Result `0` → CLAUDE.md exists but lacks the protocol section → append it in Phase 4.
 
-## GOALS.md backlog density
+## Backlog density
+
+After Phase 2 discovery resolves the backlog source path, count actionable items there:
 
 ```bash
-grep -cE "^\s*-\s*\[(\s|wip|blocked|done)\]" GOALS.md 2>/dev/null
+# substitute the discovered backlog path
+grep -cE "^\s*-\s*\[(\s|wip|blocked|done)\]" "$BACKLOG_PATH" 2>/dev/null
 ```
 
-- `0` actionable items → run Phase 2 interview
+- `0` actionable items → run the Phase 2 interview
 - `1–2` items → run a light Phase 2 to fill out
-- `≥3` items → skip Phase 2
+- `≥3` items → skip the interview
 
 ## `.gitignore` for `.auto-loop/`
 

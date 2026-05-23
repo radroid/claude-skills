@@ -108,12 +108,31 @@ def filter_window(records: list[dict], hours: int) -> list[dict]:
     return [r for r in records if datetime.fromisoformat(r["ts"]) >= cutoff]
 
 
-def goals_backlog_empty(repo: Path) -> bool:
-    """Heuristic: GOALS.md has no `[ ]`, `[wip]`, or `[blocked]` markers."""
-    goals = repo / "GOALS.md"
-    if not goals.exists():
+def load_loop_state(repo: Path) -> dict:
+    """Read .loop/state.json; return {} if missing or malformed."""
+    state = repo / ".loop" / "state.json"
+    if not state.exists():
+        return {}
+    try:
+        return json.loads(state.read_text(encoding="utf-8", errors="replace"))
+    except (json.JSONDecodeError, OSError):
+        return {}
+
+
+def backlog_empty(repo: Path, backlog_source: dict | None) -> bool:
+    """Heuristic: configured backlog file has no `[ ]`, `[wip]`, or `[blocked]` markers.
+
+    Only applies when backlog_source.kind == 'file'. External sources (github_issues,
+    linear, etc.) are too costly to poll per-iter from the driver; the agent decides
+    when to stop on backlog-empty in those cases. Defaults to GOALS.md for back-compat.
+    """
+    src = backlog_source or {"kind": "file", "path": "GOALS.md"}
+    if src.get("kind") != "file":
         return False
-    text = goals.read_text(encoding="utf-8", errors="replace")
+    path = repo / src.get("path", "GOALS.md")
+    if not path.exists():
+        return False
+    text = path.read_text(encoding="utf-8", errors="replace")
     return not re.search(r"\[\s\]|\[wip\]|\[blocked\]", text, re.IGNORECASE)
 
 
@@ -147,7 +166,15 @@ def run_one_iter(
     head_before = current_head(repo)
     iter_before = latest_iter_number(repo)
     start = time.time()
+    state = load_loop_state(repo)
     env = {**os.environ, "EXTERNAL_SCHEDULER": "1"}
+    base_branch = state.get("base_branch") or "main"
+    env["LOOP_BASE_BRANCH"] = base_branch
+    backlog = state.get("backlog_source") or {"kind": "file", "path": "GOALS.md"}
+    env["LOOP_BACKLOG_KIND"] = str(backlog.get("kind", "file"))
+    env["LOOP_BACKLOG_PATH"] = str(backlog.get("path", "GOALS.md"))
+    if backlog.get("ref"):
+        env["LOOP_BACKLOG_REF"] = str(backlog["ref"])
     cmd = [
         "claude", "-p", prompt,
         "--output-format", "json",
@@ -372,9 +399,13 @@ def main() -> int:
         if consecutive_failures >= 3:
             log("stop: 3 consecutive failed iters")
             break
-        if not args.no_empty_backlog_stop and goals_backlog_empty(repo):
-            log("stop: GOALS.md backlog empty")
-            break
+        if not args.no_empty_backlog_stop:
+            state = load_loop_state(repo)
+            backlog_source = state.get("backlog_source")
+            if backlog_empty(repo, backlog_source):
+                path = (backlog_source or {}).get("path", "GOALS.md")
+                log(f"stop: backlog empty ({path})")
+                break
 
         records = load_records(state_file)
         records_5h = filter_window(records, ROLLING_WINDOW_HOURS)

@@ -2,5 +2,10 @@
   "stage": "S3",
   "iter": 0,
   "pr_mode": true,
-  "pr_size_policy": "fat"
+  "pr_size_policy": "fat",
+  "base_branch": "main",
+  "backlog_source": {
+    "kind": "file",
+    "path": "GOALS.md"
+  }
 }
