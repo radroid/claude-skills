@@ -53,7 +53,7 @@ const config = {
   dev: input.dev || detected.dev,
   port: input.port || detected.port,
   ready: {
-    url: `http://localhost:${input.port || detected.port}`,
+    url: input.ready?.url ?? `http://localhost:${input.port || detected.port}`,
     timeout_ms: input.ready?.timeout_ms ?? 120000,
   },
 };

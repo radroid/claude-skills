@@ -143,10 +143,11 @@ Templates to copy (with substitutions):
 Stage and commit ONLY the scaffolded files. Use explicit per-file `git add` so unrelated WIP edits don't sneak in:
 
 ```
-# Include the backlog file in the add list only if Phase 2 created one (file-backlog mode).
+# Include the backlog file only if Phase 2 created/edited one (file-backlog mode).
 git add CLAUDE.md ARCHITECTURE.md PLAN.md logs/latest.md logs/blocks.md \
         .loop/state.json .gitignore .claude/settings.local.json
-# add the discovered backlog file (e.g. GOALS.md, TODO.md, ROADMAP.md) if it was created/edited
+# If Phase 2 created/edited a file backlog, add that discovered path too:
+# git add "$BACKLOG_PATH"
 git commit -m "iter 000: bootstrap autonomous build loop"
 ```
 

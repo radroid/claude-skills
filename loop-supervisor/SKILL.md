@@ -104,8 +104,8 @@ Never start a second supervisor iter in the same turn.
 
 ## Hard rules
 
-- **Read-only on code.** No `Edit` / `Write` / `NotebookEdit` against any path under typical source roots. If a denylist is wired up in `.claude/settings.local.json` for this window, the harness enforces it.
-- **Backlog and supervisor logs are the only writeable surfaces.** That's the line.
+- **Read-only on code.** No `Edit` / `Write` / `NotebookEdit` against any path under typical source roots (`src/`, `app/`, `lib/`, `internal/`, or equivalent). If a denylist is wired up in `.claude/settings.local.json` for this window, the harness enforces it.
+- **Backlog, supervisor logs, and `logs/blocks.md` (escalations only) are the only writeable surfaces.** That's the line.
 - **Never invoke or schedule the implementation loop.** The supervisor and the impl agent share state on disk; they don't call each other. The supervisor only schedules ITSELF via `ScheduleWakeup`.
 - **Never delete impl agent's logs.** Even bad iter logs are evidence; archive (don't delete) at decade rollups.
 - **Never resolve impl-agent decisions for it.** If the impl agent is stuck on a coin-toss-able A vs. B, log a recommendation to `logs/blocks.md` with `**Recommendation:** A — <reason>`. Let the impl agent's tiebreaker rule decide.

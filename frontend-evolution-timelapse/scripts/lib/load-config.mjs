@@ -51,12 +51,10 @@ export function loadConfig(repoRoot, configPath) {
   }
   const raw = yaml.parse(fs.readFileSync(p, 'utf8'));
   const config = { ...DEFAULTS, ...raw };
-  if (!config.ready?.url) {
-    config.ready = {
-      url: `http://localhost:${config.port}`,
-      timeout_ms: config.ready?.timeout_ms ?? 120000,
-    };
-  }
+  config.ready = {
+    url: config.ready?.url ?? `http://localhost:${config.port}`,
+    timeout_ms: config.ready?.timeout_ms ?? 120000,
+  };
   if (!Array.isArray(config.pages) || config.pages.length === 0) {
     throw new Error('config.pages must be a non-empty array');
   }

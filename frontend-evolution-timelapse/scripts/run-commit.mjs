@@ -34,11 +34,10 @@ function git(args, cwd) {
 
 function runCommand(cmd, cwd, logStream) {
   return new Promise((resolve, reject) => {
-    const parts = cmd.split(/\s+/);
-    const child = spawn(parts[0], parts.slice(1), {
+    const child = spawn(cmd, {
       cwd,
       env: process.env,
-      shell: false,
+      shell: true,
       stdio: ['ignore', 'pipe', 'pipe'],
     });
     child.stdout.on('data', (d) => logStream.write(d));
@@ -49,12 +48,11 @@ function runCommand(cmd, cwd, logStream) {
 
 /** Write dev server logs directly to file — avoids pipe backpressure hanging the parent on errors. */
 function startServer(cmd, cwd, logPath) {
-  const parts = cmd.split(/\s+/);
   const logFd = fs.openSync(logPath, 'a');
-  const child = spawn(parts[0], parts.slice(1), {
+  const child = spawn(cmd, {
     cwd,
     env: process.env,
-    shell: false,
+    shell: true,
     stdio: ['ignore', logFd, logFd],
     detached: true,
   });

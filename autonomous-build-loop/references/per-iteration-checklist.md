@@ -39,7 +39,7 @@ Read the last iter log's "Wake-up handoff". "Next step" + "Open first" are the m
 
 ## 7. Mark backlog
 
-Update the configured backlog source with `[done|wip|blocked]` for each item touched.
+Update the configured backlog source for each item touched. File-based backlogs use inline `[done|wip|blocked]` markers; external sources (GitHub Issues, Linear MCP, etc.) require the provider's API/tool state instead.
 
 ## 8. Write iter log + update latest.md
 

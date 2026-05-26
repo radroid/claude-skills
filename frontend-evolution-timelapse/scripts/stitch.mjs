@@ -4,7 +4,8 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { loadConfig } from './lib/load-config.mjs';
 
-const runDir = process.argv[process.argv.indexOf('--run-dir') + 1];
+const runDirIndex = process.argv.indexOf('--run-dir');
+const runDir = runDirIndex >= 0 ? process.argv[runDirIndex + 1] : null;
 if (!runDir) throw new Error('--run-dir required');
 
 const config = loadConfig(process.cwd());
@@ -61,7 +62,7 @@ for (const ent of fs.readdirSync(runDir, { withFileTypes: true })) {
   const mp4Out = path.join(pageDir, `${pageName}.mp4`);
   const gifOut = path.join(pageDir, `${pageName}.gif`);
 
-  spawnSync(
+  const mp4Result = spawnSync(
     'ffmpeg',
     [
       '-y',
@@ -83,10 +84,19 @@ for (const ent of fs.readdirSync(runDir, { withFileTypes: true })) {
       String(crf),
       mp4Out,
     ],
-    { stdio: 'ignore' },
+    { encoding: 'utf8' },
   );
+  if (mp4Result.status !== 0 || mp4Result.error) {
+    results.push({
+      page: pageName,
+      status: 'fail',
+      stage: 'mp4',
+      error: mp4Result.error?.message || mp4Result.stderr || `ffmpeg exited ${mp4Result.status}`,
+    });
+    continue;
+  }
 
-  spawnSync(
+  const gifResult = spawnSync(
     'ffmpeg',
     [
       '-y',
@@ -102,8 +112,17 @@ for (const ent of fs.readdirSync(runDir, { withFileTypes: true })) {
       '0',
       gifOut,
     ],
-    { stdio: 'ignore' },
+    { encoding: 'utf8' },
   );
+  if (gifResult.status !== 0 || gifResult.error) {
+    results.push({
+      page: pageName,
+      status: 'fail',
+      stage: 'gif',
+      error: gifResult.error?.message || gifResult.stderr || `ffmpeg exited ${gifResult.status}`,
+    });
+    continue;
+  }
 
   const thumbs = fileLines.map((l) => l.replace(/^file '|'$/g, ''));
   results.push({

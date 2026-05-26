@@ -11,6 +11,14 @@ export const LOCKFILES = [
   ['bun.lockb', 'bun'],
 ];
 
+const INUSE_TTL_MS = 24 * 60 * 60 * 1000;
+
+function yarnMajor(packageManager) {
+  if (packageManager === 'yarn@berry') return 2;
+  const m = packageManager?.match(/^yarn@(\d+)/);
+  return m ? Number(m[1]) : 0;
+}
+
 export function detectPackageManager(projectDir) {
   const pkgPath = path.join(projectDir, 'package.json');
   let packageManager = null;
@@ -26,7 +34,7 @@ export function detectPackageManager(projectDir) {
     if (fs.existsSync(path.join(projectDir, file))) {
       if (pm === 'yarn') {
         if (fs.existsSync(path.join(projectDir, '.yarnrc.yml'))) return 'yarn-berry';
-        if (packageManager?.startsWith('yarn@')) return 'yarn-berry';
+        if (yarnMajor(packageManager) >= 2) return 'yarn-berry';
         return 'yarn-classic';
       }
       return pm;
@@ -35,7 +43,9 @@ export function detectPackageManager(projectDir) {
 
   if (packageManager?.startsWith('bun@')) return 'bun';
   if (packageManager?.startsWith('pnpm@')) return 'pnpm';
-  if (packageManager?.startsWith('yarn@')) return 'yarn-berry';
+  if (packageManager?.startsWith('yarn@')) {
+    return yarnMajor(packageManager) >= 2 ? 'yarn-berry' : 'yarn-classic';
+  }
   if (packageManager?.startsWith('npm@')) return 'npm';
 
   return 'npm';
@@ -167,10 +177,18 @@ export function pruneCache(cacheRoot, maxGb, runStartMs) {
     .map((d) => {
       const p = path.join(cacheRoot, d.name);
       const st = fs.statSync(p);
+      const inusePath = path.join(p, '.inuse');
+      const inuseMs = fs.existsSync(inusePath)
+        ? Number(fs.readFileSync(inusePath, 'utf8')) || 0
+        : 0;
+      const inuse = inuseMs > Date.now() - INUSE_TTL_MS;
+      if (!inuse && fs.existsSync(inusePath)) {
+        fs.rmSync(inusePath, { force: true });
+      }
       return {
         p,
         size: dirSize(p),
-        inuse: fs.existsSync(path.join(p, '.inuse')),
+        inuse,
         mtime: st.mtimeMs,
       };
     });

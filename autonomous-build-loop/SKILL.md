@@ -17,7 +17,7 @@ Read `references/per-iteration-checklist.md` at the start of every iteration. Us
 
 1. **One iteration = one bounded turn.** End by scheduling the next wake-up via `ScheduleWakeup` (or `CronCreate` for fixed cadence). Never start a second iteration in the same turn.
 
-2. **Read state by tier, and by warm-vs-cold.** Wake-ups in the same session land in a warm prompt cache and retain working memory — re-reading everything every iter pays cache-creation cost the next auto-compaction will then have to summarize. Read the tiered strategy (`references/tiered-read-strategy.md`): on a **cold-boot iter** (first iter of the session OR first iter after auto-compaction) do the full Tier 1 read (`CLAUDE.md`, `.loop/state.json`, `logs/latest.md`, the configured backlog source); on a **warm iter** read only `logs/latest.md` + the backlog source (the supervisor may have edited it) and skip the rest unless something signals they changed. Tier 2 is on trigger (`ARCHITECTURE.md` section, `PLAN.md`, `docs/*`, `logs/blocks.md`); Tier 3 (archived iter logs, summaries) is never read back. Missing Tier-1 file on a cold boot → create a stub before doing other work.
+2. **Read state by tier, and by warm-vs-cold.** Wake-ups in the same session land in a warm prompt cache and retain working memory — re-reading everything every iter pays cache-creation cost the next auto-compaction will then have to summarize. Read the tiered strategy (`references/tiered-read-strategy.md`): on a **cold-boot iter** (first iter of the session OR first iter after auto-compaction) do the full Tier 1 read (`CLAUDE.md`, `.loop/state.json`, `logs/latest.md`, the configured backlog source); on a **warm iter** read only `logs/latest.md` + the backlog source (the supervisor may have edited it) and skip the rest unless something signals they changed. Tier 2 is on trigger (`ARCHITECTURE.md` section, `PLAN.md`, `docs/*`, `logs/blocks.md`); Tier 3 (archived iter logs, summaries) is never read back. Missing Tier-1 file on a cold boot → create a stub only for file-backed backlog sources (for external sources, fetch the provider and log an empty/missing response instead).
 
 3. **Continuous loop, never halt.** A sub-agent `block` verdict, a smoke failure, a user-decision blocker, a contract-drift signal — all become a structured entry in `logs/blocks.md` or the backlog, then the agent picks the next non-conflicting item and proceeds. There is no halt: the loop runs across auto-compaction boundaries by design.
 
@@ -40,7 +40,7 @@ Read `references/per-iteration-checklist.md` at the start of every iteration. Us
 ## Quick-start: starting an iteration
 
 1. Read `references/per-iteration-checklist.md` — the 13-step procedure.
-2. Pick 1–4 features from `GOALS.md` (verify pairwise independence — schema, api, component tree must have ZERO overlap to bundle).
+2. Pick 1–4 features from the configured backlog source (verify pairwise independence — schema, api, component tree must have ZERO overlap to bundle).
 3. If 2+ features → fat-iter dispatch (read `references/fat-iter-mode.md`).
 4. If 1 feature or non-feature work → single-agent or direct implementation.
 5. Integrate + verify (tsc, tests, contracts check, smoke).
@@ -48,7 +48,7 @@ Read `references/per-iteration-checklist.md` at the start of every iteration. Us
 7. Write `logs/iter-NNN.md` (cap 50 lines fat-iter / 40 lines otherwise — see `references/log-hygiene.md`).
 8. Commit `iter NNN: <one-line summary>`.
 9. Push if push cadence triggers (default: 5 iters since last push OR ≥8 commits ahead).
-10. End the iter by calling `ScheduleWakeup` for the next iter (default: 600s impl, 1500s plan — cadence is work-type-driven, never adjusted for context usage). Use `CronCreate` instead for fixed-interval cadence. Pass the same prompt back verbatim.
+10. End the iter by calling `ScheduleWakeup` for the next iter (default: 600s impl, 1500s plan — cadence is work-type-driven, never adjusted for context usage). Use `CronCreate` instead for fixed-interval cadence. Pass the same prompt back verbatim, or `<<autonomous-loop-dynamic>>` for the autonomous-loop sentinel.
 
 ## When NOT to fat-iter
 

@@ -10,13 +10,15 @@ export const DEFAULT_ENV_SYNC_FILES = [
   '.env.development.local',
 ];
 
-/** Load order: earlier files first, later override (matches typical Next/Vite precedence). */
+/** Load order: earlier files first, later override; default favors Next.js dev precedence. */
 const DEFAULT_ENV_LOAD_FILES = [
   '.env',
-  '.env.local',
   '.env.development',
+  '.env.local',
   '.env.development.local',
 ];
+
+const PREVIOUS_ENV = new Map();
 
 function parseEnvFile(content) {
   const env = {};
@@ -92,7 +94,14 @@ export function syncEnvFilesToWorktree({ repoRoot, worktreeRoot, config }) {
 function applyFile(filePath, sources) {
   if (!fs.existsSync(filePath)) return;
   const parsed = parseEnvFile(fs.readFileSync(filePath, 'utf8'));
-  Object.assign(process.env, parsed);
+  for (const [key, value] of Object.entries(parsed)) {
+    if (!PREVIOUS_ENV.has(key)) {
+      PREVIOUS_ENV.set(key, Object.prototype.hasOwnProperty.call(process.env, key)
+        ? process.env[key]
+        : undefined);
+    }
+    process.env[key] = value;
+  }
   sources.push({
     path: filePath,
     sha256_16: hashFile(filePath),
@@ -124,6 +133,12 @@ function collectLoadPaths(repoRoot, worktreeRoot, config) {
 }
 
 export function loadEnvForRun({ repoRoot, worktreeRoot, config, trustRepo }) {
+  for (const [key, value] of PREVIOUS_ENV.entries()) {
+    if (value === undefined) delete process.env[key];
+    else process.env[key] = value;
+  }
+  PREVIOUS_ENV.clear();
+
   const sources = [];
 
   const paths = collectLoadPaths(repoRoot, worktreeRoot, config);

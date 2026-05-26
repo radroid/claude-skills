@@ -16,9 +16,14 @@ function need(bin) {
 
 function freeGb(dir) {
   const r = spawnSync('df', ['-k', dir], { encoding: 'utf8' });
-  if (r.status !== 0) return 999;
+  if (r.status !== 0) {
+    throw new Error(`df failed for ${dir}: ${r.stderr || r.stdout || r.status}`);
+  }
   const line = r.stdout.trim().split('\n')[1];
   const avail = parseInt(line.split(/\s+/)[3], 10);
+  if (!Number.isFinite(avail)) {
+    throw new Error(`df output unparseable for ${dir}: ${r.stdout}`);
+  }
   return avail / 1024 / 1024;
 }
 
@@ -53,10 +58,14 @@ if (process.argv.includes('--commits-file')) {
     cwd: repoRoot,
     encoding: 'utf8',
   });
-  commitsPayload = JSON.parse(r.stdout);
+  if (r.status !== 0 || !r.stdout.trim()) {
+    errors.push(`list-commits failed (${r.status}): ${r.stderr || r.stdout}`);
+  } else {
+    commitsPayload = JSON.parse(r.stdout);
+  }
 }
 
-const commits = commitsPayload.commits || commitsPayload;
+const commits = commitsPayload?.commits || commitsPayload || [];
 const hasHistorical = commits.some((c) => c.hash !== head);
 if (hasHistorical && !trust && !dryRun) {
   errors.push(
@@ -71,8 +80,13 @@ const minGb =
   config.capture_mode === 'production'
     ? Math.max(20, commits.length * 1.5)
     : config.min_free_gb || 5;
-const free = freeGb(repoRoot);
-if (free < minGb) errors.push(`disk free ${free.toFixed(1)}GB < required ${minGb}GB`);
+let free = 0;
+try {
+  free = freeGb(repoRoot);
+  if (free < minGb) errors.push(`disk free ${free.toFixed(1)}GB < required ${minGb}GB`);
+} catch (e) {
+  errors.push(e.message);
+}
 
 const playwrightMarker = path.join(scriptDir, 'node_modules', 'playwright');
 if (!fs.existsSync(playwrightMarker)) {

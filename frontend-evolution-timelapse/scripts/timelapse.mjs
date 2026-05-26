@@ -14,8 +14,10 @@ import { estimateRun } from './lib/estimate.mjs';
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 
 function parseArgs(argv) {
+  const first = argv[2];
+  const hasCommand = first && !first.startsWith('--');
   const o = {
-    cmd: argv[2] || 'run',
+    cmd: hasCommand ? first : 'run',
     from: null,
     to: null,
     only: null,
@@ -31,7 +33,7 @@ function parseArgs(argv) {
     noAnnotate: false,
     calibrate: false,
   };
-  for (let i = 3; i < argv.length; i++) {
+  for (let i = hasCommand ? 3 : 2; i < argv.length; i++) {
     const a = argv[i];
     if (a === '--from') o.from = argv[++i];
     else if (a === '--to') o.to = argv[++i];
@@ -233,8 +235,14 @@ async function main() {
   }
 
   if (args.cmd === 'clean') {
-    const outputDir = path.join(repoRoot, '.timelapse');
-    const wtBase = path.join(path.dirname(repoRoot), '.timelapse-worktrees', repoHash8(repoRoot));
+    let outputDir = path.join(repoRoot, '.timelapse');
+    try {
+      const cleanConfig = loadConfig(repoRoot);
+      outputDir = path.resolve(repoRoot, cleanConfig.output_dir || '.timelapse');
+    } catch {
+      /* clean can run before init */
+    }
+    const wtBase = path.join(path.dirname(outputDir), '.timelapse-worktrees', repoHash8(repoRoot));
     if (fs.existsSync(wtBase)) fs.rmSync(wtBase, { recursive: true, force: true });
     for (const run of fs.existsSync(outputDir) ? fs.readdirSync(outputDir) : []) {
       const pids = path.join(outputDir, run, 'pids.json');
@@ -339,6 +347,13 @@ async function main() {
   }
 
   acquireLock(outputDir, runId, { force: args.force });
+  let lockReleased = false;
+  const releaseRunLock = () => {
+    if (lockReleased) return;
+    releaseLock(outputDir);
+    lockReleased = true;
+  };
+  process.once('exit', releaseRunLock);
   const runStartMs = Date.now();
   pruneCache(path.join(outputDir, '.cache'), config.cache_max_gb || 20, runStartMs);
 
@@ -486,7 +501,7 @@ async function main() {
     }
   }
 
-  releaseLock(outputDir);
+  releaseRunLock();
   const exitCode = skipped > 0 ? 2 : 0;
   console.log(JSON.stringify({ ok: true, run_dir: runDir, exit_code: exitCode }));
   process.exit(exitCode);

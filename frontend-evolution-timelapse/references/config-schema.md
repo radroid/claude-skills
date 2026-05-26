@@ -95,6 +95,6 @@ Lifecycle scripts disabled unless `--i-trust-this-repo`.
 
 ## Hashes for resume
 
-`config_hash` includes: `pages`, `viewport`, `capture_mode`, `dev`/`build`/`start`, `history_mode`, `base_url`, `frontend_paths`, `annotate`, `full_page`, `project_root`, `settle_ms`, `env_file`, `use_historical_env`.
+`config_hash` includes: `pages`, `viewport`, `capture_mode`, `dev`/`build`/`start`, `history_mode`, `base_url`, `frontend_paths`, `annotate`, `full_page`, `project_root`, `settle_ms`, `env_file`, `env_sync_files`, `required_env`, `use_historical_env`.
 
 `commit_plan_hash` = SHA256 of frozen `commits.json`.

@@ -25,7 +25,7 @@ Otherwise: warm iter. Default to warm — if uncertain, the cost of an extra che
 | `CLAUDE.md` | Protocol + conventions. | project-controlled |
 | `.loop/state.json` | Machine state — `stage`, `iter`, `pr_mode`, `pr_size_policy`, `base_branch`, `backlog_source`. | small JSON |
 | `logs/latest.md` | Handoff: next features, files to open, open blocks, last-iter summary. **This IS the carried knowledge** across compaction. | **30 lines hard** |
-| Backlog source | The file/system named in `.loop/state.json` `backlog_source`. | project-controlled |
+| Backlog source | The file/system named in `.loop/state.json` `backlog_source`. | varies by source |
 
 That is the whole cold-boot read.
 

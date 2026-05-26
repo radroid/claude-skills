@@ -55,16 +55,10 @@ export function pidOnPort(port) {
   return pidsOnPort(port)[0] ?? null;
 }
 
-export function waitForReady(url, timeoutMs) {
-  const start = Date.now();
-  while (Date.now() - start < timeoutMs) {
-    try {
-      const res = fetch(url, { signal: AbortSignal.timeout(3000) });
-      // sync wait via deasync not available — use sync http for bash layer instead
-    } catch {
-      /* continue in async version */
-    }
-  }
+export async function waitForReady(url, timeoutMs) {
+  const r = await pollReady(url, timeoutMs);
+  if (!r.ok) throw new Error(`readiness check failed: ${r.error}`);
+  return r;
 }
 
 /** Poll HTTP until 200 (Node 18+ fetch). */

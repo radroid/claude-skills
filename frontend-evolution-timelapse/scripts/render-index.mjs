@@ -17,11 +17,20 @@ const cost = fs.existsSync(path.join(runDir, 'cost.json'))
   ? JSON.parse(fs.readFileSync(path.join(runDir, 'cost.json'), 'utf8'))
   : null;
 
+function esc(v) {
+  return String(v ?? '')
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;');
+}
+
 const pageBlocks = (manifest.pages_summary || []).map((p) => {
-  const gif = p.gif ? `<a href="${p.gif}">GIF</a>` : '—';
-  const mp4 = p.mp4 ? `<a href="${p.mp4}">MP4</a>` : '—';
-  const thumb = p.thumb ? `<img src="${p.thumb}" alt="${p.name}" style="max-width:280px;border:1px solid #ddd">` : '';
-  return `<section><h2>${p.name}</h2><p>Frames: ${p.frame_count} · Status: ${p.status || 'ok'}</p>${thumb}<p>${gif} · ${mp4}</p></section>`;
+  const gif = p.gif ? `<a href="${esc(p.gif)}">GIF</a>` : '—';
+  const mp4 = p.mp4 ? `<a href="${esc(p.mp4)}">MP4</a>` : '—';
+  const thumb = p.thumb ? `<img src="${esc(p.thumb)}" alt="${esc(p.name)}" style="max-width:280px;border:1px solid #ddd">` : '';
+  return `<section><h2>${esc(p.name)}</h2><p>Frames: ${esc(p.frame_count)} · Status: ${esc(p.status || 'ok')}</p>${thumb}<p>${gif} · ${mp4}</p></section>`;
 }).join('\n');
 
 const skipped = manifest.skipped || manifest.entries?.filter((e) => e.status === 'skip') || [];
@@ -29,7 +38,7 @@ const html = `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <title>Timelapse ${manifest.run_id || ''}</title>
+  <title>Timelapse ${esc(manifest.run_id || '')}</title>
   <style>
     body { font-family: system-ui, sans-serif; max-width: 960px; margin: 2rem auto; padding: 0 1rem; }
     h1 { font-size: 1.5rem; }
@@ -40,10 +49,10 @@ const html = `<!DOCTYPE html>
 </head>
 <body>
   <h1>Frontend evolution timelapse</h1>
-  <p class="meta">Run: ${manifest.run_id || '—'} · Commits: ${manifest.processed || 0} processed, ${manifest.skipped_count || 0} skipped</p>
-  ${cost ? `<p class="meta">Est. agent context tokens: ${cost.agent_context?.tokens_est ?? '—'} · log cost avoided (est.): ${cost.log_read_cost_avoided_est ?? '—'}</p>` : ''}
+  <p class="meta">Run: ${esc(manifest.run_id || '—')} · Commits: ${esc(manifest.processed || 0)} processed, ${esc(manifest.skipped_count || 0)} skipped</p>
+  ${cost ? `<p class="meta">Est. agent context tokens: ${esc(cost.agent_context?.tokens_est ?? '—')} · log cost avoided (est.): ${esc(cost.log_read_cost_avoided_est ?? '—')}</p>` : ''}
   ${pageBlocks}
-  ${skipped.length ? `<h2>Skipped commits</h2><pre>${skipped.map((s) => `${s.hash} ${s.stage}: ${s.error}`).join('\n')}</pre>` : ''}
+  ${skipped.length ? `<h2>Skipped commits</h2><pre>${skipped.map((s) => `${esc(s.hash)} ${esc(s.stage)}: ${esc(s.error)}`).join('\n')}</pre>` : ''}
 </body>
 </html>`;
 

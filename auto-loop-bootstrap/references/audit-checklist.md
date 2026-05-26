@@ -82,7 +82,7 @@ After Phase 2 discovery resolves the backlog source path, count actionable items
 
 ```bash
 # substitute the discovered backlog path
-grep -cE "^\s*-\s*\[(\s|wip|blocked|done)\]" "$BACKLOG_PATH" 2>/dev/null
+grep -cE "^\s*-\s*\[(\s|wip|blocked)\]" "$BACKLOG_PATH" 2>/dev/null
 ```
 
 - `0` actionable items → run the Phase 2 interview

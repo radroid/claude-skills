@@ -16,7 +16,7 @@ Gated by `.loop/state.json`:
 
 - `pr_mode: false` or no `.loop/state.json` (**default**) → direct-commit to the active branch per `per-iteration-checklist.md` steps 10–11. Nothing below applies.
 - `pr_mode: true` (opt-in) → this file replaces steps 10–11 of the per-iteration checklist and Phase 5 of `fat-iter-mode.md`.
-- `base_branch` — the integration branch PRs target. Read from `.loop/state.json`; if absent, fall back to `main`. Below, `$BASE` refers to this branch.
+- `base_branch` — the integration branch PRs target. Read from `.loop/state.json`; if absent, fall back to `main`. Below, `$BASE` is documentation shorthand for this value. In auto-loop runs, `auto-loop.py` exports it as `LOOP_BASE_BRANCH`; agents should use that env var or substitute the configured value directly.
 
 `pr_size_policy` is the PR-size contract, not a feature cap:
 - **`fat`** (S3 default) — lots to build, repo is young; a PR may carry a whole multi-file slice.

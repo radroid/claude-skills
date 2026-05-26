@@ -26,9 +26,9 @@ Walks the current branch from first meaningful frontend commit to `HEAD`, captur
 cd "$SKILL_ROOT/scripts" && npm ci && npx playwright install chromium
 ```
 
-2. **Target app repo** — `cd` into the application under timelapse. `.timelapse.yaml` and `.timelapse/` live here only.
+1. **Target app repo** — `cd` into the application under timelapse. `.timelapse.yaml` and `.timelapse/` live here only.
 
-3. **Isolated worktree** — historical checkouts run in a sibling worktree; the user's active branch and working tree are not rewound.
+1. **Isolated worktree** — historical checkouts run in a sibling worktree; the user's active branch and working tree are not rewound.
 
 ## Quick start
 
@@ -86,7 +86,7 @@ Exit codes: `0` success, `2` partial skips, `3` preflight/lock failure.
 
 ## Output layout
 
-```
+```text
 .timelapse/<RUN_ID>/
   commits.json          # frozen commit plan
   progress.json         # resume checkpoint
