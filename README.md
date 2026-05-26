@@ -100,6 +100,8 @@ curl -L -o /tmp/auto-loop-bootstrap.skill \
   https://github.com/radroid/claude-skills/releases/latest/download/auto-loop-bootstrap.skill
 curl -L -o /tmp/autonomous-build-loop.skill \
   https://github.com/radroid/claude-skills/releases/latest/download/autonomous-build-loop.skill
+curl -L -o /tmp/frontend-evolution-timelapse.skill \
+  https://github.com/radroid/claude-skills/releases/latest/download/frontend-evolution-timelapse.skill
 
 # .skill files are zip archives — extract into your skills dir
 unzip /tmp/grill-to-prd.skill -d ~/.claude/skills/
@@ -107,6 +109,7 @@ unzip /tmp/idea-to-loop.skill -d ~/.claude/skills/
 unzip /tmp/prd-to-screens.skill -d ~/.claude/skills/
 unzip /tmp/auto-loop-bootstrap.skill -d ~/.claude/skills/
 unzip /tmp/autonomous-build-loop.skill -d ~/.claude/skills/
+unzip /tmp/frontend-evolution-timelapse.skill -d ~/.claude/skills/
 ```
 
 ## Quick start — run your own build loop
