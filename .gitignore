@@ -11,3 +11,6 @@ node_modules/
 # packaged artifacts are committed in dist/ so users can download them from
 # GitHub Releases without rebuilding. Uncomment to exclude:
 # dist/*.skill
+
+.timelapse/
+.timelapse-worktrees/

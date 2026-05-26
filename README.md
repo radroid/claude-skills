@@ -12,6 +12,13 @@ Skills for [Claude Code](https://claude.com/claude-code).
 | [`auto-loop-bootstrap`](./auto-loop-bootstrap/) | **Brownfield bootstrap** — stands up loop machinery on an **existing repo** (skips S0–S2). Scaffolds `CLAUDE.md`, `GOALS.md`, `ARCHITECTURE.md`, `PLAN.md`, `logs/`, and `.loop/state.json`. Invokes `grill-me` to extract a backlog when one doesn't exist. Pairs with `autonomous-build-loop`. |
 | [`autonomous-build-loop`](./autonomous-build-loop/) | The **loop runtime** — runs S3+ (feature dev). Per-iteration checklist, tiered read strategy (shrink the per-iter cold-boot cost), fat-iter parallel-dispatch protocol, Class A/B sub-agent discipline, peer-review triggers, frontend-critique gate, phase-boundary arch passes, log hygiene, no-halt continuous loop semantics. |
 | [`loop-supervisor`](./loop-supervisor/) | **Read-only oversight** — runs in a parallel Claude Code window alongside `autonomous-build-loop`. Reconciles shipped diff vs. claimed backlog, curates the TODO list (re-order, split, mark blocked, add discovered), escalates serious issues to `logs/blocks.md`. Never writes production code. |
+| [`frontend-evolution-timelapse`](./frontend-evolution-timelapse/) | **Frontend history timelapse** — walks git history on a Node web app, screenshots configured pages at each frontend-relevant commit, stitches per-page GIF/MP4 and an `index.html` summary. Isolated worktrees, resume checkpoints, token/cost accounting. Standalone analysis skill (not part of the build loop pipeline). |
+
+### Standalone analysis skills
+
+| Skill | Purpose |
+|-------|---------|
+| [`frontend-evolution-timelapse`](./frontend-evolution-timelapse/) | Visual "construction progress" timelapse of a web UI across branch history. Requires a JavaScript/TypeScript (or Node web) repo with a dev server. |
 
 ### How the skills fit together
 
@@ -71,6 +78,7 @@ ln -s ~/Documents/claude-skills/idea-to-loop ~/.claude/skills/idea-to-loop
 ln -s ~/Documents/claude-skills/prd-to-screens ~/.claude/skills/prd-to-screens
 ln -s ~/Documents/claude-skills/auto-loop-bootstrap ~/.claude/skills/auto-loop-bootstrap
 ln -s ~/Documents/claude-skills/autonomous-build-loop ~/.claude/skills/autonomous-build-loop
+ln -s ~/Documents/claude-skills/frontend-evolution-timelapse ~/.claude/skills/frontend-evolution-timelapse
 ```
 
 Restart Claude Code. Run `/skills` to confirm the skills are loaded.
