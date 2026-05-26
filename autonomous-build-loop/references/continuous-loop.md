@@ -8,7 +8,7 @@
 
 | Event | Agent action |
 |-------|--------------|
-| **Sub-agent returns `block`** | Append to `logs/blocks.md` (date, iter, sub-agent name, charter, verdict text, reason). Pick the next non-conflicting `GOALS.md` item and proceed in the SAME iter or the next one. Do NOT skip step 13 — in-session: still `ScheduleWakeup`; external-scheduler (`EXTERNAL_SCHEDULER=1`): still exit cleanly so the driver fires the next iter. |
+| **Sub-agent returns `block`** | Append to `logs/blocks.md` (date, iter, sub-agent name, charter, verdict text, reason). Pick the next non-conflicting `GOALS.md` item and proceed in the SAME iter or the next one. Do NOT skip step 13 — still call `ScheduleWakeup`. |
 | **Runtime smoke fail** (chrome-devtools MCP, lighthouse, etc.) | Log to `logs/blocks.md` with screenshot path + console output. Continue. |
 | **MCP server unreachable** | Log a one-line entry to `logs/blocks.md` once (not per-iter). Skip that surface's work for this iter; route to backend gap-fill. Escalate to user-restart recommendation after 3 consecutive iters. |
 | **User-decision blocker** (API key needed, schema purge, project provision) | Log under `GOALS.md` § "Open dependencies (waiting on user)". Prefix `**HIGH PRIORITY —**` if it blocks meaningful work. Continue with any item that does NOT depend on the decision. |
@@ -22,18 +22,13 @@
 
 The loop has **no halt cause at all** — not even a process-level one.
 
-**Context budget is never a halt, a slowdown, or a restart trigger.** In-session mode runs
-on a large-context model with harness auto-compaction (configured to compact around 50% of
-the context window). The loop is built to survive compaction: `logs/latest.md` + the tiered
-read manifest make every iter self-contained, so the loop resumes seamlessly on the other
-side of a compaction. Do NOT eyeball context usage, do NOT space out wake-ups for it, and do
-NOT write "restart Claude Code" into the iter log — the agent never recommends ending the
-session for token reasons.
-
-In **external-scheduler mode** (`EXTERNAL_SCHEDULER=1`), context never accumulates either —
-every iter is a fresh `claude -p` process with zero carried context. The driver script
-enforces budget at the OS level (rolling 5h window, per-iter `--max-budget-usd`); the agent
-just exits after committing.
+**Context budget is never a halt, a slowdown, or a restart trigger.** The loop runs in-session
+on a large-context model with harness auto-compaction (configured to fire at ~40% of the
+context window). The loop is built to survive compaction: `logs/latest.md` + the tiered read
+manifest make every cold-boot iter self-contained, so the loop resumes seamlessly on the
+other side of a compaction. Do NOT eyeball context usage, do NOT space out wake-ups for it,
+and do NOT write "restart Claude Code" into the iter log — the agent never recommends ending
+the session for token reasons.
 
 ## Repeated-issue counter
 

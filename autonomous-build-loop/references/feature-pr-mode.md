@@ -6,16 +6,17 @@ auto-merged on its own.
 
 ## When it applies
 
+**Opt-in mode.** The bootstrap default is `pr_mode: false` (direct-commit to the active branch). This file applies only when the user explicitly enabled PR mode — typically for repos with required CI checks, multiple reviewers, or branch protection rules.
+
 Gated by `.loop/state.json`:
 
 ```jsonc
-{ "pr_mode": true, "pr_size_policy": "fat" }   // fat (S3) | scoped (S4)
+{ "pr_mode": true, "pr_size_policy": "fat", "base_branch": "main" }   // fat (S3) | scoped (S4)
 ```
 
-- `pr_mode: false` or no `.loop/state.json` → **legacy mode**: commit to the active branch per
-  `per-iteration-checklist.md` steps 10–11. Nothing below applies.
-- `pr_mode: true` → this file replaces steps 10–11 of the per-iteration checklist and Phase 5 of
-  `fat-iter-mode.md`.
+- `pr_mode: false` or no `.loop/state.json` (**default**) → direct-commit to the active branch per `per-iteration-checklist.md` steps 10–11. Nothing below applies.
+- `pr_mode: true` (opt-in) → this file replaces steps 10–11 of the per-iteration checklist and Phase 5 of `fat-iter-mode.md`.
+- `base_branch` — the integration branch PRs target. Read from `.loop/state.json`; if absent, fall back to `main`. Below, `$BASE` is documentation shorthand for this value. In auto-loop runs, `auto-loop.py` exports it as `LOOP_BASE_BRANCH`; agents should use that env var or substitute the configured value directly.
 
 `pr_size_policy` is the PR-size contract, not a feature cap:
 - **`fat`** (S3 default) — lots to build, repo is young; a PR may carry a whole multi-file slice.
@@ -39,7 +40,7 @@ Gated by `.loop/state.json`:
 
 For each feature in the iter (one feature, or each feature of a fat-iter):
 
-1. **Branch off fresh `main`.** `git switch -c loop/iter-NNN-<feature-slug>`. One branch per
+1. **Branch off fresh `$BASE`.** `git fetch origin $BASE && git switch $BASE && git pull --ff-only && git switch -c loop/iter-NNN-<feature-slug>`. One branch per
    feature — never share a branch across features (defeats independent review + merge).
 2. **TDD — non-visual behaviour.** Failing test first, then minimal code, then refactor. Invoke
    `tdd` / `superpowers:test-driven-development`. The Iron Law holds: no production code without a
@@ -58,7 +59,7 @@ For each feature in the iter (one feature, or each feature of a fat-iter):
    (`superpowers:receiving-code-review`).
    - **CodeRabbit** — requires the repo be **public** *and* the `coderabbit` CLI authenticated
      (it **cannot review private repos**). When both hold: run `coderabbit:code-review` **scoped to
-     the committed diff** — `--type committed --base main`. **Always scope it.** An unscoped review
+     the committed diff** — `--type committed --base $BASE`. **Always scope it.** An unscoped review
      also ingests every uncommitted file in the working tree (e.g. sibling features' files carried
      along on the branch in fat-iter mode) and can hang for tens of minutes with no output; a
      scoped review of one feature's diff completes in ~1–2 min. Resolve findings locally and
@@ -73,7 +74,7 @@ For each feature in the iter (one feature, or each feature of a fat-iter):
      reason logged to `logs/blocks.md`** and move on. Two passes is the cap — an infinite
      review→fix→review loop is the anti-pattern.
 6. **Push the branch.** `git push -u origin loop/iter-NNN-<feature-slug>`.
-7. **Open the PR.** `gh pr create` — title `iter NNN: <feature>`, body lists the slice
+7. **Open the PR.** `gh pr create --base $BASE` — title `iter NNN: <feature>`, body lists the slice
    (files, contract, tests) and links the scoping `plan/<feature>.md`. On a public repo,
    CodeRabbit's GitHub app also auto-reviews the PR — a visible public audit trail on top of the
    pre-push CLI pass. It should be clean since step 5 already ran; if it flags something new,
@@ -111,9 +112,7 @@ review). Phase 5 closeout changes under `pr_mode`:
 ## Branch & merge hygiene
 
 - Branch name: `loop/iter-NNN-<feature-slug>` — greppable, ties the branch to its iter + feature.
-- Always branch off freshly-pulled `main`. After a merge, the next feature re-branches off the
-  new `main` so it builds on what just landed.
-- `--squash` keeps `main` history one-commit-per-feature — the merged-PR list is the audit trail.
+- Always branch off freshly-pulled `$BASE`. After a merge, the next feature re-branches off the new `$BASE` so it builds on what just landed.
+- `--squash` keeps `$BASE` history one-commit-per-feature — the merged-PR list is the audit trail.
 - Never force-push a `loop/*` branch that has an open PR under review.
-- Stale `loop/*` branches (PR merged or closed) are deleted by `gh pr merge --delete-branch` or a
-  closeout sweep — don't let them accumulate.
+- Stale `loop/*` branches (PR merged or closed) are deleted by `gh pr merge --delete-branch`.
