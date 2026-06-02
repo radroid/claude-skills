@@ -19,6 +19,7 @@ Skills for [Claude Code](https://claude.com/claude-code).
 | Skill | Purpose |
 |-------|---------|
 | [`frontend-evolution-timelapse`](./frontend-evolution-timelapse/) | Visual "construction progress" timelapse of a web UI across branch history. Requires a JavaScript/TypeScript (or Node web) repo with a dev server. |
+| [`fitness-functions`](./fitness-functions/) | **Architectural fitness functions → CI guardrails.** Profiles a repo's languages/frameworks/architecture, web-searches current best-practice checks for that stack (circular imports & layering violations, coupling, complexity, security, coverage, performance budgets), presents a tailored catalog, then implements the selected checks as a GitHub Actions pipeline plus a `FITNESS.md`. Research-driven and stack-aware; lands checks as monitoring and ratchets to gating. Standalone — any repo on GitHub. |
 
 ### How the skills fit together
 
@@ -201,6 +202,10 @@ claude-skills/
 ├── autonomous-build-loop/        skill source — the loop runtime (S3+)
 │   ├── SKILL.md
 │   └── references/
+├── fitness-functions/            skill source — architecture fitness functions → CI
+│   ├── SKILL.md
+│   ├── assets/templates/         workflow + FITNESS.md + tool-config examples
+│   └── references/               concepts, detection, research, catalog, implementation
 ├── grill-to-prd/                 skill source — persona-aware PRD interview
 │   ├── SKILL.md
 │   ├── assets/templates/         persona-specific PRD templates
