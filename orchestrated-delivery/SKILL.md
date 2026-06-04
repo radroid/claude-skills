@@ -154,6 +154,10 @@ steward.
    AUTO-TUNES the templates, logging each change to the changelog with the KPI
    it targets and moving addressed friction to Resolved. Touches ONLY the
    orchestration docs. The orchestrator gates its PR on quality before merge.
+   The steward leaves an AUDIT TRACE every run — a ledger line, plus a dated
+   changelog note even when it tunes nothing ("reviewed through PR #n, no
+   change — <why>"). A steward that only logs when it changes something is
+   indistinguishable from one silently skipped; silence is not proof it ran.
 
 ## Dispatch protocol
 
