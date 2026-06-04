@@ -164,13 +164,17 @@ steward.
    The steward is NON-DEFERRABLE, and this is a HARD GATE: before you dispatch
    the NEXT item's planner/executor, the just-completed item's steward MUST have
    run and left its changelog trace. About to start a new item with no changelog
-   entry since the last one? STOP — run the steward first. "Batch the stewardship
-   at the end" is exactly how it never runs: the trailing, unforced,
-   no-user-deliverable step always loses to the next item's momentum, and a whole
-   backlog can ship with the steward dispatched ZERO times — friction-log Open
-   never drained, templates never tuned, the entire self-improvement loop
-   vestigial. The cheapest tell you skipped it: a changelog frozen at the seed
-   entry while PRs pile up.
+   entry since the last one? STOP — run the steward first. Deferring it ("batch
+   the stewardship at the end") is the trap: the trailing, unforced,
+   no-user-deliverable step loses to the next item's momentum and slides to
+   end-of-backlog — where its tuning lands TOO LATE to compound, because every
+   item already ran on the un-improved seed templates and the SAME friction class
+   re-bit item after item. A MOVE-spec gap that recurs across five refactor PRs
+   must be fixed after the FIRST, not folded in once after the last (by then it
+   only helps the next backlog, never this one); and an end-only pass tends to
+   steward just the final item's friction, leaving earlier items' lessons
+   unfiled. Worst case it never runs at all. The cheapest tell: a changelog
+   frozen at the seed entry while PRs pile up.
 
 ## Dispatch protocol
 
