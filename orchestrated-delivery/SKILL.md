@@ -263,13 +263,17 @@ every role is the same model family reading the same spec. Counter all of it:
    class — build+unit green cannot see an untappable control, an overlapping
    pane, or an unlinked native module — so they ALWAYS get a queue entry with a
    concrete user-facing check; never let "unit-green + APPROVE" stand in for
-   "the feature actually works." And trust a runtime FAILURE only against a
+   "the feature actually works." A runtime FAILURE is only trustworthy against a
    FRESH artifact: a long-lived bundler/dev-server (Metro/Vite/etc.) can serve a
-   STALE cached transform, so a correct on-disk fix renders as still-broken — a
-   false negative that sends you re-editing code that was already right. When the
-   running app contradicts code you can prove is on disk, suspect the artifact
-   before the code: rebuild from a CLEARED cache (restart the bundler with its
-   cache-wipe flag — a file touch or app relaunch does NOT bust it).
+   STALE cached transform, so a correct fix renders as still-broken. But "stale
+   cache" cuts both ways — it is equally a STORY that hides a real bug your "the
+   code provably can't do this" read missed (a presentation/remount quirk, an
+   unexpected code path). So DISAMBIGUATE, don't guess: when the running app
+   contradicts your reading of on-disk code, force ONE clean rebuild from a
+   cleared cache (the bundler's cache-wipe flag — a file touch or app relaunch
+   does NOT bust it). If the failure survives a clean rebuild it is REAL — stop
+   theorizing and copy a proven-working sibling instead of re-deriving the broken
+   one.
 5. FRAME DIVERSITY: rotate a hostile-framed reviewer ("assume the author is
    wrong") and periodically a NO-CHECKLIST reviewer (diff + spec only). On a
    schedule, run a BLIND HOSTILE RE-REVIEW of already-merged PRs with zero
