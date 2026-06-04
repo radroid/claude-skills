@@ -1,6 +1,6 @@
 ---
 name: orchestrated-delivery
-description: Run a backlog as a token-disciplined orchestrator of planner/executor/reviewer/fix subagents with repo-resident prompts, a token ledger, a friction feedback loop, a self-improving steward, and an adversarial anti-bias check. Use when shipping a multi-PR backlog with subagents.
+description: Use when shipping a multi-PR backlog with a team of subagents — to land PR-sized slices via planner/executor/reviewer/fix/steward roles working off repo-resident, code-free plans that don't go stale. Keeps a token ledger, a friction feedback loop, a self-improving steward, and an adversarial anti-bias check that stops reviewers rubber-stamping.
 ---
 
 # Orchestrated delivery
@@ -8,22 +8,40 @@ description: Run a backlog as a token-disciplined orchestrator of planner/execut
 ## Entry gate — engage ultracode mode FIRST (do this before anything else)
 
 This skill orchestrates many role subagents and Workflow runs over a long
-horizon. It is built to run in **ultracode mode** — the harness's highest effort
-level AND the standing opt-in to author/run Workflows for every substantive
-step. Do NOT proceed in a lower gear. On invocation, before any orchestration:
+horizon. It is built to run in **ultracode mode** — a name that covers TWO
+distinct settings, not one toggle: (1) the harness's highest effort level (set
+via `/effort ultracode`, which only the user can flip), AND (2) the standing
+opt-in to pipeline every substantive step through the harness's strongest
+fan-out-and-verify primitive — a Workflow runner where one is exposed, otherwise
+role subagents you dispatch and verify before routing onward. Setting the effort
+level does NOT auto-engage the Workflow posture — verify both. Step 1 below
+checks the effort level; step 2 engages the Workflow contract. Do NOT proceed in
+a lower gear. On invocation, before any orchestration:
 
 1. **Require effort level `ultracode`.** If the session is not already in
    ultracode (e.g. it's `xhigh`/`high`/lower), STOP and ask the user, in one
    line: ``orchestrated-delivery needs ultracode — run `/effort ultracode`, then
    say "continue".`` Effort is a session setting only the user can toggle; you
    cannot flip it for them, so make the one-line ask and wait. Do not run the
-   loop in a lower effort mode.
+   loop in a lower effort mode. On a mid-backlog resume, check the session's
+   current effort first: if it is already `ultracode`, skip the ask — re-assert
+   the precondition and proceed; only STOP-and-ask when effort is below
+   ultracode (a fresh post-compaction session may default lower, so always
+   re-check on resume rather than assume). Effort is only ONE half of the gate:
+   the other half is the dynamic-Workflow opt-in in step 2 — a posture you adopt
+   yourself, not something to ask for. Confirm it here in one line (state that
+   you are running in Workflow-per-step mode for the rest of this session) so
+   the gate enumerates it as a checked precondition; the gate clears only once
+   BOTH hold, never on effort alone.
 2. **Adopt the ultracode posture immediately** — it is the standing contract for
    as long as this skill drives the session:
-   - **Author and run a Workflow for every substantive step by default.** The
+   - **Pipeline every substantive step by default — do not hand-run it solo.** The
      loop below (planner → executor → reviewer → fix → steward) IS the workflow
-     shape — pipeline the roles via the Workflow tool; do not hand-run them
-     inline when a Workflow can fan them out and verify.
+     shape — pipeline the roles via the harness's Workflow runner where one is
+     exposed; otherwise fan them out as role subagents (separate worktrees
+     where tree-isolation matters) and verify each role's output yourself
+     before routing it onward. Either way, do not hand-run inline what can be
+     fanned out and verified — degrade the tool, never the verification.
    - **Token cost is not a constraint on COVERAGE.** Be exhaustive on review,
      invariant checks, and the ANTI-BIAS passes. This does NOT relax the token
      DISCIPLINE below — that discipline is about role separation and keeping
@@ -49,6 +67,24 @@ writing fixes. The orchestrator's context fills with implementation detail it
 shouldn't hold. This protocol fixes all three by splitting roles, keeping
 plans code-free, and pushing every handoff into repo files.
 
+## Quick reference (index only — defer to the sections it names)
+
+Re-orienting from a cold start? First recover live state via **Persistence /
+resume** (gh/git/Progress line). Then this index points to the control flow:
+
+- **Loop sequence:** planner → executor → reviewer → fix → merge → steward.
+  (See **The loop**; note planner runs one item ahead.)
+- **Dispatch params:** ITEM / SPEC / SLICES / BRANCH / PR / INVARIANTS / DELTAS /
+  HANDOFF (DELTAS and HANDOFF as applicable). (See **Dispatch protocol**.)
+- **Scaffolding files:** the orchestration prompt templates, token ledger,
+  friction log, prompt changelog (the single version record), and the backlog
+  doc with its **Progress** line. (See **Phase 0**.)
+- **Verdict grammar:** `VERDICT: APPROVE` or `VERDICT: BLOCK — <n> issues`.
+  (See **The loop**, step 3.)
+
+This is navigation, not a second source of truth — the named sections are
+authoritative.
+
 ## Phase 0 — Bootstrap (run once on a fresh repo)
 
 1. Learn the repo: read CLAUDE.md / AGENTS.md / CONTRIBUTING for house style,
@@ -57,7 +93,14 @@ plans code-free, and pushing every handoff into repo files.
    OUTWARD-FACING — see Persistence), and the PR tool (`gh`).
 2. Create the scaffolding (these are the system's whole memory):
    - `docs/orchestration/prompts/{planner,executor,reviewer,fix,steward}.md`
-     — one role-contract template each (contents below).
+     — one role-contract template each. Author each by deriving its content
+     from the matching numbered step in *The loop* below plus any relevant
+     ANTI-BIAS clauses; encode the caveman report style (see Comms) into each
+     template's report section. The reviewer template MUST embed the ANTI-BIAS
+     clauses verbatim and MUST end with the exact `VERDICT: APPROVE` /
+     `VERDICT: BLOCK — <n> issues` grammar. *The loop* and ANTI-BIAS are the
+     single source — do NOT fork divergent copies into these files; when the
+     contract changes, change it there and re-derive.
    - `docs/orchestration/token-ledger.md` — one line per run + soft per-role
      budgets (seed them after a few runs; don't invent precise numbers).
    - `docs/orchestration/friction-log.md` — `## Open` / `## Resolved`; each
@@ -66,8 +109,9 @@ plans code-free, and pushing every handoff into repo files.
      template change tied to the KPI it targets. This is the SINGLE version
      record; templates carry no version in their headers.
    - A backlog doc with a one-line **Progress** marker the orchestrator
-     updates at each item completion, and a `Needs` column using ONE
-     numbering scheme.
+     updates at each item completion, and a `Needs` (dependency) column
+     listing each item's blockers by backlog item ID — ONE numbering scheme,
+     never mix item IDs with PR or slice numbers.
 3. Decompose the backlog into items, each item into PR-sized slices.
 
 ## The loop (per backlog item)
@@ -112,9 +156,14 @@ ITEM / SPEC / SLICES / BRANCH / PR / INVARIANTS / DELTAS / HANDOFF. Be precise
 when a DELTA resolves a spec-open choice, name both sides ("spec offers X|Y;
 DELTA picks X"). Match each agent's TYPE to the tools its template needs (a
 review agent type with no shell cannot run `gh pr diff` and will silently
-review the wrong thing). The working tree is a SINGLE shared resource: at most
-one tree-mutator (executor/fix/your own shell) at a time; reviewers never
-touch it.
+review the wrong thing). The working tree is a shared resource PER PATH: for
+any tracked path, at most one tree-MUTATOR — the executor, the fix executor, or
+your own orchestrator shell — touches it at a time. The one-ahead planner is
+exempt: it writes only NEW, untracked spec files on paths no other actor
+stages, which is exactly why the executor stages by EXPLICIT PATH and never
+`git add -A`s (see above). The reviewer NEVER touches the tree at all; the
+steward works in an ISOLATED git worktree (a separate checkout, not the shared
+tree) and edits only the orchestration docs.
 
 ## Token discipline + KPIs
 
@@ -182,6 +231,20 @@ every role is the same model family reading the same spec. Counter all of it:
    thorough reviews as "pricey"; annotate a cheap review that found nothing on
    a large diff. Make non-blocking findings a first-class output so the
    reviewer can register doubt without the expensive BLOCK path.
+
+## Common mistakes (silent-corruption traps — fully explained in their home sections)
+
+A scanning index of the gotchas that corrupt before they error. Pointer surface
+only — the full counter-move lives at the cited section; do NOT re-explain here.
+
+- `git add -A` in the executor → stages the one-ahead planner's untracked next
+  spec into the wrong PR. [The loop, Executor]
+- Delete a branch before `gh` confirms `state: MERGED` → closes the PR.
+  [The loop, Orchestrator merges]
+- Reviewer falls back to the local working tree when `gh pr diff` fails →
+  reviews another branch's diff. [The loop, Reviewer]
+- Dispatching a review agent whose TYPE has no shell → it silently reviews the
+  wrong tree. [Dispatch protocol]
 
 ## Comms (optional)
 
