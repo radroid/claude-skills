@@ -161,6 +161,16 @@ steward.
    changelog note even when it tunes nothing ("reviewed through PR #n, no
    change — <why>"). A steward that only logs when it changes something is
    indistinguishable from one silently skipped; silence is not proof it ran.
+   The steward is NON-DEFERRABLE, and this is a HARD GATE: before you dispatch
+   the NEXT item's planner/executor, the just-completed item's steward MUST have
+   run and left its changelog trace. About to start a new item with no changelog
+   entry since the last one? STOP — run the steward first. "Batch the stewardship
+   at the end" is exactly how it never runs: the trailing, unforced,
+   no-user-deliverable step always loses to the next item's momentum, and a whole
+   backlog can ship with the steward dispatched ZERO times — friction-log Open
+   never drained, templates never tuned, the entire self-improvement loop
+   vestigial. The cheapest tell you skipped it: a changelog frozen at the seed
+   entry while PRs pile up.
 
 ## Dispatch protocol
 
@@ -301,6 +311,9 @@ only — the full counter-move lives at the cited section; do NOT re-explain her
   reviews another branch's diff. [The loop, Reviewer]
 - Dispatching a review agent whose TYPE has no shell → it silently reviews the
   wrong tree. [Dispatch protocol]
+- Deferring the steward "to the end" under delivery momentum → it runs zero
+  times; friction never drains and the self-improvement loop never executes.
+  [The loop, Steward]
 
 ## Comms (optional)
 
