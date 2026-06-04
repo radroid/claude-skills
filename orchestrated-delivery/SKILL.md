@@ -190,7 +190,12 @@ runtime — its own sim/device, dev-server port, and bundler instance — so it
 never collides with another agent's. Treat each concrete runtime resource like
 the tree: at most one writer at a time. (When agents genuinely run in parallel,
 give each its own worktree — `isolation: worktree` — so tree AND branch are
-isolated by construction.)
+isolated by construction.) Disk is finite too: a long-horizon, per-agent-worktree
+run accumulates GBs of worktrees plus native build caches (DerivedData,
+`node_modules`, Pods) and will hit ENOSPC mid-build. Prune as you go — once a
+branch is MERGED, remove its worktree (`git worktree remove`) and delete the
+branch; on ENOSPC, reclaim from merged/stale worktrees and build caches before
+retrying, never from an in-flight branch.
 
 ## Token discipline + KPIs
 
