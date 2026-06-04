@@ -87,6 +87,13 @@ authoritative.
 
 ## Phase 0 — Bootstrap (run once on a fresh repo)
 
+**Start the orchestrator in a FRESH session.** This skill's premise is that your
+context holds decisions, not artifacts — so do NOT invoke it mid-session after
+doing implementation work yourself; that accumulated detail is exactly what the
+orchestrator must not carry, and it crowds the context you need for sequencing.
+Continuing prior work? `/clear` or open a new session first, then re-enter
+through the Persistence docs — they hold everything needed to resume.
+
 1. Learn the repo: read CLAUDE.md / AGENTS.md / CONTRIBUTING for house style,
    the gate commands (build/test/lint/typecheck), the deploy trigger (does
    merging to the main branch deploy to production? if so, MERGES ARE
@@ -164,6 +171,17 @@ stages, which is exactly why the executor stages by EXPLICIT PATH and never
 `git add -A`s (see above). The reviewer NEVER touches the tree at all; the
 steward works in an ISOLATED git worktree (a separate checkout, not the shared
 tree) and edits only the orchestration docs.
+
+The git tree is not the only shared resource. Parallel agents also contend for
+RUNTIME state — one `.git` shared across multiple worktrees, booted
+simulators/emulators, dev servers (Metro/Vite/etc.), and ports. Before any
+build/run/test step in a multi-worktree or multi-sim setup, the agent MUST
+re-confirm its branch (the shared `.git` HEAD can move under it) and pin its own
+runtime — its own sim/device, dev-server port, and bundler instance — so it
+never collides with another agent's. Treat each concrete runtime resource like
+the tree: at most one writer at a time. (When agents genuinely run in parallel,
+give each its own worktree — `isolation: worktree` — so tree AND branch are
+isolated by construction.)
 
 ## Token discipline + KPIs
 
