@@ -149,7 +149,10 @@ steward.
 4. **Fix executor** applies exactly the reviewer's issues; gate; push.
 5. **Orchestrator merges** (squash; detach HEAD first; CONFIRM `state: MERGED`
    before deleting any branch — GitHub may still be computing mergeability and
-   a premature delete closes the PR). Append ledger lines; file friction.
+   a premature delete closes the PR). The squash lands on REMOTE main, so the
+   detached local main is now BEHIND — fast-forward it (`git pull`) before the
+   next tree-mutator branches, or that branch forks off pre-merge code. Append
+   ledger lines; file friction.
 6. **Steward** (in a git worktree) reads ledger + friction + templates and
    AUTO-TUNES the templates, logging each change to the changelog with the KPI
    it targets and moving addressed friction to Resolved. Touches ONLY the
