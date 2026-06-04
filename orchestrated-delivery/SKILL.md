@@ -249,7 +249,12 @@ every role is the same model family reading the same spec. Counter all of it:
    block the loop: ship on build/unit green, but append the feature to a single
    running human-verification queue (`docs/orchestration/manual-verification.md`,
    one item + exact repro recipe each). That queue is a FIRST-CLASS run
-   deliverable — the morning handoff — not a per-PR footnote.
+   deliverable — the morning handoff — not a per-PR footnote. UI
+   layout/interaction and native-integration changes are the HIGHEST-escape
+   class — build+unit green cannot see an untappable control, an overlapping
+   pane, or an unlinked native module — so they ALWAYS get a queue entry with a
+   concrete user-facing check; never let "unit-green + APPROVE" stand in for
+   "the feature actually works."
 5. FRAME DIVERSITY: rotate a hostile-framed reviewer ("assume the author is
    wrong") and periodically a NO-CHECKLIST reviewer (diff + spec only). On a
    schedule, run a BLIND HOSTILE RE-REVIEW of already-merged PRs with zero
