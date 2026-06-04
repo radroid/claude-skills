@@ -163,7 +163,12 @@ ITEM / SPEC / SLICES / BRANCH / PR / INVARIANTS / DELTAS / HANDOFF. Be precise
 when a DELTA resolves a spec-open choice, name both sides ("spec offers X|Y;
 DELTA picks X"). Match each agent's TYPE to the tools its template needs (a
 review agent type with no shell cannot run `gh pr diff` and will silently
-review the wrong thing). The working tree is a shared resource PER PATH: for
+review the wrong thing). If you dispatch through a Workflow runner instead of
+direct subagents, author its script to the runner's EXACT contract — read the
+tool's spec, don't guess; common rejections are TypeScript syntax in a plain-JS
+runner or passing an unsupported param (e.g. a background flag). A malformed
+dispatch only costs a retry, never a wrong result, but it burns a cycle. The
+working tree is a shared resource PER PATH: for
 any tracked path, at most one tree-MUTATOR — the executor, the fix executor, or
 your own orchestrator shell — touches it at a time. The one-ahead planner is
 exempt: it writes only NEW, untracked spec files on paths no other actor
