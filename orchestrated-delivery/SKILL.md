@@ -240,10 +240,16 @@ every role is the same model family reading the same spec. Counter all of it:
    unauthorized, but DO flag one whose CONSEQUENCES violate an invariant or
    the spec's goal; make the reviewer read the cited decision, not the label.
 4. NO SELF-MARKED HOMEWORK: require ≥1 REVIEWER-authored (not executor-
-   authored) test per PR, and a runtime SMOKE ORACLE (e.g. Playwright: happy
-   path + one denied-permission path per feature). Until a runtime oracle
-   exists, label the metric "escaped defects (build/unit-detectable only)" —
-   it is 0-known, not 0-real.
+   authored) test per PR, and a runtime SMOKE ORACLE (e.g. Playwright for web;
+   a sim/device install + UI assertion for native) — happy path + one
+   denied-permission path per feature. Until a runtime oracle exists, label the
+   metric "escaped defects (build/unit-detectable only)" — it is 0-known, not
+   0-real. When the oracle CANNOT run unattended (a native install needing the
+   full build pipeline, a manual OS-settings step), do NOT fake it and do NOT
+   block the loop: ship on build/unit green, but append the feature to a single
+   running human-verification queue (`docs/orchestration/manual-verification.md`,
+   one item + exact repro recipe each). That queue is a FIRST-CLASS run
+   deliverable — the morning handoff — not a per-PR footnote.
 5. FRAME DIVERSITY: rotate a hostile-framed reviewer ("assume the author is
    wrong") and periodically a NO-CHECKLIST reviewer (diff + spec only). On a
    schedule, run a BLIND HOSTILE RE-REVIEW of already-merged PRs with zero
