@@ -18,8 +18,11 @@
 //       PASS → APPROVE; REVISE → REVISE; BLOCK → BLOCK (1:1, just rename PASS).
 //   • autonomous-build-loop super-reviewer: REQUEST_CHANGES → REVISE.
 const VERDICT_VALUES = ["APPROVE", "REVISE", "BLOCK"];
+// NOTE: these schema consts intentionally carry NO `$id`. They are pasted as one
+// block and validated by value at the tool layer (no $ref registry), and several
+// are embedded by value into the parents below — a shared `$id` would risk a
+// "duplicate $id" rejection under stricter JSON-Schema validators.
 const VERDICT_SCHEMA = {
-  $id: "canon/verdict",
   type: "string",
   enum: VERDICT_VALUES,
   description:
@@ -33,7 +36,6 @@ const GATE_VALUES = ["proceed", "hold", "escalate"];
 
 // ── Cost record ──────────────────────────────────────────────────────────────
 const COST_SCHEMA = {
-  $id: "canon/cost",
   type: "object",
   required: ["role", "label", "tokens_in", "tokens_out"],
   additionalProperties: false,
@@ -51,7 +53,6 @@ const COST_SCHEMA = {
 
 // ── Checkpoint / resume-state record ─────────────────────────────────────────
 const CHECKPOINT_SCHEMA = {
-  $id: "canon/checkpoint",
   type: "object",
   required: ["item", "stage", "status"],
   additionalProperties: false,
@@ -72,7 +73,6 @@ const CHECKPOINT_SCHEMA = {
 // Exactly the governance fields the steward + fleet-auditor read:
 // role / cost / verdict / issues / tests_added / gate_decision / human_approval.
 const AUDIT_LEDGER_ENTRY_SCHEMA = {
-  $id: "canon/audit-ledger-entry",
   type: "object",
   required: ["role", "cost", "verdict", "issues", "tests_added", "gate_decision", "human_approval"],
   additionalProperties: false,

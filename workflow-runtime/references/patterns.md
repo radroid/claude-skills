@@ -129,7 +129,8 @@ async function adversarialVerify(claim, opts) {
   return { survives, votes, kills, total };
 }
 
-// judgePanel(attempts[], scorePrompt) -> {winnerIndex, winner, reason, grafts, runnerUp}
+// judgePanel(attempts[], scorePrompt) -> {winnerIndex, winner, reason, grafts, topGraft}
+// (topGraft = the first graft the judge listed — NOT a ranked second-best.)
 // Scores N independent attempts against one rubric, returns the winner plus the
 // runner-up ideas worth grafting onto it. On any malformed/failed/out-of-range
 // verdict it DEFAULTS to attempt 0 (the first survivor) rather than inventing a
@@ -137,7 +138,7 @@ async function adversarialVerify(claim, opts) {
 async function judgePanel(attempts, scorePrompt) {
   const pool = (attempts || []).filter(Boolean); // agent() returns null on skip/death
   if (pool.length === 0) return null;
-  if (pool.length === 1) return { winnerIndex: 0, winner: pool[0], reason: "only one attempt", grafts: [], runnerUp: null };
+  if (pool.length === 1) return { winnerIndex: 0, winner: pool[0], reason: "only one attempt", grafts: [], topGraft: null };
 
   const numbered = pool
     .map((a, i) => "### ATTEMPT " + i + "\n" + (typeof a === "string" ? a : JSON.stringify(a)))
@@ -164,7 +165,7 @@ async function judgePanel(attempts, scorePrompt) {
     winner: pool[widx],
     reason: (verdict && verdict.reason) || "defaulted to attempt 0 (judge unavailable)",
     grafts,
-    runnerUp: grafts.length ? pool[grafts[0].fromIndex] : null,
+    topGraft: grafts.length ? pool[grafts[0].fromIndex] : null,
   };
 }
 ```

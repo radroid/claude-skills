@@ -18,7 +18,8 @@ export const meta = {
 //  APPROVE | REVISE | BLOCK in assets/preamble.js. When orchestrated-delivery
 //  is wired to the canon, a fixable BLOCK becomes REVISE; here we keep the
 //  binary form to stay faithful to the reviewer step as it exists today.)
-// We schema-validate the structured form and render that exact line from it.
+// This is the documented RETURN SHAPE: the pipeline builds objects of this shape
+// BY CONSTRUCTION from deterministic values (no LLM round-trip — see the body).
 const VERDICT_SCHEMA = {
   type: "object",
   required: ["claim", "verdict", "issue_count", "verdict_line", "votes", "free_hunt"],
@@ -75,50 +76,66 @@ const REFUTER_LENSES = [
 function lensFor(i) {
   return REFUTER_LENSES[i % REFUTER_LENSES.length];
 }
+// The free-hunt lens is index 1 of REFUTER_LENSES. Match free_hunt against the
+// ASSIGNED lens (deterministic) — never regex over the model's echoed lens text.
+const FREE_HUNT_LENS = REFUTER_LENSES[1];
 function tag(label, i) {
   return label + "-" + i;
 }
 
 // adversarialVerify: run N hostile refuters against ONE claim on diverse
-// lenses, then gate by REFUTE-BY-MAJORITY. Returns { survives, refutedCount, votes }.
+// lenses, then gate by REFUTE-BY-MAJORITY. Returns { survives, refutedCount, total, votes }.
 // parallel() is a BARRIER — justified here because the majority tally needs
 // ALL ballots before it can decide. A throwing thunk resolves to null -> filter.
 async function adversarialVerify(claim, diff, opts) {
   const o = opts || {};
   const n = o.n || 3;
   const phaseTag = o.phase || "adversarial-verify";
+  // The refuter returns only its judgement; the LENS is assigned deterministically
+  // by index below (never trust the model to echo it back — see free_hunt).
   const REFUTER_BALLOT = {
     type: "object",
-    required: ["lens", "refuted", "confidence", "finding"],
+    required: ["refuted", "confidence", "finding"],
     additionalProperties: false,
     properties: {
-      lens: { type: "string" },
       refuted: { type: "boolean" },
       confidence: { type: "number", minimum: 0, maximum: 1 },
       finding: { type: "string" },
       nonblocking: { type: "boolean" },
     },
   };
-  const ballots = (
-    await parallel(
-      Array.from({ length: n }, (_, i) => () =>
-        agent(
-          "You are a HOSTILE refuter on lens [" + lensFor(i) + "].\n" +
-            "Diff-only review. Try to REFUTE this claim about the change.\n" +
-            "Claim: " + claim + "\n\nDiff:\n" + diff + "\n\n" +
-            "Set refuted=true ONLY at >=0.80 confidence (the reviewer bar). " +
-            "Below the bar, set refuted=false and nonblocking=true but still record the finding. " +
-            "NEVER write code; one-line fix direction only.",
-          { label: tag("refuter", i), phase: phaseTag, schema: REFUTER_BALLOT },
-        ),
+  // parallel() is a BARRIER — the majority tally needs ALL ballots. Do NOT
+  // .filter(Boolean) the raw results before tallying: a null (skip / death /
+  // throw) is a NON-CONFIRMATION and MUST count as a refutation — never give a
+  // claim the benefit of a missing vote. (Same null doctrine as the canon's
+  // patterns.md adversarialVerify.)
+  const raw = await parallel(
+    Array.from({ length: n }, (_, i) => () =>
+      agent(
+        "You are a HOSTILE refuter on lens [" + lensFor(i) + "].\n" +
+          "Diff-only review. Try to REFUTE this claim about the change.\n" +
+          "Claim: " + claim + "\n\nDiff:\n" + diff + "\n\n" +
+          "Set refuted=true ONLY at >=0.80 confidence (the reviewer bar). " +
+          "Below the bar, set refuted=false and nonblocking=true but still record the finding. " +
+          "NEVER write code; one-line fix direction only.",
+        { label: tag("refuter", i), phase: phaseTag, schema: REFUTER_BALLOT },
       ),
-    )
-  ).filter(Boolean);
+    ),
+  );
+  const votes = raw.map((b, i) => {
+    const lens = lensFor(i); // ASSIGNED lens (deterministic), not the model's echo
+    if (!b) {
+      // null = skip/death/throw = NON-CONFIRMATION → counts as a refutation.
+      return { lens, refuted: true, confidence: 1, finding: "no ballot returned (skip/death) — defaulted to refuted", nonblocking: false };
+    }
+    return { lens, refuted: b.refuted === true, confidence: b.confidence, finding: b.finding, nonblocking: b.nonblocking === true };
+  });
 
-  const refutedCount = ballots.filter((b) => b.refuted).length;
+  const refutedCount = votes.filter((v) => v.refuted).length;
+  const total = votes.length; // includes deaths — they count as refutations
   // BLOCK on majority-refute. Ties (n even) resolve to BLOCK — the hostile default.
-  const survives = refutedCount < Math.ceil(ballots.length / 2);
-  return { survives, refutedCount, votes: ballots };
+  const survives = total > 0 && refutedCount < Math.ceil(total / 2);
+  return { survives, refutedCount, total, votes };
 }
 
 // Render the EXACT trailing line the reviewer contract mandates.
@@ -153,25 +170,25 @@ const verdicts = (
     claims,
     (item, _orig, i) =>
       adversarialVerify(item.claim, item.diff, { n: N, phase: tag("verify", i) }),
-    (av, orig, i) => {
+    (av, orig) => {
       if (!av) return null; // a throwing refute stage drops the item to null
       const verdict = av.survives ? "APPROVE" : "BLOCK";
       const issueCount = av.survives ? 0 : Math.max(1, av.refutedCount);
-      const freeHunt =
-        (av.votes.find((v) => /free-hunt/.test(v.lens)) || {}).finding ||
-        "none surfaced above the bar";
-      // Adjudicator emits the schema-validated verdict object; harness retries on mismatch.
-      return agent(
-        "Adjudicate the reviewer verdict for this claim from the refuter ballots.\n" +
-          "Claim: " + orig.claim + "\n" +
-          "Refuted by " + av.refutedCount + " of " + av.votes.length + " refuters.\n" +
-          "Majority-refute => BLOCK; else APPROVE.\n" +
-          "Decision: verdict=" + verdict + ", issue_count=" + issueCount + ".\n" +
-          "Ballots:\n" + JSON.stringify(av.votes) + "\n" +
-          "free_hunt MUST be: " + freeHunt + "\n" +
-          "verdict_line MUST be EXACTLY: " + verdictLine(verdict, issueCount),
-        { label: tag("adjudicate", i), schema: VERDICT_SCHEMA },
-      );
+      const fh = av.votes.find((v) => v.lens === FREE_HUNT_LENS);
+      const freeHunt = (fh && fh.finding) || "none surfaced above the bar";
+      // Every value here is DETERMINISTIC — build the (VERDICT_SCHEMA-shaped)
+      // object directly. Do NOT round-trip known values through an LLM: a schema
+      // validates SHAPE, not values, so an adjudicator agent could silently
+      // reformat verdict_line or drop a vote. "The verdict is typed, not parsed"
+      // — reserve agent()+schema for genuine judgement (the refuters above).
+      return {
+        claim: orig.claim,
+        verdict,
+        issue_count: issueCount,
+        verdict_line: verdictLine(verdict, issueCount),
+        votes: av.votes,
+        free_hunt: freeHunt,
+      };
     },
   )
 ).filter(Boolean);
