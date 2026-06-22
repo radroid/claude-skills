@@ -47,13 +47,13 @@ Same pattern as `autonomous-build-loop`. Check which mode applies BEFORE the las
 
 4. **Research first, HTML second — they are two steps, not one.** The Mobbin pass produces `docs/research/design/<screen>.md` (pattern notes, app references, annotations). HTML authoring is a *separate* step that reads the research doc as context. Skipping the research persistence step makes critique impossible (no reference to compare against) and burns Mobbin queries on every refinement.
 
-5. **Critique exit gate is non-negotiable.** A screen iter does NOT close on "the HTML rendered." It closes on: (i) chrome-devtools-mcp opens the file in a real browser at the configured viewport, (ii) screenshot is captured, (iii) a Class A `design-review` sub-agent (read-only, fresh context) compares the screenshot against the research notes and returns `pass | revise | block`. Anything other than `pass` re-queues the screen.
+5. **Critique exit gate is non-negotiable.** A screen iter does NOT close on "the HTML rendered." It closes on: (i) chrome-devtools-mcp opens the file in a real browser at the configured viewport, (ii) screenshot is captured, (iii) a Class A `design-review` sub-agent (read-only, fresh context) compares the screenshot against the research notes and returns `PASS | REVISE | BLOCK`. Anything other than `PASS` re-queues the screen.
 
 6. **Mobile or desktop, not "responsive" by default.** Pick one platform up front in `.design-loop/state.json` (`platform: "mobile" | "desktop"`). The chrome-devtools viewport, the Mobbin queries ("mobile checkout"), and the HTML breakpoints all key off this. Responsive can be a later refinement once both viewports have been individually validated.
 
 7. **Stack the artifacts; don't fork them.** If `prd-to-screens` already wrote `docs/screens/html/dashboard.html`, this loop UPDATES that file in place. Same shared `assets/mock-data.js`, same Tailwind-via-CDN convention. Forking output locations creates two competing baselines and defeats the consumer (`autonomous-build-loop`) that reads from one path.
 
-8. **Same continuous-loop semantics as `autonomous-build-loop`.** Blocks become entries in `logs/blocks.md`, not halts. A Mobbin query that returns nothing useful, a critique `block` verdict, a render failure — all log + pick next screen + continue. See `autonomous-build-loop/references/continuous-loop.md`.
+8. **Same continuous-loop semantics as `autonomous-build-loop`.** Blocks become entries in `logs/blocks.md`, not halts. A Mobbin query that returns nothing useful, a critique `BLOCK` verdict, a render failure — all log + pick next screen + continue. See `autonomous-build-loop/references/continuous-loop.md`.
 
 ## Quick-start: starting an iteration
 
@@ -62,16 +62,16 @@ Same pattern as `autonomous-build-loop`. Check which mode applies BEFORE the las
 3. **Mobbin research pass** — query the `mobbin` MCP server with focused, comparative prompts. Persist the result as `docs/research/design/<screen>.md`. If notes already exist, update them additively (don't overwrite — research compounds).
 4. **HTML synthesis** — open `docs/screens/html/<screen>.html` if it exists; create from a clean Tailwind+CDN page skeleton if not. Apply the patterns from the research doc. Shared mock data in `docs/screens/html/assets/mock-data.js` (matches `prd-to-screens` convention).
 5. **Render + screenshot** — use `chrome-devtools-mcp` to open the file at the platform viewport (`375x812` mobile / `1440x900` desktop), capture screenshot.
-6. **Class A design-critique sub-agent** — fresh context, read-only, given the screenshot + research notes; returns `pass | revise | block` with concrete annotations. Charter template: `references/design-critique.md`.
-7. **On `pass`:** mark `screens[i].status: "approved"`, increment `refinement_count`, advance `current` to the next pending screen, commit.
-8. **On `revise`:** keep `current` as-is, log the critique to `logs/blocks.md`, the next iter re-enters synthesis with the critique in context.
-9. **On `block`:** mark `screens[i].status: "blocked"`, log reason, advance to the next pending screen.
+6. **Class A design-critique sub-agent** — fresh context, read-only, given the screenshot + research notes; returns `PASS | REVISE | BLOCK` with concrete annotations. Charter template: `references/design-critique.md`.
+7. **On `PASS`:** mark `screens[i].status: "approved"`, increment `refinement_count`, advance `current` to the next pending screen, commit.
+8. **On `REVISE`:** keep `current` as-is, log the critique to `logs/blocks.md`, the next iter re-enters synthesis with the critique in context.
+9. **On `BLOCK`:** mark `screens[i].status: "blocked"`, log reason, advance to the next pending screen.
 10. **In-session mode:** `ScheduleWakeup` for next iter (default: 600s). **External-scheduler mode:** exit cleanly.
 
 ## When NOT to use this skill
 
 - **No screen inventory and no PRD.** This loop refines *something*. If there's neither an existing `docs/screens/html/` directory nor a PRD from which to derive a screen list, run `prd-to-screens` first (or `grill-to-prd` → `prd-to-screens` if there's not even a PRD).
-- **Mobbin MCP is not configured / authenticated.** The skill's value rests on the Mobbin research step. Without it, every iter degrades to "draft HTML from training data" — which is exactly what we built `frontend-design:frontend-design` for. Add the MCP server first: `claude mcp add mobbin --transport http https://api.mobbin.com/mcp` (browser OAuth on first use). If the user can't add it, point them at `prd-to-screens` (which doesn't depend on Mobbin) and stop.
+- **Mobbin MCP is not configured / authenticated.** The skill's value rests on the Mobbin research step. Without it, every iter degrades to generic HTML drafting. Add the MCP server first: `claude mcp add mobbin --transport http https://api.mobbin.com/mcp` (browser OAuth on first use). If the user can't add it, point them at `prd-to-screens` (which doesn't depend on Mobbin) and stop.
 - **The user wants production frontend code.** This loop produces design references in `docs/screens/html/`. If they want real components in `src/`, that's `autonomous-build-loop` territory — and that loop will critique its output against *these* mockups.
 - **Mid-implementation surface churn.** If `autonomous-build-loop` is actively shipping S3 frontend features for a screen, refining its design reference under it causes whiplash. Pause this loop until the in-flight feature merges, or scope refinement to screens not under active implementation.
 
@@ -79,7 +79,7 @@ Same pattern as `autonomous-build-loop`. Check which mode applies BEFORE the las
 
 - **One screen per iter.** Hard cap. The exit gate (chrome-devtools + Class A critique) is per-screen; batching forfeits the gate.
 - **Never edit `src/` or any application source.** This loop is design-only. Application-code changes go through `autonomous-build-loop`.
-- **Never skip the critique gate.** No "looked fine in my head." A screen iter that doesn't end in a `pass` verdict from a fresh-context Class A sub-agent is not done.
+- **Never skip the critique gate.** No "looked fine in my head." A screen iter that doesn't end in a `PASS` verdict from a fresh-context Class A sub-agent is not done.
 - **Never overwrite a research doc — append.** Each Mobbin pass adds findings to `docs/research/design/<screen>.md`. Old findings are dated and kept. Research is cumulative.
 - **Mock data is shared across screens.** Reuse `docs/screens/html/assets/mock-data.js` (the `prd-to-screens` convention). A user named "Sam Chen" on the dashboard must still be "Sam Chen" on settings.
 - **HTML is self-contained.** No build step. Tailwind via CDN, fonts via Google Fonts, mock data via relative `<script src>`. Double-click the file → it renders.

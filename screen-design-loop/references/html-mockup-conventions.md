@@ -66,7 +66,7 @@ Within a screen, links to other screens use relative paths: `<a href="./settings
 ## Iteration discipline
 
 When refining an existing file:
-- **Preserve approved structure.** Diff is incremental. If a prior iter `pass`-ed the sidebar layout, don't re-architect it in a later iter — change only what the new research justifies.
+- **Preserve approved structure.** Diff is incremental. If a prior iter `PASS`-ed the sidebar layout, don't re-architect it in a later iter — change only what the new research justifies.
 - **Update the `<title>`'s implicit version mark only when sections meaningfully change.** No "v2", "v3" suffixes in filenames or titles.
 - **The shared mock data is shared.** Adding a new user field for this screen means adding it to `mock-data.js` (which every other screen now sees), not faking it inline.
 

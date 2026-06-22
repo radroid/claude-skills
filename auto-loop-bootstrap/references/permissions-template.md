@@ -1,8 +1,8 @@
 # Permissions template — `.claude/settings.local.json`
 
-The auto-loop driver runs `claude -p` with `--permission-mode bypassPermissions`. That's required for headless operation — there's nobody to approve prompts. To compensate, use the project-local settings file to DENY access to sensitive files.
+The autonomous build loop runs inside a Claude Code session that the user explicitly starts. Even though the user is at the keyboard when the loop kicks off, the loop runs unattended for long stretches (`ScheduleWakeup` between iters). A project-local settings file with DENY entries is defense in depth: it prevents the loop from touching secrets or running destructive Bash even if a backlog item or hallucinated step would otherwise lead it there.
 
-**This file is REQUIRED.** As of `auto-loop.py` v0.1.2, the driver refuses to start if `.claude/settings.local.json` is missing (override with `--skip-denylist-check`). Phase 5 of the bootstrap must always write the baseline below — Phase 3 only collects ADDITIONS, not the baseline itself.
+**Phase 5 of the bootstrap always writes the baseline below.** Phase 3 collects ADDITIONS (repo-specific sensitive paths) and merges them in.
 
 ## Skeleton
 
@@ -54,7 +54,7 @@ Regardless of repo:
 | `Bash(gh release create:*)` | Public release |
 | `Bash(vercel deploy --prod:*)` | Production deploy |
 
-The autonomous-build-loop skill already encodes "no force-push / no production deploys" as hard rules, but a settings-level deny is a defense in depth.
+The autonomous-build-loop skill already encodes "no force-push / no production deploys" as hard rules, but a settings-level deny is harness-enforced — it catches drift even if the agent forgets a rule.
 
 ## What NOT to deny
 
@@ -72,4 +72,4 @@ After writing the file:
 python3 -c "import json; print(json.dumps(json.load(open('.claude/settings.local.json')), indent=2))"
 ```
 
-Confirms valid JSON. The auto-loop's `claude -p` will load these settings automatically (it inherits the project's settings dir).
+Confirms valid JSON. Claude Code loads `.claude/settings.local.json` automatically when the session is opened in the repo.

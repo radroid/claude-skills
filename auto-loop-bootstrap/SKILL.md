@@ -1,13 +1,13 @@
 ---
 name: auto-loop-bootstrap
-description: Bootstrap a repo for autonomous build looping — scaffolds CLAUDE.md, GOALS.md, ARCHITECTURE.md, PLAN.md, logs/, and drops in the auto-loop driver script. Use when the user wants to "set up the autonomous loop", "bootstrap auto-loop", "prepare this repo for autonomous building", "make this repo loopable", "scaffold the build loop", or "set up self-driving build" on a repo that doesn't yet have the loop protocol files. If GOALS.md is missing or empty, invokes the grill-me skill first to interview the user and extract a concrete backlog. Idempotent — preserves existing content. Pairs with autonomous-build-loop (runs one iter) which the driver script then invokes per fresh Claude Code session.
+description: Bootstrap a repo for autonomous build looping — scaffolds CLAUDE.md, GOALS.md, ARCHITECTURE.md, PLAN.md, logs/, and `.loop/state.json`. Use when the user wants to "set up the autonomous loop", "bootstrap auto-loop", "prepare this repo for autonomous building", "make this repo loopable", "scaffold the build loop", or "set up self-driving build" on a repo that doesn't yet have the loop protocol files. If GOALS.md is missing or empty, invokes the grill-me skill first to interview the user and extract a concrete backlog. Idempotent — preserves existing content. Pairs with autonomous-build-loop which the user invokes in their Claude Code session to run iters.
 ---
 
 # Auto Loop Bootstrap
 
 ## Overview
 
-Prepare a repo so the autonomous build loop can run. The output is a self-driving setup: the user runs `python3 scripts/auto-loop.py` and walks away — each iter spawns a fresh `claude -p` invocation, reads state from disk, ships features, commits, exits. No `ScheduleWakeup`, no token-runway exhaustion.
+Prepare a repo so the autonomous build loop can run. The output is a loop-ready setup: the user invokes the `autonomous-build-loop` skill in a Claude Code session and walks away — each iter reads state from disk, ships features, commits, and schedules the next iter via `ScheduleWakeup`. One in-session loop, no external driver.
 
 Pairs with the `autonomous-build-loop` skill (which defines per-iter behavior). This skill sets up the static files; the other skill defines the runtime protocol.
 
@@ -21,7 +21,7 @@ Pairs with the `autonomous-build-loop` skill (which defines per-iter behavior). 
 | Mode | Trigger | Behavior |
 |---|---|---|
 | **Brownfield** (default) | Neither signal present | Existing 8-phase workflow below — grill for backlog, scaffold all templates, smoke-test |
-| **Greenfield handoff** | Either signal present | **Skip Phase 2** (grilling — backlog already exists). **Skip Phase 4 substitutions for** `GOALS.md` / `ARCHITECTURE.md` / `PLAN.md` (idea-to-loop wrote them). DO run remaining Phase 4 actions (CLAUDE.md protocol-section append, `logs/` skeleton, `.loop/state.json` S2→S3 rewrite, `scripts/auto-loop.py` drop), 5 (.gitignore + settings), 6 (initial commit), 7 (smoke), 8 (hand-off). State transition: rewrite `.loop/state.json` → `"stage": "S3"`, `"pr_mode": true`, `"pr_size_policy": "fat"`, `"iter": 0`. |
+| **Greenfield handoff** | Either signal present | **Skip Phase 2** (grilling — backlog already exists). **Skip Phase 4 substitutions for** `GOALS.md` / `ARCHITECTURE.md` / `PLAN.md` (idea-to-loop wrote them). DO run remaining Phase 4 actions (CLAUDE.md protocol-section append, `logs/` skeleton, `.loop/state.json` S2→S3 rewrite), 5 (.gitignore + settings), 6 (initial commit), 7 (smoke), 8 (hand-off). State transition: rewrite `.loop/state.json` → `"stage": "S3"`, `"pr_mode": false`, `"pr_size_policy": "fat"`, `"iter": 0`. Phase 3 can still flip `pr_mode` to `true` if the user opts in. |
 
 In both modes, the exit state is identical: a loop-ready repo with `.loop/state.json` at `"stage": "S3"`.
 
@@ -37,38 +37,82 @@ Check the repo for what's already in place. See `references/audit-checklist.md` 
 |-----|-----|
 | `~/.claude/skills/autonomous-build-loop/SKILL.md` | **REQUIRED companion skill.** Halt the bootstrap if missing — see `references/audit-checklist.md` for install instructions to surface to the user. |
 | `CLAUDE.md` | Exists AND contains "autonomous build loop" or equivalent protocol section |
-| `GOALS.md` | Exists AND has at least 3 actionable items with `[ ]` / `[wip]` / `[blocked]` / `[done]` markers |
+| Backlog source | Resolved in Phase 2 — a file, GH issues, or Linear. ≥3 actionable items. |
 | `ARCHITECTURE.md` | Exists (content can be sparse — minimum: domain summary + key tech choices) |
 | `PLAN.md` | Exists (content can be sparse — phase ordering) |
 | `logs/` directory | Exists with `latest.md` + `blocks.md` stubs |
 | `.loop/state.json` | Exists — machine state (`stage`, `iter`, `pr_mode`, `pr_size_policy`). Committed to git. |
-| `scripts/auto-loop.py` | Present and executable |
-| `.gitignore` | Contains `/.auto-loop/` and `/.loop/claims/` |
+| `.gitignore` | Contains `/.loop/claims/` |
 | Git repo | `git rev-parse HEAD` succeeds (i.e. at least one commit) |
 
 Report the audit to the user as a checklist. Anything missing → flag as needing scaffold.
 
-### Phase 2 — Extract requirements (only if GOALS.md missing or sparse)
+### Phase 2 — Discover the backlog source
 
-**Skip entirely in greenfield-handoff mode** — idea-to-loop already produced GOALS.md.
+**Skip entirely in greenfield-handoff mode** — idea-to-loop already produced `GOALS.md`.
 
-If GOALS.md is missing OR has fewer than 3 actionable items, the loop has nothing to do on wake-up. Before scaffolding, run an interview to extract a real backlog.
+The loop reads a backlog every iter to pick features. Each repo organizes backlogs differently — don't assume `GOALS.md`. **Auto-detect first, ask only if ambiguous.**
 
-**Invoke the `grill-me` skill** with a brief like: "Interview me to flesh out a build backlog for autonomous looping in this repo. We need 8–15 concrete, independently-shippable features ordered roughly by phase. Stress-test for: dependencies between features, MVP scope vs. nice-to-haves, what's already done vs. truly remaining, and any external blockers (API keys, design decisions, third-party signoffs)."
+Scan, in order:
 
-If `grill-me` isn't available, fall back to `superpowers:brainstorming` or run a manual Q&A loop covering: (1) what the project IS, (2) what's already built, (3) what the next 2–3 phases of features look like, (4) any external blockers. See `references/grilling-guide.md` for question banks.
+1. `GOALS.md`, `TODO.md`, `ROADMAP.md`, `BACKLOG.md`, `docs/roadmap.md`, `docs/backlog.md` at repo root
+2. GitHub Issues (`gh issue list --state open` returns >0)
+3. Linear MCP tools (if `mcp__claude_ai_Linear__*` are available)
+4. Any `*.md` file containing ≥3 `[ ]`/`[x]` checkbox lines
 
-The interview output becomes the seed for `GOALS.md` in Phase 4. Format per `references/backlog-format.md`.
+Decision tree:
 
-> **PRD-grilling is a separate skill.** If the brownfield repo also lacks `docs/PRD.md` (or it's stub/sparse) and the user wants a written PRD as part of bootstrap, invoke `grill-to-prd` **before** this Phase 2 backlog grill. The PRD-grill writes `docs/PRD.md` via a persona-aware interview (Technical / Designer / Vibe); the backlog-grill (this Phase 2) writes `GOALS.md`. They produce different artifacts and can both run on the same repo. Order: PRD first (scope), then backlog (drain order).
+- **Exactly one candidate** → confirm with user, record in `.loop/state.json`.
+- **Multiple candidates** → ask which is canonical.
+- **None found** → run the backlog interview (see below), output to `GOALS.md`, record as the source.
 
-### Phase 3 — Capture plan tier + budget preferences
+Record in `.loop/state.json`:
 
-Ask the user (only if not already known from session context):
+```jsonc
+"backlog_source": { "kind": "file", "path": "GOALS.md" }              // markdown file
+"backlog_source": { "kind": "github_issues", "ref": "owner/repo" }    // GH issues
+"backlog_source": { "kind": "linear", "ref": "TEAM" }                 // Linear team key
+```
 
-- **Claude plan tier** — Max 20x / Max 5x / Pro / API pay-as-you-go. Determines budget defaults the auto-loop driver will enforce. See `references/plan-tier-defaults.md`.
-- **Approximate phase target** — how many iters per phase / how aggressive cadence should be. Default: 3–5 iters per phase, 600s–3600s wake-up spacing.
-- **Anything sensitive in the repo** — secrets, prod keys, files NOT to let the loop touch. Translates into `.claude/settings.local.json` denylist entries. See `references/permissions-template.md`.
+For non-file backlogs, the per-iter agent uses the matching MCP/CLI to query items each iter — slower but follows the repo's existing workflow. `references/backlog-format.md` documents the file-backlog format if you fall back to one.
+
+**Backlog interview (only when no source exists).** Invoke `grill-me` with: "Interview me for an 8–15 item build backlog. Stress-test for: pairwise independence, MVP vs. nice-to-haves, what's done vs. remaining, external blockers." Fall back to `superpowers:brainstorming` if `grill-me` is unavailable. See `references/grilling-guide.md`.
+
+> **PRD-grilling is separate.** If `docs/PRD.md` is missing and the user wants one, invoke `grill-to-prd` **before** this phase. PRD-grill writes `docs/PRD.md`; backlog setup here records the source. Both can run on the same repo.
+
+### Phase 3 — Pin stage + base branch + tier + denylist
+
+**Stage** (what `.loop/state.json` `stage` will be set to — see `autonomous-build-loop/references/lifecycle-stages.md`):
+
+Auto-detect, then confirm:
+
+| Signals present | Detected stage |
+|---|---|
+| Only `docs/PRD.md` (or sparse repo) — no `ARCHITECTURE.md`, no code | `S1` (still designing) |
+| `ARCHITECTURE.md` filled + minimal code (scaffold only, no features) | `S2` (scaffolding) |
+| `ARCHITECTURE.md` filled + `src/` or app code + plan/backlog ready (e.g. vertical-slice plan branch, ≥3 backlog items) | `S3` (default — vertical-slice impl looping) |
+| Complexity signal tripped (M4) — large LoC, deep deps, file count past threshold | `S4` (layer-specialized scale) |
+
+Ask the user to confirm. Brownfield repos with existing app code + a plan default to `S3` — that's the case for most real-world bootstraps. If the repo is past S3 territory but no M4 complexity-signal infra exists yet, stay at S3; M4 will retro-detect.
+
+**Commit mode** (write the chosen value into `.loop/state.json` `pr_mode`):
+
+| Mode | `pr_mode` | Behavior |
+|---|---|---|
+| **Direct-commit (default, recommended)** | `false` | Loop commits straight to the active branch. Push cadence: every 5 iters or 8 commits ahead. One linear history, no PR overhead, no auto-merge churn. Best for solo / small-team repos and for any repo where the active branch *is* the integration target. |
+| **Per-feature PR** | `true` | Each feature lands on its own `loop/iter-NNN-<slug>` branch, gets reviewed by `coderabbit` (or the fallback reviewer) + the super-reviewer, then merges into `$BASE`. Best for repos with required CI checks, multiple humans reviewing, or branch protection rules. |
+
+Default to direct-commit unless the user explicitly wants PR mode. Ask if you're unsure. Record the choice in `.loop/state.json`.
+
+**Base branch** (the integration target — either the branch the loop commits to in direct-commit mode, or the PR target in `pr_mode: true`):
+
+1. Default to the current branch if it is not `main` (e.g. `development`); otherwise default to `main`.
+2. Cross-check with the GitHub default branch if a remote exists (`gh repo view --json defaultBranchRef`). If they differ, surface both and confirm with the user.
+3. Record the chosen branch as `.loop/state.json` `base_branch`. In direct-commit mode, the loop runs on this branch directly.
+
+**Plan tier guidance** (only if not known from session context): Max 20x / Max 5x / Pro / API. Affects recommended cadence and model — see `references/plan-tier-defaults.md`.
+
+**Sensitive paths** — secrets, prod keys, files the loop must not touch. Translates into `.claude/settings.local.json` denylist entries. See `references/permissions-template.md`.
 
 ### Phase 4 — Scaffold missing files
 
@@ -80,19 +124,18 @@ Templates to copy (with substitutions):
 
 | Asset | Destination | Substitutions |
 |-------|-------------|---------------|
-| `assets/templates/CLAUDE.md` | `<repo>/CLAUDE.md` | `{{PROJECT_NAME}}`, `{{DEV_SERVER_PORT}}`, `{{TECH_STACK}}` |
-| `assets/templates/GOALS.md` | `<repo>/GOALS.md` | Seeded from Phase 2 interview output |
+| `assets/templates/CLAUDE.md` | `<repo>/CLAUDE.md` | `{{PROJECT_NAME}}`, `{{DEV_SERVER_PORT}}`, `{{TECH_STACK}}`, `{{BACKLOG_PATH}}` |
+| `assets/templates/GOALS.md` | `<repo>/GOALS.md` | **Only if backlog interview ran in Phase 2.** Otherwise the existing source stays untouched. |
 | `assets/templates/ARCHITECTURE.md` | `<repo>/ARCHITECTURE.md` | One-paragraph stub if no architecture doc exists |
 | `assets/templates/PLAN.md` | `<repo>/PLAN.md` | Phase list from Phase 2 |
 | `assets/templates/logs/latest.md` | `<repo>/logs/latest.md` | iter-000 pointer |
 | `assets/templates/logs/blocks.md` | `<repo>/logs/blocks.md` | empty header |
-| `assets/templates/.loop/state.json` | `<repo>/.loop/state.json` | none — minimal starter (`stage: S3`, `iter: 0`, `pr_mode: true`, `pr_size_policy: fat`). M2 expands the schema. |
-| `assets/auto-loop.py` | `<repo>/scripts/auto-loop.py` | `chmod 755` after copy |
+| `assets/templates/.loop/state.json` | `<repo>/.loop/state.json` | Substitute `base_branch` (Phase 3) and `backlog_source` (Phase 2) before writing. |
 
 ### Phase 5 — Wire up `.gitignore` and settings
 
-- Append `/.auto-loop/` and `/.loop/claims/` to `.gitignore` (create file if missing). Note: `.loop/state.json` itself **is** committed — only `.loop/claims/` (multi-loop atomic-claim ephemera) is ignored. Keep `.auto-loop/` (driver runtime) and `.loop/` (committed loop state) distinct.
-- **ALWAYS write the baseline `.claude/settings.local.json`** per `references/permissions-template.md` — this is required, not optional. As of v0.1.2 the driver refuses to start if it's missing. Phase 3 collected ADDITIONS the user named; merge those entries into the baseline before writing.
+- Append `/.loop/claims/` to `.gitignore` (create file if missing). Note: `.loop/state.json` itself **is** committed — only `.loop/claims/` (multi-loop atomic-claim ephemera) is ignored.
+- **ALWAYS write the baseline `.claude/settings.local.json`** per `references/permissions-template.md` — defense-in-depth deny entries for secrets and dangerous Bash patterns. Phase 3 collected ADDITIONS the user named; merge those entries into the baseline before writing.
 - Before bootstrapping, REFUSE to proceed if `git status --porcelain` is non-empty — uncommitted WIP would get bundled into the iter-000 commit. Surface the dirty paths to the user and ask them to commit/stash first.
 
 ### Phase 6 — Initial commit
@@ -100,46 +143,51 @@ Templates to copy (with substitutions):
 Stage and commit ONLY the scaffolded files. Use explicit per-file `git add` so unrelated WIP edits don't sneak in:
 
 ```
-git add CLAUDE.md GOALS.md ARCHITECTURE.md PLAN.md logs/latest.md logs/blocks.md \
-        .loop/state.json scripts/auto-loop.py .gitignore .claude/settings.local.json
+# Include the backlog file only if Phase 2 created/edited one (file-backlog mode).
+git add CLAUDE.md ARCHITECTURE.md PLAN.md logs/latest.md logs/blocks.md \
+        .loop/state.json .gitignore .claude/settings.local.json
+# If Phase 2 created/edited a file backlog, add that discovered path too:
+# git add "$BACKLOG_PATH"
 git commit -m "iter 000: bootstrap autonomous build loop"
 ```
 
 This commit is the loop's seed. `iter-000.md` doesn't exist yet — the first auto-loop iter will write `iter-001.md`.
 
-### Phase 7 — Smoke-test with one dry-run iter
+### Phase 7 — Smoke-test with one in-session iter
 
-**Do not start the full loop yet.** Run ONE iter to verify plumbing. **Use Sonnet** — fresh-session Opus iters cost $4-8 just on context bootstrap, which would blow past a low smoke-test budget:
+**Do not start the continuous loop yet.** Run ONE iter to verify plumbing. Have the user invoke the `autonomous-build-loop` skill in their open Claude Code session — just say:
 
-```bash
-# Sonnet smoke (recommended)
-python3 scripts/auto-loop.py --max-iters 1 --max-budget-usd-per-iter 3 \
-  --prompt "Run ONE iteration of the autonomous build loop per CLAUDE.md, using model=sonnet."
+> "Run one iteration of the autonomous-build-loop skill, then stop (do not call `ScheduleWakeup`)."
 
-# Or Opus smoke (heavier)
-python3 scripts/auto-loop.py --max-iters 1 --max-budget-usd-per-iter 10
-```
+The skill will read `.loop/state.json`, ship one feature, commit, and write `logs/iter-001.md`. Expected outcomes:
 
-Expected outcomes:
-- `.auto-loop/usage.jsonl` has one entry with non-zero `input_tokens` + `output_tokens`
 - `logs/iter-001.md` exists
 - A new commit exists with the iter-001 summary
-- Exit code 0
+- `.loop/state.json` `iter` has incremented to `1`
 
 If the smoke test fails:
-- Exit code 124 → `claude` timed out; increase `--iter-timeout-s` next time
-- No commit → check stderr; likely a permission prompt got blocked → confirm `--permission-mode bypassPermissions` is OK for this repo
+
+- No commit → check the agent's output; likely a permission prompt blocked or the backlog source was empty
 - No `logs/iter-001.md` → the agent didn't follow the protocol; verify CLAUDE.md's protocol section is present AND the user has the `autonomous-build-loop` skill installed
 
 ### Phase 8 — Hand off
 
-Tell the user the one command to start real looping:
+Tell the user the one prompt to start continuous looping in their Claude Code session:
 
-```bash
-python3 scripts/auto-loop.py
-```
+> "Start the autonomous build loop." (or `/loop run one iteration of the autonomous-build-loop skill`)
 
-Include stop conditions: Ctrl-C, `touch .auto-loop/stop`, GOALS.md backlog empty, `--max-iters` reached, or 3 consecutive failed iters.
+The skill will run one iter then call `ScheduleWakeup` to wake itself for the next iter — continuing until the user stops it.
+
+Stop conditions: Ctrl-C in CC, the user types a new prompt that overrides, the configured backlog source is empty (the agent decides), or the user reviews and stops manually.
+
+**One-time Claude Code settings (print these once, do NOT add to CLAUDE.md):**
+
+- Set auto-compaction threshold to **40%** — the loop is built to survive compaction, but a lower threshold keeps each iter's working memory leaner. Configure via `/config` → "auto-compact" or `~/.claude/settings.json`.
+- Set context window to **1M** — eliminates token-runway worry inside the harness so the model focuses on work, not bookkeeping. Configure via `/config` → "context window" (requires a model that supports 1M, e.g. Opus 4.7 1M).
+
+These are first-and-done — never repeat in per-iter instructions.
+
+**Pair with a supervisor (recommended).** Open a second Claude Code window in the same repo and invoke the `loop-supervisor` skill. It reads code + iter logs read-only and curates the backlog while the implementation loop runs. Together: one window builds, the other steers.
 
 ## Hard rules
 
@@ -152,11 +200,10 @@ Include stop conditions: Ctrl-C, `touch .auto-loop/stop`, GOALS.md backlog empty
 
 - `references/audit-checklist.md` — exact commands to run for the Phase 1 audit
 - `references/grilling-guide.md` — how to use grill-me effectively for backlog extraction
-- `references/plan-tier-defaults.md` — auto-loop budget defaults per Claude plan
+- `references/plan-tier-defaults.md` — recommended cadence + model per Claude plan
 - `references/permissions-template.md` — `.claude/settings.local.json` skeleton for denylist
 - `references/backlog-format.md` — GOALS.md structure the loop expects
 
 ## Assets
 
-- `assets/auto-loop.py` — the driver script (copy to `<repo>/scripts/`)
 - `assets/templates/` — file templates for scaffold phase

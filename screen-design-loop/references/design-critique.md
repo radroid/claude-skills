@@ -1,6 +1,6 @@
 # Design critique — the per-screen exit gate
 
-A screen iter does NOT close on "the HTML rendered." It closes on a `pass` verdict from a fresh-context Class A `design-review` sub-agent that compared the rendered screenshot against the research notes.
+A screen iter does NOT close on "the HTML rendered." It closes on a `PASS` verdict from a fresh-context Class A `design-review` sub-agent that compared the rendered screenshot against the research notes.
 
 This is the analogue of `autonomous-build-loop`'s principle 9 ("frontend has no free signal") applied to design refinement. We manufacture the signal here because there isn't one for free.
 
@@ -33,7 +33,7 @@ If chrome-devtools-mcp isn't available, fall back: instruct the user to open the
 
 **The prompt:**
 
-```
+```text
 You are a Class A design-review sub-agent. Read-only. Return verdict text only.
 
 Context:

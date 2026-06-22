@@ -41,7 +41,7 @@ Wake-up handoff:
   - Open questions: <bullets, or "none">
   - Carry-forward to next iter: <≤2 short items; longer or recurring promotes to GOALS.md>
   - Push: <ok | skipped — <reason> | failed — <reason>>
-  - Scheduled: <delaySeconds> via ScheduleWakeup  (in-session) — OR — Scheduled: external (EXTERNAL_SCHEDULER=1; driver handles cadence)
+  - Scheduled: <delaySeconds> via ScheduleWakeup (or CronCreate for fixed cadence)
 ```
 
 ## The "Closest GOALS.md item" line

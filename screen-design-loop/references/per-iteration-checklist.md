@@ -59,7 +59,7 @@ Use `chrome-devtools-mcp`:
    - `platform: "mobile"` → `375x812` (iPhone-class)
    - `platform: "desktop"` → `1440x900`
 2. Capture screenshot.
-3. Check the console — any JS errors are an automatic `revise` before the critique even runs.
+3. Check the console — any JS errors are an automatic `REVISE` before the critique even runs.
 
 If the file fails to render at all (broken HTML, mock-data import errors), don't run critique — fix the render issue this iter, log to blocks, re-queue the screen.
 
@@ -71,13 +71,13 @@ Dispatch per `references/design-critique.md`. Fresh-context, read-only, given:
 - The screen's entry in `docs/screens/inventory.md` (or `state.json` `screens[i].purpose`)
 
 Sub-agent returns:
-- `pass` — screen meets the research target; proceed to commit
-- `revise` — falls short on specific named dimensions; concrete annotations included
-- `block` — premise problem (wrong screen, conflicts with inventory, etc.) — needs human resolution
+- `PASS` — screen meets the research target; proceed to commit
+- `REVISE` — falls short on specific named dimensions; concrete annotations included
+- `BLOCK` — premise problem (wrong screen, conflicts with inventory, etc.) — needs human resolution
 
 ## 6. State + commit
 
-**On `pass`:**
+**On `PASS`:**
 - `screens[i].status = "approved"`
 - `screens[i].refinement_count += 1`
 - `current = next pending screen slug` (or `null` if none)
@@ -85,13 +85,13 @@ Sub-agent returns:
 - Write `logs/iter-NNN.md` (≤ 30 lines — see `autonomous-build-loop/references/log-hygiene.md`)
 - Commit: `screen-design-loop: iter NNN — <slug> approved (refinement N)`
 
-**On `revise`:**
+**On `REVISE`:**
 - `screens[i].status = "revise"`
 - `current` stays
 - Append critique verbatim to `logs/blocks.md` under `## screen: <slug> — iter NNN revise`
 - Commit: `screen-design-loop: iter NNN — <slug> revise round N`
 
-**On `block`:**
+**On `BLOCK`:**
 - `screens[i].status = "blocked"`
 - `current = next pending screen slug` (or `null`)
 - Append reason to `logs/blocks.md`
@@ -99,7 +99,7 @@ Sub-agent returns:
 
 ## 7. End of iter
 
-- **In-session mode:** call `ScheduleWakeup` (default 600s for normal iters; 1200s if just emitted a `revise` so the human has a window to skim before re-entry).
+- **In-session mode:** call `ScheduleWakeup` (default 600s for normal iters; 1200s if just emitted a `REVISE` so the human has a window to skim before re-entry).
 - **External-scheduler mode (`EXTERNAL_SCHEDULER=1`):** exit cleanly. Driver handles cadence.
 
 ## When the backlog is empty
