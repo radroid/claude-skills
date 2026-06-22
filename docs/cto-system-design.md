@@ -4,6 +4,11 @@
 > and the order to build them. Produced 2026-06-22 by the multi-agent `cto-system-design`
 > workflow (15 agents: 10 skill profilers → 3 lens architects → synthesis → adversarial
 > critique) and hardened against the live repo + a headless-runner spike.
+>
+> **Decisions locked 2026-06-22** (see §10): loop mechanism = interactive Claude Code CLI
+> (xhigh + ultracode + `/loop`), **not** `claude -p`; triggers = **schedule + webhook** from
+> day one; prod-deploy default = **per-app `fleet-registry` flag** (HOLD when unset); rollback
+> required for **prod-deploying apps**; MAINTAIN = **standalone `fleet-maintenance`** skill.
 
 ## 1. Goal
 
@@ -216,3 +221,19 @@ scripts dir). Phases: Profile (10 parallel skill profilers) → Architect (3 len
 maintenance-first / greenfield-first / governance-first) → Synthesize (1 merge) → Critique
 (1 adversarial completeness pass). Every load-bearing "verified" claim was checked against the
 live repo. Headless-runner viability confirmed by a separate `claude -p` spike (§2).
+
+## 10. Decisions locked (2026-06-22)
+
+| # | Decision | Choice | Consequence for the build |
+|---|---|---|---|
+| D1 | **Loop mechanism** | Interactive Claude Code CLI — xhigh effort + ultracode + `/loop` (ScheduleWakeup). **Not** `claude -p`. | The `-p` spike stays a probe only. `orchestrated-delivery`'s human-only `/effort ultracode` entry gate is fine for human-kicked sessions but **must be self-assertable** for schedule/webhook-fired ones (D2). |
+| D2 | **Trigger scope (v1)** | **Schedule + webhook** from day one (most autonomous). | Elevates the trigger-security layer to **co-P0**: webhook authenticity/signature verification, dedupe/coalesce-by-app, and a **per-app concurrency lease/lock** must exist *before the webhook surface is enabled*. Also pulls forward the **self-observability heartbeat** (are crons firing? is a session hung?) and a **hard cost circuit-breaker** (unattended webhooks = trigger-storm risk). Build for it early; **enable the surface only once these guards land.** |
+| D3 | **Prod-deploy default** | **Per-app `fleet-registry` flag**, fail-closed (HOLD when unset). | `fleet-registry` (P0) carries `merge_deploys_to_prod` + the resolved posture per app; the HOLD precondition in `cto-governance-spine` reads it. |
+| D4 | **Rollback requirement** | Required **only for prod-deploying apps** (apps whose merge deploys to prod). Dev/staging may proceed without. | The rollback/last-known-good actuator is gating for any app with `merge_deploys_to_prod = true`; `fleet-registry` stores a `last_known_good` ref + revert command for those apps. Not a universal blocker. |
+| D5 | **MAINTAIN engine shape** | **Standalone `fleet-maintenance`** skill; reuses `orchestrated-delivery` only for the per-PR fix. | Resolves the §5 overlap: telemetry→triage + trigger plumbing live in `fleet-maintenance`; the per-PR fix substrate stays `orchestrated-delivery`. |
+
+**Revised near-term critical path (reflecting D2):**
+`workflow-runtime` (P0) → `fleet-registry` (P0; carries D3/D4 flags + the concurrency lease) →
+`cto-governance-spine` (now co-P0; carries webhook-auth + dedupe + HOLD precondition + **hard cost
+circuit-breaker** + **heartbeat**) → `fleet-maintenance` (P0) → graduation/provisioning (P1).
+Webhooks are *coded for* throughout but *switched on last*, after the D2 guards are proven on one app.
