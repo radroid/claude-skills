@@ -5,10 +5,11 @@ description: Use when an autonomous fleet needs a per-app source of truth — th
 
 # Fleet registry
 
-The per-app **source of truth** an autonomous fleet has nothing for today. Every
-trigger — a cron health sweep, a webhook incident, a graduation enrollment —
-scopes to exactly one app by reading *its* record here first. One app, one
-record; the record is the contract between the trigger and everything it may do.
+This skill defines the per-app **source of truth** an autonomous fleet otherwise
+lacks. Every trigger — a cron health sweep, a webhook incident, a graduation
+enrollment — scopes to exactly one app by reading *its* record here first. One
+app, one record; the record is the contract between the trigger and everything it
+may do.
 
 This skill defines that record (two typed schemas), the operations that read and
 mutate it (with their invariants), and the **admission validator** that gates a
@@ -31,10 +32,20 @@ resolution of the open-scope calls in the system design (`docs/cto-system-design
 | Incidents | the `open_incidents` count + `last_hygiene` | the severity ladder + ack-timeout |
 
 Rule of thumb: if it is a **noun** (a value an app has), it is registry data. If
-it is a **verb** (a decision made about an app), it is governance. The registry
-ships *one* piece of enforcement and only one — the fail-closed READER
-(`prodDeployAllowed`), because the safe default for a missing/garbled flag (treat
-as HOLD) is a property of the data contract itself, not a policy choice.
+it is a **verb** (a decision made about an app), it is governance. Two bounded
+exceptions live here by necessity, and only two:
+
+- the fail-closed READER (`prodDeployAllowed`) — because "treat a missing/garbled
+  flag as HOLD" is a property of the data contract itself, not a policy choice;
+- the **admission validator**, which gates the *shape* of a record at enrollment
+  (required fields present + an adequate oracle).
+
+The validator enforces the **enrollment contract** ("is this a well-formed fleet
+member?"), never ongoing governance policy ("may this app auto-approve this
+change?"). That distinction is the data/policy line drawn at the moment of
+admission, not erased by it — the oracle-adequacy and required-field checks decide
+whether a record may *exist*, while what an existing app is *allowed to do* stays
+with governance.
 
 Likewise the registry does **not** run the smoke oracle (that is
 `fleet-maintenance` / the runtime), decide escalation, or hold session context.

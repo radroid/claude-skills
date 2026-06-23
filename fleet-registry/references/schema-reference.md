@@ -51,8 +51,12 @@ UTC strings sort lexicographically, which is why `leaseState()` can compare
 
 `requiredConfigFields()` / `requiredStateFields()` return the `required` arrays.
 A candidate missing ANY of them fails admission (BLOCK) — see
-`references/lifecycle.md`. The nullable fields (`prod_url`, `revert_command`,
-`secrets_ref`, `last_hygiene`, `last_known_good`) are deliberately NOT required:
-they are legitimately absent for some apps (a non-deployed app has no
-`revert_command`). The required set is the floor below which an app is not a
-well-formed fleet member.
+`references/lifecycle.md`. The nullable / optional fields (`prod_url`,
+`revert_command`, `secrets_ref`, `last_hygiene`, `last_known_good`, and `lease`)
+are deliberately NOT required: they are legitimately absent for some apps (a
+non-deployed app has no `revert_command`; a free app has `lease: null`, and an
+absent `lease` key means the same — `leaseState()` treats both as free). Keeping
+every *required* field non-nullable is exactly what lets `missingFields()` fail
+closed on a `null` (a null `app_id` IS missing) without false-flagging a free
+lease. The required set is the floor below which an app is not a well-formed fleet
+member.

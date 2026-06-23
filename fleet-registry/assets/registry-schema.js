@@ -135,7 +135,12 @@ const LEASE_SCHEMA = {
 
 const STATE_SCHEMA = {
   type: "object",
-  required: ["app_id", "status", "lease", "open_incidents", "drift"],
+  // NOTE: `lease` is deliberately NOT required — it is nullable (null ⇒ free) and
+  // an absent lease key means the same thing (leaseState() treats !lease as free).
+  // Keeping it out of `required` preserves the invariant that EVERY required field
+  // is non-nullable, so missingFields() can fail-closed on null without false-
+  // flagging a free lease (which is the state of every freshly-enrolled app).
+  required: ["app_id", "status", "open_incidents", "drift"],
   additionalProperties: false,
   properties: {
     app_id: { type: "string", pattern: "^[a-z0-9][a-z0-9-]*$", description: "Must match the config.yaml app_id." },
