@@ -276,7 +276,8 @@ retrying, never from an in-flight branch.
   followed by rising findings or an escaped defect.
 - The canon-bound scripts emit a TYPED audit-ledger record per gate outcome
   (workflow-runtime's `AUDIT_LEDGER_ENTRY` schema: role / verdict / issues /
-  gate_decision, with the orchestrator stamping cost / ts / human_approval). The
+  tests_added / gate_decision, with the orchestrator stamping cost / ts /
+  human_approval). The
   steward consumes that structured truth instead of scraping a transcript — treat
   the audit-ledger schema as the seam between the loop and everything that reasons
   ABOUT the loop.

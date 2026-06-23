@@ -269,9 +269,14 @@ async function adversarialVerify(claim, diff, opts) {
 // Non-blocking doubts (below the bar) are recorded as non_blocking issues either way.
 function claimToVerdict(av) {
   const issues = [];
+  const upheld = av.survives;
   for (const v of av.votes) {
     if (v.refuted) {
-      issues.push({ severity: "blocking", note: "[" + lensKind(v.lens) + "] " + v.finding });
+      // A minority refutation on an UPHELD claim is recorded but is NOT blocking —
+      // the majority tally already cleared it. Only mark blocking when the claim
+      // was killed; otherwise an APPROVE would carry blocking issues, violating the
+      // ledger invariant (empty [] on APPROVE) and inflating the smell-probe count.
+      issues.push({ severity: upheld ? "non_blocking" : "blocking", note: "[" + lensKind(v.lens) + "] " + v.finding });
     } else if (v.nonblocking) {
       issues.push({ severity: "non_blocking", note: "[" + lensKind(v.lens) + "] " + v.finding });
     }
