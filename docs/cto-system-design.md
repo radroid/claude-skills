@@ -33,8 +33,10 @@ The repo today is a **BUILD machine wearing a CTO costume.** Verified against th
   the only `.js` in the repo is a mock-data template. "Use ultracode" is aspirational prose
   in every skill.
 - `orchestrated-delivery` is Workflow-*shaped* but not Workflow-*wired*, and its entry gate
-  hard-stops on a human-only `/effort ultracode` flip — an unclearable dead-end for an
-  unattended trigger.
+  hard-stops on a human-only `/effort ultracode` flip. An interactive `/loop` session (D1)
+  clears this once at human kickoff and then runs AFK; but a *fully* unattended
+  schedule/webhook-fired session (D2) has no human to flip it — making the agent's
+  self-assertion of the ultracode posture an open governance item (see D1 and §7).
 
 The good news: **nearly every primitive the CTO needs already exists**, trapped in BUILD
 skills and pointed the wrong way. The work is mostly **rewiring**, plus one genuinely new
@@ -113,7 +115,10 @@ differs** (PRD vs telemetry). That shared substrate is what makes one repo a coh
 
 ### Scope decisions still open (from the adversarial critique)
 
-These are real "draw the boundary" calls, not blockers:
+These are real "draw the boundary" calls, **not blockers** — each carries a lean below and
+gets *locked at the point its skill is built* (deciding now, before the runtime is proven
+under load, would be premature). They do not gate the P0 critical path; D5 already resolved
+the biggest one (fleet-maintenance is standalone).
 - **workflow-runtime (mechanism) vs cto-governance-spine (policy)** — the HOLD rule, denylist
   contract, and ledger schema are claimed by both. Author each rule in exactly one place or
   the verdict-grammar drift the split was meant to prevent reappears.
@@ -227,7 +232,7 @@ live repo. Headless-runner viability confirmed by a separate `claude -p` spike (
 | # | Decision | Choice | Consequence for the build |
 |---|---|---|---|
 | D1 | **Loop mechanism** | Interactive Claude Code CLI — xhigh effort + ultracode + `/loop` (ScheduleWakeup). **Not** `claude -p`. | The `-p` spike stays a probe only. `orchestrated-delivery`'s human-only `/effort ultracode` entry gate is fine for human-kicked sessions but **must be self-assertable** for schedule/webhook-fired ones (D2). |
-| D2 | **Trigger scope (v1)** | **Schedule + webhook** from day one (most autonomous). | Elevates the trigger-security layer to **co-P0**: webhook authenticity/signature verification, dedupe/coalesce-by-app, and a **per-app concurrency lease/lock** must exist *before the webhook surface is enabled*. Also pulls forward the **self-observability heartbeat** (are crons firing? is a session hung?) and a **hard cost circuit-breaker** (unattended webhooks = trigger-storm risk). Build for it early; **enable the surface only once these guards land.** |
+| D2 | **Trigger scope (v1)** | **Schedule + webhook** are the v1 target — *built for* from day one, but the webhook **surface is enabled last** (schedule first, webhook after the guards below are proven). "From day one" = design/build scope, not switch-on order. | Elevates the trigger-security layer to **co-P0**: webhook authenticity/signature verification, dedupe/coalesce-by-app, and a **per-app concurrency lease/lock** must exist *before the webhook surface is enabled*. Also pulls forward the **self-observability heartbeat** (are crons firing? is a session hung?) and a **hard cost circuit-breaker** (unattended webhooks = trigger-storm risk). Build for it early; **enable the surface only once these guards land.** |
 | D3 | **Prod-deploy default** | **Per-app `fleet-registry` flag**, fail-closed (HOLD when unset). | `fleet-registry` (P0) carries `merge_deploys_to_prod` + the resolved posture per app; the HOLD precondition in `cto-governance-spine` reads it. |
 | D4 | **Rollback requirement** | Required **only for prod-deploying apps** (apps whose merge deploys to prod). Dev/staging may proceed without. | The rollback/last-known-good actuator is gating for any app with `merge_deploys_to_prod = true`; `fleet-registry` stores a `last_known_good` ref + revert command for those apps. Not a universal blocker. |
 | D5 | **MAINTAIN engine shape** | **Standalone `fleet-maintenance`** skill; reuses `orchestrated-delivery` only for the per-PR fix. | Resolves the §5 overlap: telemetry→triage + trigger plumbing live in `fleet-maintenance`; the per-PR fix substrate stays `orchestrated-delivery`. |
