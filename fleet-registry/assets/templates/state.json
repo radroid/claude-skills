@@ -1,0 +1,13 @@
+{
+  "app_id": "example-app",
+  "status": "active",
+  "lease": null,
+  "open_incidents": 0,
+  "last_hygiene": null,
+  "last_known_good": null,
+  "drift": {
+    "status": "in_sync",
+    "last_reconciled": null
+  },
+  "schema_version": "1"
+}
