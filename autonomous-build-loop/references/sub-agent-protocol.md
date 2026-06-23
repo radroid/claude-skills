@@ -11,7 +11,7 @@ Two classes of sub-agent with different write authority. Use the right class for
 **Charter format:**
 
 - One paragraph of context
-- Verdict format: `approve` / `request_changes` / `block`
+- Verdict format (unified canon): `APPROVE` / `REVISE` / `BLOCK` (legacy `approve` → APPROVE; `request_changes` → REVISE; `block` → BLOCK)
 - Verdict text must include cited file paths + line numbers where applicable
 
 **Inputs to give the sub-agent:**
@@ -23,9 +23,9 @@ Two classes of sub-agent with different write authority. Use the right class for
 
 **Verdict handling:**
 
-- `approve` → log to `logs/blocks.md` (low severity), continue
-- `request_changes` → log to `logs/blocks.md` (medium severity), apply fixes same-iter, continue
-- `block` → log to `logs/blocks.md` (high severity), pick next non-conflicting `GOALS.md` item, continue. Do NOT halt the loop.
+- `APPROVE` → log to `logs/blocks.md` (low severity), continue
+- `REVISE` → log to `logs/blocks.md` (medium severity), apply fixes same-iter, continue
+- `BLOCK` → log to `logs/blocks.md` (high severity), pick next non-conflicting `GOALS.md` item, continue. Do NOT halt the loop.
 
 ## Class B — Implementation (write-authorized)
 

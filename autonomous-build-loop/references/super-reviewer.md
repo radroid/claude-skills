@@ -27,6 +27,8 @@ Skill: superpowers:requesting-code-review
 
 Fall back to a Class A sub-agent (per `sub-agent-protocol.md`) if the skill is absent.
 
+**Mechanized form (canon):** `assets/perspective-verify.workflow.js` (`mode:"super-reviewer"`) runs this as perspective-diverse verification — exactly ONE verifier per distinct lens (architecture/ADR-consistency, contract, security, test-adequacy), aggregated worst-wins, failing CLOSED when a lens dies. See SKILL.md "Canon & mechanism". The design-review gate is the same script with `mode:"design"`.
+
 ### Repo-context pack (always include)
 
 Pass the reviewer the following so it has whole-repo context without re-exploring:
@@ -44,11 +46,13 @@ Pass the reviewer the following so it has whole-repo context without re-explorin
 The reviewer returns exactly one verdict line plus body. Log to `logs/blocks.md` regardless.
 
 ```
-VERDICT: APPROVE | REQUEST_CHANGES | BLOCK
+VERDICT: APPROVE | REVISE | BLOCK
 ```
 
+(Unified canon grammar. Legacy `REQUEST_CHANGES` → `REVISE` — same meaning.)
+
 - `APPROVE` → proceed. Stage advance / PR merge.
-- `REQUEST_CHANGES` → fix listed items, re-run reviewer. Two-pass cap (same as CodeRabbit).
+- `REVISE` → fix listed items, re-run reviewer. Two-pass cap (same as CodeRabbit).
 - `BLOCK` → halt the specific action; log to `logs/blocks.md`; loop picks next non-conflicting item
   per `continuous-loop.md`. The stage / PR does NOT advance.
 
