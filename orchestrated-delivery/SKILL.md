@@ -1,6 +1,6 @@
 ---
 name: orchestrated-delivery
-description: Use when shipping a multi-PR backlog with a team of subagents — to land PR-sized slices via planner/executor/reviewer/fix/steward roles working off repo-resident, code-free plans that don't go stale. Keeps a token ledger, a friction feedback loop, a self-improving steward, and an adversarial anti-bias check that stops reviewers rubber-stamping.
+description: Use when shipping a multi-PR backlog with a team of subagents — to land PR-sized slices via planner/executor/reviewer/fix/steward roles working off repo-resident, code-free plans that don't go stale. Keeps a token ledger, a friction feedback loop, a self-improving steward, and an adversarial anti-bias check that stops reviewers rubber-stamping. Review and steward steps are wired to the workflow-runtime canon as concrete Workflow scripts (a quality gate is a pipeline stage, not a paragraph) emitting the unified APPROVE|REVISE|BLOCK verdict.
 ---
 
 # Orchestrated delivery
@@ -79,11 +79,53 @@ resume** (gh/git/Progress line). Then this index points to the control flow:
 - **Scaffolding files:** the orchestration prompt templates, token ledger,
   friction log, prompt changelog (the single version record), and the backlog
   doc with its **Progress** line. (See **Phase 0**.)
-- **Verdict grammar:** `VERDICT: APPROVE` or `VERDICT: BLOCK — <n> issues`.
-  (See **The loop**, step 3.)
+- **Verdict grammar (unified):** `VERDICT: APPROVE` · `VERDICT: REVISE — <n>
+  issues` · `VERDICT: BLOCK — <n> issues`. APPROVE→merge, REVISE→fix loop,
+  BLOCK→escalate. (See **The loop**, step 3, and **Canon & mechanism**.)
+- **Canon-bound scripts:** `assets/review-and-verify.workflow.js` (the review +
+  ANTI-BIAS engine) and `assets/steward.workflow.js` (the worktree-isolated
+  steward gate). (See **Canon & mechanism**.)
 
 This is navigation, not a second source of truth — the named sections are
 authoritative.
+
+## Canon & mechanism (workflow-runtime)
+
+The fan-out-and-verify steps in this loop are not prose followed on the honor
+system — they are CONCRETE Workflow scripts built on the `workflow-runtime` canon
+(the shared P0 substrate: the runner contract, the copy-paste preamble, and the
+named pipeline patterns). The canon's core principle governs here: **a quality
+gate is a pipeline STAGE, not a paragraph.** Its verdict is a typed object and the
+absence of its output is visible downstream, so it cannot be silently skipped.
+
+Two steps ship as canon-bound scripts in `assets/`:
+
+- **`assets/review-and-verify.workflow.js`** — the REVIEW step (loop step 3 + the
+  whole ANTI-BIAS section). Claims flow through a per-claim `pipeline()`, and within
+  each claim the N hostile refuters (the five anti-bias lenses, rules 1–5) fan out
+  through a `parallel()` BARRIER — the barrier is required so the majority tally
+  sees ALL ballots before deciding (do not convert it to a pipeline). It gates by
+  refute-by-majority (a missing/dead refuter counts as a REFUTE and a tie kills — a
+  claim never survives on a missing vote), then FAILS CLOSED at the roll-up too (an
+  empty or partially-dropped batch is BLOCK, never APPROVE), and fires the
+  zero-block-streak smell probe (rule 6).
+- **`assets/steward.workflow.js`** — the STEWARD step (loop step 6). The steward
+  runs in its OWN git worktree (`isolation: "worktree"`) so it never collides with
+  the shared tree's in-flight planner/executor; it auto-tunes the templates, and a
+  read-only quality gate reviews its PR before the orchestrator merges.
+
+Both inline the canon preamble — the executable schema consts + helpers are
+byte-identical to `workflow-runtime/assets/preamble.js` (only the header comment is
+role-localized); there is NO runtime import, reuse is paste, not link — and emit
+the unified verdict plus the typed AUDIT-LEDGER record
+the steward and fleet governance read (the orchestrator stamps `cost`/`ts`/
+`human_approval` when it appends the line). The macro-loop (sequencing, merges,
+persistence/resume) stays SESSION-driven — a Workflow run is a bounded fan-out,
+not a multi-day resumable orchestration. Where the harness exposes NO Workflow
+runner, fall back to dispatching the same roles as subagents and verify each
+yourself; the verdict grammar, the anti-bias lenses, and the gates are identical
+either way. Read the `workflow-runtime` skill before editing either script and
+validate every change against its runner contract.
 
 ## Phase 0 — Bootstrap (run once on a fresh repo)
 
@@ -104,10 +146,12 @@ through the Persistence docs — they hold everything needed to resume.
      from the matching numbered step in *The loop* below plus any relevant
      ANTI-BIAS clauses; encode the caveman report style (see Comms) into each
      template's report section. The reviewer template MUST embed the ANTI-BIAS
-     clauses verbatim and MUST end with the exact `VERDICT: APPROVE` /
-     `VERDICT: BLOCK — <n> issues` grammar. *The loop* and ANTI-BIAS are the
-     single source — do NOT fork divergent copies into these files; when the
-     contract changes, change it there and re-derive.
+     clauses verbatim and MUST end with the exact unified grammar — one of
+     `VERDICT: APPROVE` / `VERDICT: REVISE — <n> issues` / `VERDICT: BLOCK — <n>
+     issues`. *The loop* and ANTI-BIAS are the single source — do NOT fork
+     divergent copies into these files (the `assets/*.workflow.js` scripts and the
+     templates both DERIVE from here); when the contract changes, change it there
+     and re-derive.
    - `docs/orchestration/token-ledger.md` — one line per run + soft per-role
      budgets (seed them after a few runs; don't invent precise numbers).
    - `docs/orchestration/friction-log.md` — `## Open` / `## Resolved`; each
@@ -144,16 +188,24 @@ steward.
    (cwd-independent; STOP LOUDLY if it fails — NEVER fall back to the local
    working tree, which may hold another branch). Diff-only; ≥80% confidence
    to raise an issue; one-line fix directions, NEVER code. Ends with EXACTLY
-   `VERDICT: APPROVE` or `VERDICT: BLOCK — <n> issues`. (Anti-bias clauses
+   one unified verdict line: `VERDICT: APPROVE` (ship → step 5),
+   `VERDICT: REVISE — <n> issues` (fixable defects → step 4), or
+   `VERDICT: BLOCK — <n> issues` (premise/spec breakage → ESCALATE to the
+   orchestrator/human, do NOT auto-fix). REVISE is the common non-approve case;
+   reserve BLOCK for "this change cannot be salvaged by a local fix." The
+   mechanized form is `assets/review-and-verify.workflow.js`. (Anti-bias clauses
    below are part of this contract.)
-4. **Fix executor** applies exactly the reviewer's issues; gate; push.
-5. **Orchestrator merges** (squash; detach HEAD first; CONFIRM `state: MERGED`
+4. **Fix executor** (on REVISE) applies exactly the reviewer's issues; gate;
+   push. A BLOCK does not come here — it escalates to the orchestrator, which
+   bounces the item back to the planner or to the user.
+5. **Orchestrator merges** (on APPROVE only; squash; detach HEAD first; CONFIRM `state: MERGED`
    before deleting any branch — GitHub may still be computing mergeability and
    a premature delete closes the PR). The squash lands on REMOTE main, so the
    detached local main is now BEHIND — fast-forward it (`git pull`) before the
    next tree-mutator branches, or that branch forks off pre-merge code. Append
    ledger lines; file friction.
-6. **Steward** (in a git worktree) reads ledger + friction + templates and
+6. **Steward** (in a git worktree; mechanized form
+   `assets/steward.workflow.js`) reads ledger + friction + templates and
    AUTO-TUNES the templates, logging each change to the changelog with the KPI
    it targets and moving addressed friction to Resolved. Touches ONLY the
    orchestration docs. The orchestrator gates its PR on quality before merge.
@@ -222,6 +274,12 @@ retrying, never from an in-flight branch.
   analysis, NOT caps. QUALITY OUTRANKS TOKEN SAVINGS — never thin a review,
   invariant check, or the gate to hit a budget; revert any token-saving change
   followed by rising findings or an escaped defect.
+- The canon-bound scripts emit a TYPED audit-ledger record per gate outcome
+  (workflow-runtime's `AUDIT_LEDGER_ENTRY` schema: role / verdict / issues /
+  gate_decision, with the orchestrator stamping cost / ts / human_approval). The
+  steward consumes that structured truth instead of scraping a transcript — treat
+  the audit-ledger schema as the seam between the loop and everything that reasons
+  ABOUT the loop.
 - KPIs to track: planner/executor/reviewer cost; review yield (real issues
   surviving the fix); escaped defects; plan-friction count; cycle overhead
   (fix loops per PR). The changelog decides whether a template change stays.
