@@ -91,9 +91,9 @@ For each feature in the iter (one feature, or each feature of a fat-iter):
      - **Branch protection + required CI checks** → `gh pr merge --squash --auto --delete-branch`;
        `--auto` queues the merge until the required checks pass (needs repo auto-merge enabled —
        see Prerequisites).
-   - **`request_changes`** → fix on the same branch this iter or the next; re-review; do not
-     leave half-reviewed PRs merged.
-   - **`block`** → log to `logs/blocks.md`, leave the PR open, re-queue the feature in `GOALS.md`,
+   - **`REVISE`** (legacy `request_changes`) → fix on the same branch this iter or the next;
+     re-review; do not leave half-reviewed PRs merged.
+   - **`BLOCK`** → log to `logs/blocks.md`, leave the PR open, re-queue the feature in `GOALS.md`,
      move on. The loop never halts.
 
 ## Interaction with fat-iter mode

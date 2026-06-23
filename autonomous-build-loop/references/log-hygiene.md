@@ -99,7 +99,7 @@ the per-iter cold-boot cost is climbing — trim it back.
 Structured log of everything that would normally halt the loop. Format per entry:
 
 ```markdown
-## YYYY-MM-DD — <short title> [APPROVE|REQUEST_CHANGES|BLOCK|FAILURE|DRIFT]
+## YYYY-MM-DD — <short title> [APPROVE|REVISE|BLOCK|FAILURE|DRIFT]
 
 **Iter:** NNN
 **Source:** peer-review | arch-pass | smoke-failure | mcp-preflight | user-report | contract-drift

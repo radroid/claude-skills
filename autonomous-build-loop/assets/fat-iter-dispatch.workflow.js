@@ -8,7 +8,7 @@ export const meta = {
 // ════════════════════════════════════════════════════════════════════════════
 // workflow-runtime CANON — CANONICAL PREAMBLE (paste-in, NOT a module)
 // Pasted from workflow-runtime/assets/preamble.js — the executable code (schema
-// consts + helpers) is byte-identical to canon; only this header comment is
+// consts + helpers) is byte-identical to canon; surrounding comments are
 // role-localized. There is no import/require, no filesystem, no clock, no RNG.
 // Reuse = paste, not link.
 // ════════════════════════════════════════════════════════════════════════════
@@ -156,15 +156,22 @@ const SLICE_RESULT_SCHEMA = {
 // Pure helper: find any path claimed by more than one feature's allowlist.
 // Disjoint allowlists are a HARD RULE (fat-iter-mode.md) — overlap is a
 // parallel-write corruption vector, so we refuse to dispatch on overlap.
+// Ownership is tracked by feature INDEX, not name — two DISTINCT entries that
+// happen to share a `feature` string must still clash on an overlapping path
+// (name-based tracking would mask that real corruption vector). An entry listing
+// the same path twice (same index) is a benign intra-feature dup, not a clash.
 function overlappingPaths(features) {
-  const owner = {};
+  const ownerIndex = {};
+  const ownerName = {};
   const clashes = [];
-  for (const f of features) {
+  for (let i = 0; i < features.length; i++) {
+    const f = features[i];
     for (const p of f.allowlist || []) {
-      if (owner[p] != null && owner[p] !== f.feature) {
-        clashes.push(p + " (claimed by '" + owner[p] + "' and '" + f.feature + "')");
-      } else {
-        owner[p] = f.feature;
+      if (ownerIndex[p] != null && ownerIndex[p] !== i) {
+        clashes.push(p + " (claimed by '" + ownerName[p] + "' and '" + f.feature + "')");
+      } else if (ownerIndex[p] == null) {
+        ownerIndex[p] = i;
+        ownerName[p] = f.feature;
       }
     }
   }

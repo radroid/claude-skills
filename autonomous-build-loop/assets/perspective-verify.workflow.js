@@ -8,7 +8,7 @@ export const meta = {
 // ════════════════════════════════════════════════════════════════════════════
 // workflow-runtime CANON — CANONICAL PREAMBLE (paste-in, NOT a module)
 // Pasted from workflow-runtime/assets/preamble.js — the executable code (schema
-// consts + helpers) is byte-identical to canon; only this header comment is
+// consts + helpers) is byte-identical to canon; surrounding comments are
 // role-localized. There is no import/require, no filesystem, no clock, no RNG.
 // Reuse = paste, not link.
 // ════════════════════════════════════════════════════════════════════════════
@@ -233,9 +233,29 @@ function worstVerdict(verdicts) {
 // BODY — args may be undefined; inline constants are the safe fallback.
 // =====================================================================
 const mode = (args && args.mode) || "super-reviewer"; // "super-reviewer" | "design"
+// Default target is a SELF-CONTAINED diff (judge the snippet inline; do not go
+// hunt a repo). Real callers pass the integrated diff + repo-context pack — a
+// super-reviewer with repo access is MEANT to inspect the actual tree.
 const target =
   (args && args.target) ||
-  "PR #123 (iter-007): adds archiveTodo mutation + Archive button. ARCHITECTURE.md says mutations live in convex/; ADR-004 mandates soft-delete via an `archived` flag. Diff: convex/todos.ts +archive mutation; src/TodoRow.tsx +Archive button.";
+  [
+    "Self-contained diff under review. Judge ONLY the snippet + the context stated here;",
+    "do not assume any other repository state.",
+    "",
+    "Recorded decision (treat as the governing ADR for this review):",
+    "  ADR-004 — todos use SOFT delete via an `archived` boolean; hard delete is forbidden.",
+    "",
+    "--- a/convex/todos.ts",
+    "+++ b/convex/todos.ts",
+    "@@",
+    "+ export const archiveTodo = mutation({",
+    "+   args: { id: v.id('todos') },",
+    "+   handler: async (ctx, { id }) => { await ctx.db.patch(id, { archived: true }); },",
+    "+ });",
+    "",
+    "Note for reviewers: this diff adds NO ownership/auth check on `id` and does NOT add a",
+    "default-query filter excluding archived rows, and ships no test.",
+  ].join("\n");
 const lensSet = mode === "design" ? DESIGN_LENSES : SUPER_REVIEWER_LENSES;
 const lenses = (args && args.lenses) || lensSet;
 

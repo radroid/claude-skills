@@ -11,7 +11,7 @@ export const meta = {
 // ════════════════════════════════════════════════════════════════════════════
 // workflow-runtime CANON — CANONICAL PREAMBLE (paste-in, NOT a module)
 // Pasted from workflow-runtime/assets/preamble.js — the executable code (schema
-// consts + helpers) is byte-identical to canon; only this header comment is
+// consts + helpers) is byte-identical to canon; surrounding comments are
 // role-localized. There is no import/require, no filesystem, no clock, no RNG.
 // Reuse = paste, not link.
 // ════════════════════════════════════════════════════════════════════════════
