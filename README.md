@@ -13,6 +13,7 @@ Skills for [Claude Code](https://claude.com/claude-code).
 | [`screen-design-loop`](./screen-design-loop/) | **Mobbin-powered design refinement loop** — iterative loop that grounds HTML mockups in real shipped-app references via the Mobbin MCP server. One screen per iter: Mobbin research → HTML synthesis → chrome-devtools render + Class A design-critique gate → commit. Refines the baseline `prd-to-screens` produces (same `docs/screens/html/` output dir, artifacts stack); runs standalone too. Targets mobile or desktop. |
 | [`auto-loop-bootstrap`](./auto-loop-bootstrap/) | **Brownfield bootstrap** — stands up loop machinery on an **existing repo** (skips S0–S2). Scaffolds `CLAUDE.md`, `GOALS.md`, `ARCHITECTURE.md`, `PLAN.md`, `logs/`, and `.loop/state.json`. Invokes `grill-me` to extract a backlog when one doesn't exist. Pairs with `autonomous-build-loop`. |
 | [`autonomous-build-loop`](./autonomous-build-loop/) | The **loop runtime** — runs S3+ (feature dev). Per-iteration checklist, tiered read strategy (shrink the per-iter cold-boot cost), fat-iter parallel-dispatch protocol, Class A/B sub-agent discipline, peer-review triggers, frontend-critique gate, phase-boundary arch passes, log hygiene, no-halt continuous loop semantics. |
+| [`orchestrated-delivery`](./orchestrated-delivery/) | **Multi-PR backlog delivery (orchestration).** Ships a multi-PR backlog with a team of role subagents — planner → executor → reviewer → fix → merge → steward — working off repo-resident, code-free plans that don't go stale. Keeps a token ledger, a friction feedback loop, a self-improving steward, and an adversarial anti-bias check that stops reviewers rubber-stamping. Review + steward steps are wired to the `workflow-runtime` canon as concrete Workflow scripts emitting the unified `APPROVE \| REVISE \| BLOCK` verdict. ultracode-gated. |
 | [`loop-supervisor`](./loop-supervisor/) | **Read-only oversight** — runs in a parallel Claude Code window alongside `autonomous-build-loop`. Reconciles shipped diff vs. claimed backlog, curates the TODO list (re-order, split, mark blocked, add discovered), escalates serious issues to `logs/blocks.md`. Never writes production code. |
 | [`frontend-evolution-timelapse`](./frontend-evolution-timelapse/) | **Frontend history timelapse** — walks git history on a Node web app, screenshots configured pages at each frontend-relevant commit, stitches per-page GIF/MP4 and an `index.html` summary. Isolated worktrees, resume checkpoints, token/cost accounting. Standalone analysis skill (not part of the build loop pipeline). |
 
@@ -225,6 +226,9 @@ claude-skills/
 │   ├── SKILL.md
 │   ├── assets/
 │   └── references/
+├── orchestrated-delivery/        skill source — multi-PR backlog delivery (orchestration)
+│   ├── SKILL.md
+│   └── assets/                   review-and-verify + steward Workflow scripts (canon-bound)
 ├── prd-to-screens/               skill source — PRD → approved HTML mockups
 │   ├── SKILL.md
 │   ├── assets/templates/         page.html, mock-data.js, etc
@@ -240,6 +244,7 @@ claude-skills/
     ├── autonomous-build-loop.skill
     ├── grill-to-prd.skill
     ├── idea-to-loop.skill
+    ├── orchestrated-delivery.skill
     ├── prd-to-screens.skill
     └── screen-design-loop.skill
 ```
