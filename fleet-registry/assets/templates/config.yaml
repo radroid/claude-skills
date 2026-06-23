@@ -1,0 +1,66 @@
+# fleet/apps/<app-id>/config.yaml — PR-GATED record. Copy, fill, enroll via PR.
+# Validated by assets/admission-validator.workflow.js against CONFIG_SCHEMA.
+# Every field here is a slow-changing, dangerous knob: it changes only through a
+# reviewed diff. Hot per-run state lives in the sibling state.json, NOT here.
+
+app_id: example-app # canonical id; MUST match the directory name and state.json
+repo: radroid/example-app # owner/name slug
+prod_url: https://example-app.app # or null for a non-deployed app
+
+# Bounds what governance may auto-approve: experimental | standard | critical.
+governance_tier: standard
+
+# D3 — the prod-deploy gate. HOLD | SHIP. DEFAULTS HOLD (fail-closed): the reader
+# prodDeployAllowed() treats anything-not-exactly-"SHIP" as HOLD. Flip to SHIP
+# only in a PR that ALSO sets revert_command (D4).
+merge_deploys_to_prod: HOLD
+
+# The runtime smoke oracle. `command` boots and checks the app; `asserts` lists
+# what it actually verifies — admission REFUSES an oracle that asserts no more
+# than "boots + 200" (§7.9). Include a failure path + a core user action.
+smoke_oracle:
+  command: npm run smoke
+  asserts:
+    - signed-out user is redirected to /sign-in (auth path)
+    - signed-in user can create and see a new item (core user action)
+    - a non-member is denied a private item with 403 (denied-permission path)
+  runnable_unattended: true # false ⇒ the runtime QUEUES it for a human, not gate on it
+
+# Health baselines/SLOs the runtime scores against. Common fields typed;
+# app-specific metrics may be added freely.
+slo:
+  availability_target_pct: 99.5
+  p95_latency_ms: 800
+  error_rate_target_pct: 1
+
+# Path globs the agent must NEVER touch for this app (per-app; on top of the
+# harness L1 floor in auto-loop-bootstrap).
+denylist:
+  - infra/**
+  - "*.env"
+
+# §7.7 circuit-breaker inputs. The registry STORES these; governance trips on them.
+cost_caps:
+  usd_per_day: 25
+  max_prs_per_day: 5
+  max_concurrent_sessions: 1
+
+# D2 — the trigger IDs that may wake a session for this app (dedupe + scoping).
+triggers:
+  schedule_ids:
+    - cron-daily-health
+  webhook_ids:
+    - sentry-incident
+
+# D4 — how to un-ship to last_known_good. REQUIRED when merge_deploys_to_prod is
+# SHIP; null is fine while HOLD.
+revert_command: null
+
+# A POINTER to where deploy creds live — NEVER a credential value (§7.4).
+secrets_ref: vault://fleet/example-app/deploy
+
+# Provenance — who admitted this app, at which commit, under which schema version.
+enrolled:
+  by: graduation-gate#0
+  ref: "0000000"
+  schema_version: "1"
