@@ -13,6 +13,18 @@ The loop runs **in-session only** in an interactive Claude Code session. Each it
 
 Read `references/per-iteration-checklist.md` at the start of every iteration. Use `references/tiered-read-strategy.md` to decide what to read on wake-up (tiered — not every file every iter). Use `references/fat-iter-mode.md` when picking 2+ features. **Default mode is direct-commit to the active branch** (`pr_mode: false`); use `references/feature-pr-mode.md` ONLY when `.loop/state.json` has `pr_mode: true` (opt-in). Use `references/sub-agent-protocol.md` when dispatching sub-agents. Use `references/log-hygiene.md` when writing the iter log + handoff. Use `references/continuous-loop.md` when something would normally halt the loop.
 
+## Canon & mechanism (workflow-runtime)
+
+The loop's fan-out-and-verify steps are not prose followed on the honor system — they are CONCRETE Workflow scripts built on the `workflow-runtime` canon (the runner contract, the copy-paste preamble, the named pipeline patterns). The canon's core principle holds here: **a quality gate is a pipeline STAGE, not a paragraph** — its verdict is a typed object and the absence of its output is visible downstream, so it cannot be silently skipped. All emit the unified `APPROVE | REVISE | BLOCK` verdict (legacy `approve|request_changes|block` and `APPROVE|REQUEST_CHANGES|BLOCK` both map in: `request_changes` → REVISE).
+
+Three steps ship as canon-bound scripts in `assets/` (inline the canon preamble VERBATIM — executable code byte-identical to `workflow-runtime/assets/preamble.js`; there is NO runtime import):
+
+- **`assets/fat-iter-dispatch.workflow.js`** — Phase-2 parallel dispatch as a worktree-isolated code-gen fan-out: one Class B implementation agent PER feature, each `isolation:"worktree"` (its own tree + branch — the canonical "one editor per slice" case), owning that feature's DISJOINT allowlist + the stop-rule. It REFUSES to dispatch on overlapping allowlists and surfaces a dead slice as BLOCKED (never silently dropped). This is the per-feature-branch (`pr_mode`) form; for direct-commit mode with provably-disjoint slices in ONE combined diff, stay on the shared-tree dispatch (canon worktree guidance — separate trees would only add merge-back overhead there).
+- **`assets/peer-review.workflow.js`** — Phase-4 peer review as adversarial-verify: N hostile refuters, EACH over the whole integrated diff + all scoping plans on a distinct peer-review lens (contract-drift / dead-code / test-gap / cross-feature-integration / hostile), refute-by-majority (null/dead vote = kill, tie = kill), unified verdict, zero-block smell probe. Preserves the "one coherent reviewer over everything" intent while diversity defeats the single-reviewer rubber-stamp.
+- **`assets/perspective-verify.workflow.js`** — the super-reviewer and the design-review gate as perspective-diverse verification: exactly ONE verifier per distinct lens (super-reviewer: architecture/ADR-consistency, contract, security, test-adequacy; design: visual hierarchy, ≥44px touch targets, AA contrast, design-reference fidelity), aggregated worst-wins, FAILS CLOSED when a lens dies.
+
+The macro-loop (iteration cadence, `ScheduleWakeup`, integration, logs) stays SESSION-driven — a Workflow run is a bounded fan-out WITHIN an iter, not the loop itself. Where the harness exposes NO Workflow runner, fall back to the same roles as sub-agents and verify each yourself; the verdicts, lenses, and gates are identical. Read the `workflow-runtime` skill before editing any script.
+
 ## Core principles
 
 1. **One iteration = one bounded turn.** End by scheduling the next wake-up via `ScheduleWakeup` (or `CronCreate` for fixed cadence). Never start a second iteration in the same turn.

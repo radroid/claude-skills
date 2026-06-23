@@ -39,6 +39,8 @@ The scoping plan IS the sub-agent brief. Be specific enough that implementation 
 
 ### Phase 2: Parallel dispatch (sub-agents, ~60% budget)
 
+**Mechanized form (canon):** `assets/fat-iter-dispatch.workflow.js` runs this as a worktree-isolated fan-out — one implementation agent PER feature, each `isolation:"worktree"` (its own tree + branch), owning that feature's disjoint allowlist + the stop-rule; it REFUSES to dispatch on overlapping allowlists and surfaces a dead slice as BLOCKED. That is the per-feature-branch (`pr_mode`) form. For **direct-commit mode** (`pr_mode:false`) with provably-disjoint slices in ONE combined diff, do NOT worktree — use the shared-tree dispatch below (separate trees would only add merge-back overhead). See SKILL.md "Canon & mechanism".
+
 Dispatch ALL sub-agents in a **single message** with multiple `Agent` tool calls so they run concurrently. Per feature, pair:
 
 - **`impl-backend-<feature>`** (subagent_type: `general-purpose`) — writes backend + backend tests per scoping plan
@@ -66,9 +68,9 @@ Fix any breaks **here**, not by re-dispatching a sub-agent. The integrated state
 
 Charter: "Validate ALL features landed this iter against their respective `plan/<feature>.md`. For each feature: cite contract drift, dead code, test gaps, integration risks. Also surface cross-feature integration concerns (did sub-agents collide on shared dependencies despite the allowlist?)."
 
-A single reviewer is more coherent than one-per-feature — the reviewer reads all scoping plans + the integrated diff.
+A single reviewer is more coherent than one-per-feature — the reviewer reads all scoping plans + the integrated diff. **Mechanized form (canon):** `assets/peer-review.workflow.js` (adversarial-verify — N hostile refuters each over the whole integrated diff; see `references/peer-review-triggers.md`).
 
-Log result to `logs/blocks.md` regardless of verdict (see `references/peer-review-triggers.md`). `REQUEST_CHANGES` → fix same-iter.
+Log result to `logs/blocks.md` regardless of verdict (see `references/peer-review-triggers.md`). `REVISE` (legacy `REQUEST_CHANGES`) → fix same-iter.
 
 ### Phase 5: Closeout (main agent)
 

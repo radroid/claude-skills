@@ -8,6 +8,8 @@ EVERY fat-iter that lands one or more features runs a peer-review Class A sub-ag
 
 One reviewer per iter, not one per feature — a single reviewer reading all scoping plans + the integrated diff produces more coherent feedback than N narrow reviewers.
 
+**Mechanized form (canon):** `assets/peer-review.workflow.js` runs this gate as an adversarial-verify pass — N hostile refuters, EACH over the whole integrated diff + all plans on a distinct lens (contract-drift / dead-code / test-gap / cross-feature-integration / hostile), refute-by-majority (null/dead vote = kill, tie = kill). It preserves the one-coherent-reviewer intent (each refuter reads everything) while diversity defeats the single-reviewer rubber-stamp. See SKILL.md "Canon & mechanism". Where no Workflow runner is exposed, fall back to a single Class A sub-agent with the charter below — the verdict grammar is identical.
+
 ## Legacy triggers (non-fat-iter only)
 
 For bookkeeping iters, hygiene iters, architecture passes — spawn a peer-review sub-agent when ANY of these is true at the END of an iter:
@@ -42,7 +44,8 @@ Inputs to read:
   - The error-mapping file
   - Latest contract-drift status (e.g. `logs/contracts-status.json`)
 
-Verdict format: approve | request_changes | block
+Verdict format (unified APPROVE|REVISE|BLOCK): APPROVE | REVISE | BLOCK
+  (legacy approve → APPROVE; request_changes → REVISE; block → BLOCK)
 ```
 
 ## Verdict logging — ALWAYS log to `logs/blocks.md`
@@ -50,11 +53,11 @@ Verdict format: approve | request_changes | block
 Regardless of verdict. This makes adoption auditable.
 
 ```markdown
-## YYYY-MM-DD — Peer review iter-NNN [APPROVE|REQUEST_CHANGES|BLOCK]
+## YYYY-MM-DD — Peer review iter-NNN [APPROVE|REVISE|BLOCK]
 
 **Iter:** NNN
 **Source:** peer-review (sub-agent)
-**Severity:** low (approve) | medium (request_changes) | high (block)
+**Severity:** low (approve) | medium (revise) | high (block)
 
 **Charter:** <one-line charter>
 **Trigger:** cadence | contract-surface | diff-size | fat-iter (default)
@@ -63,7 +66,7 @@ Regardless of verdict. This makes adoption auditable.
 **Action taken:** <main agent's response — applied edits / deferred / disagreed>
 ```
 
-`block` and `request_changes` → log + continue per `references/continuous-loop.md`; never halt.
+`BLOCK` and `REVISE` → log + continue per `references/continuous-loop.md`; never halt.
 
 ## Dashboard KPI
 
