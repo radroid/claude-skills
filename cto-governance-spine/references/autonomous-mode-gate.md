@@ -30,6 +30,16 @@ the lowest-reversibility actions).
 The decision classes are enumerated in `DECISION_CLASSES`; an action that doesn't
 map to one is unrecognized and escalates (fail-closed).
 
+**Recognized but always-human (at current tiers).** Several classes are in
+`DECISION_CLASSES` but in *no* tier's allow-list — `dep_minor`, `dep_major`,
+`feature`, `schema_change`, `infra` — so they always escalate today. They are
+enumerated deliberately (not omitted) so the matrix's *exclusions* are explicit
+and the ledger records an honest class label rather than "unrecognized"; they are
+the reserved slots a future, more-trusting matrix would widen into. `prod_deploy`
+and `graduation` are always-human structurally (handled before the matrix). There
+is no `incident_fix` class — an incident fix is tagged by its actual change shape
+(e.g. `small_fix`, `tests`) and gated like any other change of that shape.
+
 ## Evaluation order (highest-stakes first, fail-closed)
 
 1. **Tier normalization** — an unknown/garbled tier is treated as `critical` (the

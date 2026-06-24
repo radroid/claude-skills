@@ -12,8 +12,8 @@ This is the layer that bounds an autonomous system to the rails: it decides what
 may happen **unsupervised** and what must **escalate to a human**.
 
 It is consumed by every acting skill (`orchestrated-delivery`'s merge step,
-`fleet-maintenance`'s fix step, `autonomous-build-loop`) — they paste the policy
-module and call the gate before committing to an action — and it writes the one
+`fleet-maintenance`'s fix step (planned), `autonomous-build-loop`) — they paste the
+policy module and call the gate before committing to an action — and it writes the one
 audit ledger the whole fleet is judged by.
 
 ## Deterministic by design — the gate is an allow-list, not a vibe

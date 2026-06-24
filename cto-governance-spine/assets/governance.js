@@ -24,6 +24,15 @@
 // may be auto-approved UNSUPERVISED at that tier. A class not in the set escalates
 // to a human. prod_deploy and graduation are in NO tier's set — they are always
 // human gates (handled before the matrix is consulted).
+// The full action taxonomy. A class NOT in any tier's allow-list below is
+// "recognized but always-human at current tiers" — dep_minor, dep_major, feature,
+// schema_change, infra are deliberately human-only for now (reserved for a future
+// widening of the matrix), and prod_deploy + graduation are always-human
+// structurally. Enumerating them (rather than letting them fall through as
+// "unknown") makes the matrix's EXCLUSIONS explicit and gives the ledger an honest
+// class label. An action that maps to NONE of these is unrecognized → escalate.
+// (An incident fix is NOT its own class — tag it by its actual change shape, e.g.
+// small_fix / tests; see references/incident-and-escalation.md.)
 const DECISION_CLASSES = [
   "docs",
   "dep_patch",
@@ -34,7 +43,6 @@ const DECISION_CLASSES = [
   "feature",
   "schema_change",
   "infra",
-  "incident_fix",
   "prod_deploy",
   "graduation",
 ];
@@ -88,15 +96,25 @@ function costBreaker(usage, caps) {
   const tripped = [];
   if (!caps) return { tripped: ["cost_caps missing — fail-closed trip"], ok: false };
   usage = usage || {};
-  if (typeof caps.usd_per_day === "number" && (usage.usd_today || 0) >= caps.usd_per_day) {
+  // REQUIRED caps: a missing or non-number value fail-closes (trip), never skips —
+  // a cap that silently disappears would let spend run uncapped (fail-open).
+  if (typeof caps.usd_per_day !== "number") {
+    tripped.push("usd_per_day not a number — fail-closed trip");
+  } else if ((usage.usd_today || 0) >= caps.usd_per_day) {
     tripped.push("usd_per_day (" + (usage.usd_today || 0) + " >= " + caps.usd_per_day + ")");
   }
-  if (typeof caps.max_prs_per_day === "number" && (usage.prs_today || 0) >= caps.max_prs_per_day) {
+  if (typeof caps.max_prs_per_day !== "number") {
+    tripped.push("max_prs_per_day not a number — fail-closed trip");
+  } else if ((usage.prs_today || 0) >= caps.max_prs_per_day) {
     tripped.push("max_prs_per_day (" + (usage.prs_today || 0) + " >= " + caps.max_prs_per_day + ")");
   }
-  if (typeof caps.max_concurrent_sessions === "number" &&
-      (usage.concurrent_sessions || 0) > caps.max_concurrent_sessions) {
-    tripped.push("max_concurrent_sessions (" + (usage.concurrent_sessions || 0) + " > " + caps.max_concurrent_sessions + ")");
+  // OPTIONAL cap: enforced only when present; present-but-non-number fail-closes.
+  if (caps.max_concurrent_sessions !== undefined) {
+    if (typeof caps.max_concurrent_sessions !== "number") {
+      tripped.push("max_concurrent_sessions not a number — fail-closed trip");
+    } else if ((usage.concurrent_sessions || 0) > caps.max_concurrent_sessions) {
+      tripped.push("max_concurrent_sessions (" + (usage.concurrent_sessions || 0) + " > " + caps.max_concurrent_sessions + ")");
+    }
   }
   return { tripped: tripped, ok: tripped.length === 0 };
 }
@@ -115,9 +133,12 @@ function denylistViolation(touchedPaths, denylist) {
   }
   return false;
 }
-// Minimal deterministic glob: `*` matches any run of non-slash-or-any chars.
-// Anchored full-string match. Sufficient for denylist globs like "infra/**",
-// "*.env", "secrets/*".
+// Minimal deterministic glob: `*` expands to `.*` (matches any sequence INCLUDING
+// path separators — intentionally over-eager for a denylist, so it errs toward
+// catching MORE, never missing). Anchored full-string match. Sufficient for
+// denylist globs like "infra/**", "*.env", "secrets/*". Do NOT "fix" this toward
+// `[^/]*`: that would let a denylisted path slip through (fail-OPEN) — the wrong
+// direction for a refusal gate.
 function globMatch(path, glob) {
   let re = "^";
   for (let i = 0; i < glob.length; i++) {
@@ -169,7 +190,9 @@ function autonomousModeGate(candidate) {
   if (cls === "graduation") {
     return decide("escalate", reasons, "graduation is always a human gate");
   }
-  if (candidate.is_prod_deploy === true || cls === "prod_deploy") {
+  // is_prod_deploy is a DANGER flag — treat ANY truthy/garbled value as "this is a
+  // prod deploy" (fail-closed). Only an explicitly falsy value means "not prod".
+  if (candidate.is_prod_deploy || cls === "prod_deploy") {
     const r = prodDeployRule(candidate.prod_flag_ship === true, candidate.human_approval);
     return decide(r, reasons, "prod deploy → " + r + " (flag SHIP=" + (candidate.prod_flag_ship === true) +
       ", human_approval=" + (!!(candidate.human_approval && candidate.human_approval.approved)) + ")");
@@ -194,9 +217,12 @@ function autonomousModeGate(candidate) {
     return decide("hold", reasons, "cost circuit-breaker not clear (cost_ok!=true) — hold");
   }
 
-  // 5) Auto-approve.
+  // 5) Auto-approve. (Report the oracle status HONESTLY — docs is oracle-exempt, so
+  //    do NOT assert "oracle green" for a docs change whose oracle was red/absent;
+  //    the ledger must not record a false fact.)
+  const oracleNote = oracleRequired(cls) ? "oracle green" : "oracle not required (docs)";
   return decide("proceed", reasons,
-    "class '" + cls + "' auto-approvable at tier '" + tier + "' (oracle green, within cost caps, not prod, not denylisted)");
+    "class '" + cls + "' auto-approvable at tier '" + tier + "' (" + oracleNote + ", within cost caps, not prod, not denylisted)");
 }
 
 // ── Incident severity ladder + ack-timeout + dead-man's-switch (§7.2) ─────────

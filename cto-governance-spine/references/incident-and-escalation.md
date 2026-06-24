@@ -17,6 +17,9 @@ and a dead-man's-switch for the CTO itself going dark mid-incident.
 - `escalate` — a human must be brought in now (sev1 also pages).
 - `auto_triage` — the CTO may triage/fix under the normal autonomous-mode-gate
   (a sev3 fix is still subject to the tier allow-list, oracle, and cost gates).
+  There is no special "incident fix" decision class: tag the fix by its actual
+  change shape (`small_fix`, `tests`, `docs`, …) so it is gated exactly like any
+  other change of that shape — an incident is not a license to bypass the matrix.
 
 **Unknown severity → treated as `sev1`** (fail-closed: an unclassifiable incident
 is assumed worst-case, not ignored).
@@ -49,5 +52,5 @@ app-specific extension governance enforces on top.
 
 Governance decides the *response class* (escalate / auto-triage / page) and the
 dead-man's-switch. It does NOT diagnose the incident, write the fix, or run the
-oracle — those are `fleet-maintenance` + the loop skills, each of which still
-passes its proposed fix back through the autonomous-mode-gate before acting.
+oracle — those are `fleet-maintenance` (planned) + the loop skills, each of which
+still passes its proposed fix back through the autonomous-mode-gate before acting.
