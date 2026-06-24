@@ -24,7 +24,7 @@ and committing them with real git.
 | Phase | What ran live | Result |
 |---|---|---|
 | 1. Oracle | `npm run smoke` on the sacrificial app | GREEN (exit 0) |
-| 2. Graduation enrol | `buildEnrollmentState` → real `state.json` + `config.json`, git-committed; ledger appended | config + state pass the registry required-field checks; round-trip from disk valid |
+| 2. Graduation enrol (*) | `buildEnrollmentState` → real `state.json` + `config.json`, git-committed; ledger appended | config + state pass the registry required-field checks; round-trip from disk valid |
 | 3. D2 lease | acquire → HELD → second-session backoff (dedupe) → release → stale | all transitions correct on real committed files |
 | 4. Maintenance | `healthAssess` real signals vs registry SLO → `mergeBacklog` → `maintenance.md` | backlog written + committed; re-sweep deduped (0 new) |
 | 5. Backlog render | maintenance item → orchestrated-delivery backlog doc | renders a valid Progress + backlog + Needs doc (**seam — see below**) |
@@ -34,6 +34,18 @@ and committing them with real git.
 
 The git history is a real, auditable trail: `seed → enrol → lease acquire → lease
 release → maintenance backlog → demote quarantine`.
+
+(*) **Phase 2 enrolled under a documented exception.** `instrumentationRollup` was
+honestly NOT ready (`health_endpoint` + `telemetry_connected` false for a local,
+non-deployed app), so this phase tested the enrol *write path*, not a fully-passing
+graduation. See "What is STILL not exercised" below.
+
+The concurrency result (phase 7) is an **empirical confirmation on this platform**
+(POSIX `O_APPEND`, one `write()` per line — an independent re-run reproduced it at
+1000 appends with payloads exceeding `PIPE_BUF`). The *portable* guarantee remains
+the documented single-writer/lock fallback in `cto-governance-spine`'s
+`audit-ledger.md` for hosts without atomic append — this validates the contract, it
+does not replace it.
 
 ## The one seam found — backlog-rendering (now closed at the contract level)
 

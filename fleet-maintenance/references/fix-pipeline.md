@@ -84,7 +84,9 @@ Progress: M1 (in_progress)
 | M1 | [<severity>/<category>] <title> — <detail> | — |
 ```
 
-One maintenance item → one `M1` backlog item (`Needs: —`, no dependencies). The
+One maintenance item → one `M1` backlog item (`Needs: —`, no dependencies). (`M1`
+is this pipeline's instantiation of orchestrated-delivery's "ONE numbering scheme"
+rule — any single consistent ID works; it is not an OD-mandated prefix.) The
 governance gate decision (step 2) gates whether you reach this step at all; this is
 only the *format* of what you hand over once `proceed` is granted.
 
