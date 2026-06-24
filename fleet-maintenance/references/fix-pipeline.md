@@ -22,10 +22,21 @@ Paste `cto-governance-spine`'s `governance.js` and call `autonomousModeGate` wit
 the candidate derived from the registry + the diagnosis:
 
 ```js
+// SHORT-CIRCUIT the sentinel FIRST. `escalate` is the diagnosis's "no safe
+// autonomous fix" signal — it is NOT a governance decision_class. Routing it
+// through the gate happens to fail-closed to escalate (unrecognized class), but
+// relying on that is accidental and makes the ledger read "unrecognized" rather
+// than "deliberately routed to a human". So decide it explicitly here:
+if (diagnosis.suggested_fix_class === "escalate") {
+  const decision = { gate_decision: "escalate", reasons: ["diagnosis found no safe autonomous fix — routed to a human"] };
+  // append governanceLedgerEntry(decision, ...) and STOP — do not call the gate.
+}
+
 const decision = autonomousModeGate({
-  decision_class: diagnosis.suggested_fix_class,   // e.g. "dep_patch"
+  decision_class: diagnosis.suggested_fix_class,   // e.g. "dep_patch" — a real DECISION_CLASS
   tier: cfg.governance_tier,                       // from the registry
-  oracle_green: signals.oracle_pass === true,
+  oracle_green: signals.oracle_pass === true,      // NOTE the field rename: maintenance emits
+                                                   // `oracle_pass`; governance reads `oracle_green`.
   cost_ok: costBreaker(usage, cfg.cost_caps).ok,
   is_prod_deploy: false,                           // the FIX is a PR, not a deploy
   denylist_hit: denylistViolation(touched, cfg.denylist),

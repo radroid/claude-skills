@@ -51,6 +51,28 @@ analysis (by `loop-supervisor`, read-only) and any external auditor read one fil
   ledger append as a hard error, not a warning — if the story can't be written,
   the action shouldn't proceed.
 
+## Concurrency (the global-write seam the per-app lease does NOT cover)
+
+The D2 lease serializes writes to one app's `state.json`; it does **not** serialize
+writes to this ONE global file. Many app-sessions run concurrently (the lease is
+per-app, the ledger is fleet-wide), so concurrent appends are the normal case, not
+the exception. The contract that keeps the stream from tearing:
+
+- **One atomic append per entry.** Write each entry as a single
+  `O_APPEND` write of one newline-terminated line (POSIX guarantees atomicity for
+  an `O_APPEND` write up to `PIPE_BUF`). Keep an entry under that bound — these
+  records are small (no transcripts; `cost`/`ts`/verdict/one issue note). An entry
+  that would exceed it must be trimmed, never split across writes.
+- **Never read-modify-write the file.** Appending is the only mutation; there is no
+  "load, push, save" path that two sessions could interleave into a lost write.
+- **If a host can't guarantee atomic append** (a non-POSIX FS, an oversized entry),
+  serialize through a single fleet-level ledger writer or a short-held advisory
+  lock — do NOT fall back to unsynchronized appends. This is the v1 contract;
+  promote to a real broker (an append service / KV log) if cross-session contention
+  ever shows torn lines. Same posture as the registry's lease-churn upgrade note:
+  take the heavier mechanism only when contention bites, but never weaken the
+  atomicity guarantee in the meantime.
+
 ## Who reads it
 
 - `loop-supervisor` (read-only) — outlier/regression analysis, KPIs ("gates since

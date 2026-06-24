@@ -8,7 +8,11 @@ surface last — after the auth/dedupe guards are proven).
 
 `assets/monitor-sweep.workflow.js`, run on a schedule. Per sweep:
 
-1. Read the registry for every `active` app (skip `retired`/`quarantined`).
+1. Read the registry for every `active` app (skip `retired`/`quarantined`). The
+   sweep **enforces this defensively** — it filters out any app whose registry
+   `state.status` is `retired`/`quarantined` rather than trusting the caller to
+   pre-filter (an absent/`active` status is swept; only an explicit retire/quarantine
+   removes an app), and reports `counts.skipped`.
 2. For each app, **acquire its D2 lease** before touching it (one writer per app;
    a held lease → back off, another session owns it). The sweep is a `pipeline()`
    fan-out — apps are assessed concurrently, each behind its own lease.
