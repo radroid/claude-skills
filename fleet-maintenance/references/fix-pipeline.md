@@ -65,6 +65,31 @@ does not re-implement or weaken it. A maintenance fix is held to the same bar as
 feature: a reviewer-authored test + the runtime smoke oracle (NO self-marked
 homework).
 
+### The handoff doc shape (the rendering contract)
+
+`mergeBacklog` produces a backlog **item object**; orchestrated-delivery's Phase 0
+expects a backlog **doc** (a `Progress:` line + a backlog table + a `Needs`
+dependency column, ONE numbering scheme — never mixing item IDs with PR/slice #s).
+The live integration test (`docs/p0-live-integration-test.md`) confirmed this
+item→doc translation is real **session glue** — so render it to this exact shape
+(do not invent a per-call format):
+
+```markdown
+# Backlog — fix <app_id>/<category>
+
+Progress: M1 (in_progress)
+
+| Item | Description | Needs |
+|------|-------------|-------|
+| M1 | [<severity>/<category>] <title> — <detail> | — |
+```
+
+One maintenance item → one `M1` backlog item (`Needs: —`, no dependencies). (`M1`
+is this pipeline's instantiation of orchestrated-delivery's "ONE numbering scheme"
+rule — any single consistent ID works; it is not an OD-mandated prefix.) The
+governance gate decision (step 2) gates whether you reach this step at all; this is
+only the *format* of what you hand over once `proceed` is granted.
+
 ## 4. Prepare-and-HOLD on prod
 
 For a prod-deploying app, the fix lands as a prepared PR and **HOLDs** — the
