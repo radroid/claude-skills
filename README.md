@@ -9,6 +9,7 @@ Skills for [Claude Code](https://claude.com/claude-code).
 | [`workflow-runtime`](./workflow-runtime/) | **Ultracode substrate (infrastructure).** The shared canon every loop skill targets to turn "use ultracode" from prose into mechanism: the empirically-pinned Workflow-runner contract, a copy-paste preamble (unified `APPROVE \| REVISE \| BLOCK` verdict + cost/checkpoint/**fail-closed audit-ledger** schemas), and paste-ready patterns (adversarial-verify + judge-panel, loop-until-dry + completeness-critic, perspective-diverse-verify). Not an importable library — scripts are self-contained, so the canon is paste-in. Core principle: a quality gate is a concrete pipeline stage, not a paragraph. |
 | [`fleet-registry`](./fleet-registry/) | **Per-app source of truth (infrastructure).** The typed record every loop/schedule/webhook trigger scopes to one app from — split into PR-gated `config.yaml` (identity, the fail-closed `merge_deploys_to_prod` flag, smoke oracle, SLOs, denylist, cost caps, revert command) and machine-mutable `state.json` (the D2 concurrency lease, open-incident count, last-known-good ref, drift status); git-committed for v1. Ships the paste-in schema, the deterministic fail-closed readers (`prodDeployAllowed`, `leaseState`), and a canon-bound **admission validator** (graduation calls it to enroll — a gate, not a handoff). STORES data; `cto-governance-spine` READS and ENFORCES it. |
 | [`cto-governance-spine`](./cto-governance-spine/) | **Policy contract (infrastructure).** The rules every loop/schedule/webhook trigger runs through before acting — what the CTO may do unsupervised vs. must escalate. Owns the **autonomous-mode-gate** (a tier-driven *enumerated allow-list*, never an LLM confidence score), the prod-deploy HOLD rule (flag SHIP **and** a human), the cost circuit-breaker, the per-app denylist refusal, the incident severity ladder + ack-timeout + dead-man's-switch, and the single append-only global audit ledger (`fleet/ledger.jsonl`). Deterministic by design — pure functions, no agents. READS `fleet-registry` data and ENFORCES on it; `loop-supervisor` only informs, never enforces. |
+| [`fleet-maintenance`](./fleet-maintenance/) | **MAINTAIN pillar (orchestration).** Keeps a fleet of production apps healthy on schedule/webhook triggers: a poll-sweep (enabled) + a gated webhook adapter fan out over registry-enrolled apps, **deterministically** assess health signals against each app's SLOs into a severity-ranked per-app backlog (`maintenance.md`), diagnose the urgent ones, then GATE every fix through `cto-governance-spine` and DELEGATE the per-PR fix to `orchestrated-delivery` (non-negotiable adversarial-verify; prepare-and-HOLD on prod; revert via last-known-good). Dependency/security hygiene + incident response are modes; also runs the CTO self-heartbeat (`_cto-self`). Standalone engine (D5); consumes the whole P0 spine. |
 | [`grill-to-prd`](./grill-to-prd/) | **Builder interview → PRD.** Detects greenfield vs. brownfield, probes builder expertise (Technical / Designer / Vibe lanes), runs a persona-specific inline grill, then writes `docs/PRD.md` from a lane-matching template. Implements the `grill-me` / `to-prd` chain referenced by `idea-to-loop` S0 — callable standalone or as the S0 PRD-production step. Optional brainstorming pass on request. |
 | [`idea-to-loop`](./idea-to-loop/) | **Greenfield bootstrap** — idea → PRD → tech stack → runnable scaffold → hands off to the loop. Runs lifecycle stages S0 (Alignment & Scope) → S1 (System Design & Tech Stack) → S2 (Scaffold & Wire). New in M2. |
 | [`prd-to-screens`](./prd-to-screens/) | **PRD → approved HTML mockups** — phased conversation that turns an existing PRD into the baseline frontend: P1 intake → P2 screen inventory → P3 user workflows → P4 wireframes → P5 self-contained HTML with shared mock data → P6 cross-link & walkthrough. Optional but high-leverage between S0 and S1 — the approved HTML becomes the spec the loop builds against. Runs standalone too. |
@@ -224,6 +225,10 @@ claude-skills/
 │   ├── SKILL.md
 │   ├── assets/                   governance.js policy module + runnable self-test
 │   └── references/               mode-gate, prod/cost, ledger, incident, boundaries
+├── fleet-maintenance/            skill source — MAINTAIN pillar engine (CTO infra)
+│   ├── SKILL.md
+│   ├── assets/                   maintenance.js engine + monitor-sweep workflow + self-test
+│   └── references/               monitor/ingest, backlog, fix-pipeline, self-obs, boundaries
 ├── fleet-registry/               skill source — per-app source of truth (CTO infra)
 │   ├── SKILL.md
 │   ├── assets/                   registry schema + admission-validator (canon-bound) + templates
@@ -253,6 +258,7 @@ claude-skills/
     ├── auto-loop-bootstrap.skill
     ├── autonomous-build-loop.skill
     ├── cto-governance-spine.skill
+    ├── fleet-maintenance.skill
     ├── fleet-registry.skill
     ├── grill-to-prd.skill
     ├── idea-to-loop.skill
