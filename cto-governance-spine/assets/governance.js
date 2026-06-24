@@ -1,0 +1,249 @@
+// ════════════════════════════════════════════════════════════════════════════
+// cto-governance-spine POLICY MODULE — PASTE-IN CONTRACT (not a module)
+// Paste this block into any Workflow script or session step that must enforce
+// governance policy before acting. Same distribution model as the workflow-runtime
+// preamble and the fleet-registry schema: NO import/require, no filesystem, no
+// clock, no RNG. Timestamps are stamped by the CALLER and passed in.
+//
+// THE DESIGN INVARIANT (§6 L4): the autonomous-mode-gate is an ENUMERATED
+// ALLOW-LIST, never an LLM "confidence" score — confidence is the rubber-stamp
+// the whole regime exists to distrust. So every function here is DETERMINISTIC:
+// a matrix lookup + precondition checks with a single correct answer. There are
+// no agent() calls in governance — that is the point.
+//
+// BOUNDARY: this module ENFORCES policy. It reads FACTS the caller derived from
+// the fleet-registry (the prod flag, cost caps, the denylist, the oracle result)
+// — it does NOT re-implement the registry's readers. registry = data; this =
+// policy; workflow-runtime = mechanism. loop-supervisor only INFORMS, never
+// enforces (that is here).
+// ════════════════════════════════════════════════════════════════════════════
+
+// ── Decision classes + the tier-driven autonomy matrix ───────────────────────
+// Every action the CTO can take is tagged with ONE decision class. The matrix
+// maps an app's governance_tier (from the registry) to the SET of classes that
+// may be auto-approved UNSUPERVISED at that tier. A class not in the set escalates
+// to a human. prod_deploy and graduation are in NO tier's set — they are always
+// human gates (handled before the matrix is consulted).
+const DECISION_CLASSES = [
+  "docs",
+  "dep_patch",
+  "dep_minor",
+  "dep_major",
+  "tests",
+  "small_fix",
+  "feature",
+  "schema_change",
+  "infra",
+  "incident_fix",
+  "prod_deploy",
+  "graduation",
+];
+
+const AUTONOMY_MATRIX = {
+  experimental: ["docs", "dep_patch", "tests", "small_fix"],
+  standard: ["docs", "dep_patch", "tests"],
+  critical: ["docs"],
+};
+// The most-restrictive tier — the fail-closed default for an unknown/garbled tier.
+const SAFEST_TIER = "critical";
+
+// docs is the only class that cannot change runtime behavior, so it is the only
+// class allowed to proceed WITHOUT a confirmed-green smoke oracle. Every other
+// class requires oracle_green === true (fail-closed: anything-not-true holds).
+function oracleRequired(decisionClass) {
+  return decisionClass !== "docs";
+}
+
+// ── Gate ⇄ verdict mapping (mirrors workflow-runtime's gateForVerdict) ────────
+// proceed↔APPROVE, hold↔REVISE, escalate↔BLOCK. Provided so a governance gate
+// decision can be written to the canonical AUDIT_LEDGER_ENTRY (which carries BOTH
+// a verdict and a gate_decision).
+function verdictForGate(gate) {
+  if (gate === "proceed") return "APPROVE";
+  if (gate === "hold") return "REVISE";
+  return "BLOCK"; // escalate
+}
+
+function decide(gate, reasons, why) {
+  return { gate_decision: gate, reasons: reasons.concat([why]) };
+}
+
+// ── The prod-deploy HOLD rule (D3) ───────────────────────────────────────────
+// Enforces the RULE; the registry owns the fail-closed flag READ. `prodFlagShip`
+// is the caller's prodDeployAllowed(config) result (true ONLY for an exact
+// "SHIP"). A prod deploy needs BOTH: the flag SHIP *and* a human approval. The
+// registry guarantees you never deploy on an absent flag; this guarantees you
+// never deploy on the flag alone.
+function prodDeployRule(prodFlagShip, humanApproval) {
+  if (!prodFlagShip) return "hold"; // registry says HOLD (flag not SHIP / fail-closed)
+  if (humanApproval && humanApproval.approved === true) return "proceed";
+  return "escalate"; // flag allows, but a human must sign off
+}
+
+// ── The cost circuit-breaker (§7.7) ──────────────────────────────────────────
+// Hard caps from the registry's cost_caps. Returns the tripped caps (empty ⇒ ok).
+// A breaker trip is a transient HOLD, not an escalation — back off, retry later.
+// `usage` and `caps` are caller-supplied snapshots (no clock here).
+function costBreaker(usage, caps) {
+  const tripped = [];
+  if (!caps) return { tripped: ["cost_caps missing — fail-closed trip"], ok: false };
+  usage = usage || {};
+  if (typeof caps.usd_per_day === "number" && (usage.usd_today || 0) >= caps.usd_per_day) {
+    tripped.push("usd_per_day (" + (usage.usd_today || 0) + " >= " + caps.usd_per_day + ")");
+  }
+  if (typeof caps.max_prs_per_day === "number" && (usage.prs_today || 0) >= caps.max_prs_per_day) {
+    tripped.push("max_prs_per_day (" + (usage.prs_today || 0) + " >= " + caps.max_prs_per_day + ")");
+  }
+  if (typeof caps.max_concurrent_sessions === "number" &&
+      (usage.concurrent_sessions || 0) > caps.max_concurrent_sessions) {
+    tripped.push("max_concurrent_sessions (" + (usage.concurrent_sessions || 0) + " > " + caps.max_concurrent_sessions + ")");
+  }
+  return { tripped: tripped, ok: tripped.length === 0 };
+}
+
+// ── The per-app denylist (refusal) ───────────────────────────────────────────
+// True if any touched path matches a per-app denylist glob (substring/`*` form).
+// A denylist hit is a REFUSAL → escalate, never a silent skip. This composes
+// with — does not replace — the harness L1 floor (auto-loop-bootstrap).
+function denylistViolation(touchedPaths, denylist) {
+  if (!denylist || !denylist.length || !touchedPaths || !touchedPaths.length) return false;
+  for (let i = 0; i < touchedPaths.length; i++) {
+    const p = touchedPaths[i];
+    for (let j = 0; j < denylist.length; j++) {
+      if (globMatch(p, denylist[j])) return true;
+    }
+  }
+  return false;
+}
+// Minimal deterministic glob: `*` matches any run of non-slash-or-any chars.
+// Anchored full-string match. Sufficient for denylist globs like "infra/**",
+// "*.env", "secrets/*".
+function globMatch(path, glob) {
+  let re = "^";
+  for (let i = 0; i < glob.length; i++) {
+    const c = glob[i];
+    if (c === "*") {
+      re += ".*";
+    } else if ("\\^$.|?+()[]{}".indexOf(c) !== -1) {
+      re += "\\" + c; // escape regex metachars
+    } else {
+      re += c;
+    }
+  }
+  re += "$";
+  return new RegExp(re).test(path);
+}
+
+// ── THE AUTONOMOUS-MODE-GATE ─────────────────────────────────────────────────
+// The single decision: may the CTO take THIS action unsupervised? Deterministic,
+// fail-closed, ordered so the highest-stakes checks win first.
+//
+// candidate = {
+//   decision_class,           // one of DECISION_CLASSES
+//   tier,                     // app governance_tier (registry); unknown ⇒ critical
+//   oracle_green,             // boolean — caller's smoke-oracle result
+//   denylist_hit,             // boolean — caller ran denylistViolation()
+//   is_prod_deploy,           // boolean — does this action deploy to prod?
+//   prod_flag_ship,           // boolean — caller's prodDeployAllowed(config)
+//   cost_ok,                  // boolean — caller's costBreaker(...).ok
+//   human_approval,           // { approved, by } | null
+// }
+// → { gate_decision: "proceed" | "hold" | "escalate", reasons: [...] }
+function autonomousModeGate(candidate) {
+  candidate = candidate || {};
+  const reasons = [];
+
+  // Fail-closed tier: an unknown/garbled tier is treated as the most restrictive.
+  let tier = candidate.tier;
+  if (!AUTONOMY_MATRIX[tier]) {
+    reasons.push("tier '" + tier + "' unknown → treated as '" + SAFEST_TIER + "' (fail-closed)");
+    tier = SAFEST_TIER;
+  }
+
+  const cls = candidate.decision_class;
+  if (DECISION_CLASSES.indexOf(cls) === -1) {
+    return decide("escalate", reasons, "decision_class '" + cls + "' is unrecognized → escalate (fail-closed)");
+  }
+
+  // 1) Always-human classes, regardless of tier.
+  if (cls === "graduation") {
+    return decide("escalate", reasons, "graduation is always a human gate");
+  }
+  if (candidate.is_prod_deploy === true || cls === "prod_deploy") {
+    const r = prodDeployRule(candidate.prod_flag_ship === true, candidate.human_approval);
+    return decide(r, reasons, "prod deploy → " + r + " (flag SHIP=" + (candidate.prod_flag_ship === true) +
+      ", human_approval=" + (!!(candidate.human_approval && candidate.human_approval.approved)) + ")");
+  }
+
+  // 2) Denylist refusal — escalate, never silently skip.
+  if (candidate.denylist_hit === true) {
+    return decide("escalate", reasons, "touches a per-app denylisted path — refuse + escalate");
+  }
+
+  // 3) Is the class even auto-approvable at this tier? If not, a human decides;
+  //    runtime preconditions below don't matter.
+  if (AUTONOMY_MATRIX[tier].indexOf(cls) === -1) {
+    return decide("escalate", reasons, "class '" + cls + "' is not on the '" + tier + "' allow-list — needs a human");
+  }
+
+  // 4) The class IS auto-approvable — now the runtime preconditions (transient HOLDs).
+  if (oracleRequired(cls) && candidate.oracle_green !== true) {
+    return decide("hold", reasons, "class '" + cls + "' requires a green smoke oracle; oracle_green is not true — hold");
+  }
+  if (candidate.cost_ok !== true) {
+    return decide("hold", reasons, "cost circuit-breaker not clear (cost_ok!=true) — hold");
+  }
+
+  // 5) Auto-approve.
+  return decide("proceed", reasons,
+    "class '" + cls + "' auto-approvable at tier '" + tier + "' (oracle green, within cost caps, not prod, not denylisted)");
+}
+
+// ── Incident severity ladder + ack-timeout + dead-man's-switch (§7.2) ─────────
+// Deterministic mapping from severity → required response + ack-timeout (minutes).
+// sev1 = prod down / data at risk; sev2 = degraded; sev3 = minor.
+const SEVERITY_LADDER = {
+  sev1: { action: "escalate", ack_timeout_min: 15, page_human: true },
+  sev2: { action: "escalate", ack_timeout_min: 60, page_human: false },
+  sev3: { action: "auto_triage", ack_timeout_min: 240, page_human: false },
+};
+// Returns the required response for an incident. If the CTO has not ACKed within
+// the ack-timeout (caller computes ageMinutes from its own clock), the dead-man's
+// switch fires: ESCALATE to a human regardless of severity — a CTO gone dark
+// mid-incident must not silently sit on it.
+function incidentResponse(severity, acked, ageMinutes) {
+  const rung = SEVERITY_LADDER[severity] || SEVERITY_LADDER.sev1; // unknown severity ⇒ treat as worst (fail-closed)
+  if (acked !== true && typeof ageMinutes === "number" && ageMinutes >= rung.ack_timeout_min) {
+    return { action: "escalate", reason: "dead-man's-switch: unacked " + ageMinutes + "min ≥ " + rung.ack_timeout_min + "min ack-timeout", rung: rung };
+  }
+  return { action: rung.action, reason: "severity " + severity + " ladder rung", rung: rung };
+}
+
+// ── The single global audit-ledger entry builder ─────────────────────────────
+// Governance owns ONE append-only ledger (fleet/ledger.jsonl). Every gate outcome
+// is one entry conforming to workflow-runtime's AUDIT_LEDGER_ENTRY. The registry
+// stores NO audit history — this is the single source of audit truth. cost/ts are
+// stamped by the caller (no clock here).
+function governanceLedgerEntry(decision, ctx) {
+  ctx = ctx || {};
+  const gate = decision.gate_decision;
+  const issues = [];
+  if (gate === "hold") {
+    issues.push({ severity: "non_blocking", note: decision.reasons[decision.reasons.length - 1] });
+  } else if (gate === "escalate") {
+    issues.push({ severity: "blocking", note: decision.reasons[decision.reasons.length - 1] });
+  }
+  return {
+    role: "auditor",
+    cost: { role: "auditor", label: ctx.label || "governance-gate", tokens_in: 0, tokens_out: 0 },
+    verdict: verdictForGate(gate),
+    issues: issues,
+    tests_added: 0,
+    gate_decision: gate,
+    human_approval: ctx.human_approval || null,
+    item: ctx.app_id || ctx.item || "unknown",
+  };
+}
+// ════════════════════════════════════════════════════════════════════════════
+// END cto-governance-spine POLICY MODULE
+// ════════════════════════════════════════════════════════════════════════════
