@@ -510,7 +510,9 @@ const counts = {
   swept: clean.length,
   dropped: dropped.length,
   healthy: clean.filter(function (r) { return r.assess.status === "healthy"; }).length,
-  degraded: clean.filter(function (r) { return r.assess.status === "degraded" || r.assess.status === "unknown"; }).length,
+  // degraded is a CATCH-ALL (everything clean that is neither healthy nor down) so a
+  // future/unexpected status counts as degraded — never silently uncounted, never healthy.
+  degraded: clean.filter(function (r) { return r.assess.status !== "healthy" && r.assess.status !== "down"; }).length,
   down: clean.filter(function (r) { return r.assess.status === "down"; }).length,
 };
 log("swept " + counts.swept + " app(s): " + counts.healthy + " healthy, " + counts.degraded + " degraded, " + counts.down + " down; " +
