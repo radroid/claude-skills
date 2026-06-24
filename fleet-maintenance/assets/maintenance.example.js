@@ -18,12 +18,12 @@
 // ════════════════════════════════════════════════════════════════════════════
 
 const SEVERITIES = ["sev1", "sev2", "sev3"]; // sev1 = worst
-const OBS_CATEGORIES = ["oracle", "availability", "error_rate", "latency", "security", "deps", "unverified"];
+const OBS_CATEGORIES = ["oracle", "availability", "error_rate", "latency", "security", "deps", "unverified", "self"];
 
 // Rank order for sorting (lower = more urgent).
 function severityOrder(sev) {
   const i = SEVERITIES.indexOf(sev);
-  return i === -1 ? 0 : i; // unknown severity sorts as MOST urgent (fail-closed)
+  return i === -1 ? -1 : i; // unknown severity sorts BEFORE sev1 (most urgent, fail-closed)
 }
 
 // ── healthAssess — gathered signals → severity-ranked observations ────────────
@@ -107,25 +107,31 @@ function worstSeverity(obs) {
   for (let i = 0; i < obs.length; i++) {
     if (severityOrder(obs[i].severity) < severityOrder(worst)) worst = obs[i].severity;
   }
-  return worst;
+  // Normalize an unrecognized severity UP to the canonical most-urgent (sev1) so
+  // downstream `=== "sev1"` checks (status=down, BLOCK, escalate) fail closed
+  // instead of silently treating a garbled severity as merely "degraded".
+  return SEVERITIES.indexOf(worst) === -1 ? "sev1" : worst;
 }
 
 // ── Backlog: dedupe + merge + rank ───────────────────────────────────────────
 // A backlog item is keyed by (app_id, category, title) so the same recurring issue
 // updates in place instead of piling duplicates every sweep. nowTs is caller-supplied.
 function itemKey(item) {
+  if (!item) return "?|?|?"; // a null/garbled item never throws — it keys to a junk slot
   return (item.app_id || "?") + "|" + (item.category || "?") + "|" + (item.title || "?");
 }
 // Merge freshly-observed items into an existing backlog. An OPEN item with the same
 // key is refreshed (last_seen, severity may worsen) — never duplicated. A new key is
-// appended as `open`. Returns { backlog, added: [...] }.
+// appended as `open`. Returns { backlog, added: [...] }. PURE w.r.t. inputs: existing
+// items are cloned, so refreshing never mutates the caller's array.
 function mergeBacklog(existing, incoming, nowTs) {
-  const backlog = (existing || []).slice();
+  const backlog = (existing || []).map(function (it) { return Object.assign({}, it); });
   const byKey = {};
   for (let i = 0; i < backlog.length; i++) byKey[itemKey(backlog[i])] = backlog[i];
   const added = [];
   for (let i = 0; i < (incoming || []).length; i++) {
     const inc = incoming[i];
+    if (!inc) continue; // skip null/garbled incoming items rather than file junk
     const k = itemKey(inc);
     const cur = byKey[k];
     if (cur && cur.status !== "done") {
@@ -153,6 +159,36 @@ function rankBacklog(backlog) {
     if (ad !== bd) return ad - bd;
     return severityOrder(a.severity) - severityOrder(b.severity);
   });
+}
+
+// ── Webhook-alert ingestion (BUILT, GATED OFF in v1) ─────────────────────────
+// D2: build for webhooks early, enable the surface last. The adapter is real code
+// but disabled by default; flip WEBHOOK_INGEST_ENABLED (or pass opts.force_enabled)
+// only once the auth + dedupe guards are proven on a sacrificial app (§7.4 — a
+// spoofed alert is a code-injection vector, not just cost). Fail-closed at every
+// step: disabled → refuse; unauthenticated → refuse; an alert whose trigger_id is
+// not registered for this app → refuse. An accepted alert returns a backlog item
+// to feed through mergeBacklog (which dedupes it against the open backlog).
+const WEBHOOK_INGEST_ENABLED = false;
+function ingestWebhookAlert(alert, app, opts) {
+  opts = opts || {};
+  if (!WEBHOOK_INGEST_ENABLED && opts.force_enabled !== true) {
+    return { accepted: false, reason: "webhook ingestion gated off (v1) — poll-sweep only" };
+  }
+  if (!alert || alert.authenticated !== true) {
+    return { accepted: false, reason: "unauthenticated alert — refused (§7.4)" };
+  }
+  const ids = (app && app.config && app.config.triggers && app.config.triggers.webhook_ids) || [];
+  if (ids.indexOf(alert.trigger_id) === -1) {
+    return { accepted: false, reason: "alert trigger_id '" + (alert.trigger_id || "?") + "' not registered for this app — refused" };
+  }
+  const sev = SEVERITIES.indexOf(alert.severity) === -1 ? "sev1" : alert.severity; // unknown → most urgent
+  const item = {
+    app_id: app.config.app_id, source: "webhook",
+    category: OBS_CATEGORIES.indexOf(alert.category) === -1 ? "availability" : alert.category,
+    severity: sev, title: alert.title || "webhook alert", detail: alert.detail || "",
+  };
+  return { accepted: true, reason: "ingested", item: item };
 }
 
 // ── CTO self-heartbeat (§7.6) — escalate-never-fix ───────────────────────────
@@ -191,7 +227,6 @@ function selfHeartbeat(input) {
 // ════════════════════════════════════════════════════════════════════════════
 // END fleet-maintenance ENGINE
 // ════════════════════════════════════════════════════════════════════════════
-
 // ════════════════════════════════════════════════════════════════════════════
 // RUNNABLE EXAMPLE + SELF-TEST (plain node: `node maintenance.example.js`)
 // The block ABOVE is assets/maintenance.js verbatim (paste-in, no import). The
@@ -246,6 +281,22 @@ eq("cron overdue → escalate", selfHeartbeat({ cron_age_min: 60, max_cron_age_m
 eq("cron age missing → sev1", selfHeartbeat({}).issues[0].severity, "sev1");
 eq("stale leases → escalate", selfHeartbeat({ cron_age_min: 1, max_cron_age_min: 30, stale_lease_apps: ["a1", "a2"] }).action, "escalate");
 eq("frozen ledger w/ expected writes → escalate", selfHeartbeat({ cron_age_min: 1, max_cron_age_min: 30, ledger_prev: 10, ledger_curr: 10, expected_ledger_writes: true }).action, "escalate");
+
+
+// hardened: unknown severity is most-urgent + normalizes to sev1 downstream
+eq("severityOrder unknown = -1 (most urgent)", severityOrder("bogus"), -1);
+eq("worstSeverity normalizes unknown → sev1", worstSeverity([{ severity: "bogus" }]), "sev1");
+// mergeBacklog purity + null-skip
+const _ex = [{ app_id: "a1", category: "deps", title: "t", severity: "sev3", status: "open" }];
+mergeBacklog(_ex, [{ app_id: "a1", category: "deps", title: "t", severity: "sev1", source: "poll" }], "ts");
+eq("mergeBacklog does not mutate caller's existing", _ex[0].severity, "sev3");
+eq("mergeBacklog skips null incoming", mergeBacklog([], [null, { app_id: "a1", category: "deps", title: "t2", severity: "sev3", source: "poll" }], "ts").added.length, 1);
+// webhook adapter: built, gated, fail-closed
+const _app = { config: { app_id: "a1", triggers: { webhook_ids: ["sentry-incident"] } } };
+eq("webhook gated off by default", ingestWebhookAlert({ authenticated: true, trigger_id: "sentry-incident" }, _app).accepted, false);
+eq("webhook force+unauth refused", ingestWebhookAlert({ authenticated: false, trigger_id: "sentry-incident" }, _app, { force_enabled: true }).accepted, false);
+eq("webhook force+auth+unregistered refused", ingestWebhookAlert({ authenticated: true, trigger_id: "spoofed" }, _app, { force_enabled: true }).accepted, false);
+eq("webhook force+auth+registered accepted", ingestWebhookAlert({ authenticated: true, trigger_id: "sentry-incident", severity: "sev2", title: "x" }, _app, { force_enabled: true }).accepted, true);
 
 console.log(fail === 0 ? "\nALL FLEET-MAINTENANCE SELF-TESTS PASS" : "\n" + fail + " FAILURE(S)");
 process.exit(fail === 0 ? 0 : 1);

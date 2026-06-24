@@ -127,12 +127,12 @@ function gateForVerdict(verdict) {
 // Kept in sync with assets/maintenance.js — edit there, re-paste here.
 // ════════════════════════════════════════════════════════════════════════════
 const SEVERITIES = ["sev1", "sev2", "sev3"]; // sev1 = worst
-const OBS_CATEGORIES = ["oracle", "availability", "error_rate", "latency", "security", "deps", "unverified"];
+const OBS_CATEGORIES = ["oracle", "availability", "error_rate", "latency", "security", "deps", "unverified", "self"];
 
 // Rank order for sorting (lower = more urgent).
 function severityOrder(sev) {
   const i = SEVERITIES.indexOf(sev);
-  return i === -1 ? 0 : i; // unknown severity sorts as MOST urgent (fail-closed)
+  return i === -1 ? -1 : i; // unknown severity sorts BEFORE sev1 (most urgent, fail-closed)
 }
 
 // ── healthAssess — gathered signals → severity-ranked observations ────────────
@@ -216,25 +216,31 @@ function worstSeverity(obs) {
   for (let i = 0; i < obs.length; i++) {
     if (severityOrder(obs[i].severity) < severityOrder(worst)) worst = obs[i].severity;
   }
-  return worst;
+  // Normalize an unrecognized severity UP to the canonical most-urgent (sev1) so
+  // downstream `=== "sev1"` checks (status=down, BLOCK, escalate) fail closed
+  // instead of silently treating a garbled severity as merely "degraded".
+  return SEVERITIES.indexOf(worst) === -1 ? "sev1" : worst;
 }
 
 // ── Backlog: dedupe + merge + rank ───────────────────────────────────────────
 // A backlog item is keyed by (app_id, category, title) so the same recurring issue
 // updates in place instead of piling duplicates every sweep. nowTs is caller-supplied.
 function itemKey(item) {
+  if (!item) return "?|?|?"; // a null/garbled item never throws — it keys to a junk slot
   return (item.app_id || "?") + "|" + (item.category || "?") + "|" + (item.title || "?");
 }
 // Merge freshly-observed items into an existing backlog. An OPEN item with the same
 // key is refreshed (last_seen, severity may worsen) — never duplicated. A new key is
-// appended as `open`. Returns { backlog, added: [...] }.
+// appended as `open`. Returns { backlog, added: [...] }. PURE w.r.t. inputs: existing
+// items are cloned, so refreshing never mutates the caller's array.
 function mergeBacklog(existing, incoming, nowTs) {
-  const backlog = (existing || []).slice();
+  const backlog = (existing || []).map(function (it) { return Object.assign({}, it); });
   const byKey = {};
   for (let i = 0; i < backlog.length; i++) byKey[itemKey(backlog[i])] = backlog[i];
   const added = [];
   for (let i = 0; i < (incoming || []).length; i++) {
     const inc = incoming[i];
+    if (!inc) continue; // skip null/garbled incoming items rather than file junk
     const k = itemKey(inc);
     const cur = byKey[k];
     if (cur && cur.status !== "done") {
@@ -262,6 +268,36 @@ function rankBacklog(backlog) {
     if (ad !== bd) return ad - bd;
     return severityOrder(a.severity) - severityOrder(b.severity);
   });
+}
+
+// ── Webhook-alert ingestion (BUILT, GATED OFF in v1) ─────────────────────────
+// D2: build for webhooks early, enable the surface last. The adapter is real code
+// but disabled by default; flip WEBHOOK_INGEST_ENABLED (or pass opts.force_enabled)
+// only once the auth + dedupe guards are proven on a sacrificial app (§7.4 — a
+// spoofed alert is a code-injection vector, not just cost). Fail-closed at every
+// step: disabled → refuse; unauthenticated → refuse; an alert whose trigger_id is
+// not registered for this app → refuse. An accepted alert returns a backlog item
+// to feed through mergeBacklog (which dedupes it against the open backlog).
+const WEBHOOK_INGEST_ENABLED = false;
+function ingestWebhookAlert(alert, app, opts) {
+  opts = opts || {};
+  if (!WEBHOOK_INGEST_ENABLED && opts.force_enabled !== true) {
+    return { accepted: false, reason: "webhook ingestion gated off (v1) — poll-sweep only" };
+  }
+  if (!alert || alert.authenticated !== true) {
+    return { accepted: false, reason: "unauthenticated alert — refused (§7.4)" };
+  }
+  const ids = (app && app.config && app.config.triggers && app.config.triggers.webhook_ids) || [];
+  if (ids.indexOf(alert.trigger_id) === -1) {
+    return { accepted: false, reason: "alert trigger_id '" + (alert.trigger_id || "?") + "' not registered for this app — refused" };
+  }
+  const sev = SEVERITIES.indexOf(alert.severity) === -1 ? "sev1" : alert.severity; // unknown → most urgent
+  const item = {
+    app_id: app.config.app_id, source: "webhook",
+    category: OBS_CATEGORIES.indexOf(alert.category) === -1 ? "availability" : alert.category,
+    severity: sev, title: alert.title || "webhook alert", detail: alert.detail || "",
+  };
+  return { accepted: true, reason: "ingested", item: item };
 }
 
 // ── CTO self-heartbeat (§7.6) — escalate-never-fix ───────────────────────────
@@ -297,6 +333,7 @@ function selfHeartbeat(input) {
     issues: issues,
   };
 }
+
 // ════════════════════════════════════════════════════════════════════════════
 // END fleet-maintenance ENGINE
 // ════════════════════════════════════════════════════════════════════════════
@@ -333,10 +370,12 @@ const DIAGNOSIS_SCHEMA = {
 
 function gatherPrompt(app) {
   return [
-    "Gather the current health signals for app '" + app.config.app_id + "' (" + app.config.repo + ").",
+    "FIRST acquire the fleet-registry D2 lease for app '" + app.config.app_id + "' (one writer per app).",
+    "If the lease is already HELD by another live session, do NOT gather — return immediately noting the held lease (back off; this is also trigger dedupe).",
+    "Only if the lease is free/stale (acquire it), gather the current health signals for '" + app.config.app_id + "' (" + app.config.repo + ").",
     "Run/inspect: the registry smoke_oracle (`" + ((app.config.smoke_oracle && app.config.smoke_oracle.command) || "?") + "`),",
     "the prod /health endpoint, error-tracking error rate, p95 latency, availability, open CVEs, outdated deps.",
-    "Return the typed signals object. oracle_pass MUST reflect the real oracle result.",
+    "Return the typed signals object. oracle_pass MUST reflect the real oracle result. Release the lease when done.",
   ].join("\n");
 }
 
@@ -416,33 +455,60 @@ const results = await pipeline(
     return { app_id: app.config.app_id, tier: app.config.governance_tier, assess: assess, added: merged.added, backlog: merged.backlog };
   },
   // Stage 2 — diagnose the urgent ones (agent judgment; healthy apps pass through).
+  // Diagnosis is ENRICHMENT, never on the critical path: if the agent throws, KEEP
+  // the deterministic assessment (diagnosis:null) so a down app is never erased by a
+  // diagnosis failure. (agent() returning null is already non-throwing; this guards
+  // the throw path the pipeline would otherwise drop to null.)
   async function (swept) {
     const urgent = swept.assess.observations.filter(function (o) { return o.severity === "sev1" || o.severity === "sev2"; });
     if (!urgent.length) return Object.assign({ diagnosis: null }, swept);
     urgent.sort(function (a, b) { return severityOrder(a.severity) - severityOrder(b.severity); });
-    const dx = await agent(diagnosePrompt(swept.app_id, urgent[0], swept.assess), {
-      label: "diagnose:" + swept.app_id, phase: "Diagnose", schema: DIAGNOSIS_SCHEMA,
-    });
-    return Object.assign({ diagnosis: dx }, swept);
+    try {
+      const dx = await agent(diagnosePrompt(swept.app_id, urgent[0], swept.assess), {
+        label: "diagnose:" + swept.app_id, phase: "Diagnose", schema: DIAGNOSIS_SCHEMA,
+      });
+      return Object.assign({ diagnosis: dx }, swept);
+    } catch (e) {
+      return Object.assign({ diagnosis: null, diagnosis_error: String(e) }, swept);
+    }
   }
 );
 
 phase("Self");
 const heartbeat = selfHeartbeat(self);
 
-// ── Roll-up ──────────────────────────────────────────────────────────────────
+// ── Roll-up — FAIL CLOSED ────────────────────────────────────────────────────
+// A DROPPED pipeline item (null — a stage threw despite the guards) must NEVER be
+// silence: for a watchdog, a vanished app is the worst outcome. Map every result
+// back to its app by index; a null becomes its own sev1 escalation + BLOCK ledger
+// entry ("assessment failed — investigate"), so a crashed sweep over-escalates
+// rather than under-reports.
 const clean = results.filter(Boolean);
+const dropped = [];
+for (let i = 0; i < results.length; i++) {
+  if (!results[i]) {
+    const fa = fleet[i] || {};
+    dropped.push((fa.config && fa.config.app_id) || ("app#" + i));
+  }
+}
 const ledger = clean.map(sweepLedger);
 const escalations = clean
-  .filter(function (r) { return r.assess.severity === "sev1" && r.assess.status !== "healthy"; })
+  .filter(function (r) { return r.assess.severity === "sev1"; })
   .map(function (r) { return { app_id: r.app_id, severity: "sev1", observations: r.assess.observations, diagnosis: r.diagnosis }; });
+for (let i = 0; i < dropped.length; i++) {
+  escalations.push({ app_id: dropped[i], severity: "sev1", observations: [{ severity: "sev1", category: "unverified", title: "sweep stage failed", detail: "assessment was dropped (a pipeline stage threw) — investigate this app manually" }], diagnosis: null });
+  ledger.push({ role: "auditor", cost: { role: "auditor", label: "monitor-sweep", tokens_in: 0, tokens_out: 0 }, verdict: "BLOCK", issues: [{ severity: "blocking", note: "sweep stage failed — app assessment dropped" }], tests_added: 0, gate_decision: "escalate", human_approval: null, item: dropped[i] });
+}
 if (!heartbeat.ok) {
   escalations.push({ app_id: "_cto-self", severity: "sev1", observations: heartbeat.issues, diagnosis: null });
+  // The self-miss is audit truth — append a _cto-self ledger entry too.
+  ledger.push({ role: "auditor", cost: { role: "auditor", label: "self-heartbeat", tokens_in: 0, tokens_out: 0 }, verdict: "BLOCK", issues: heartbeat.issues.map(function (o) { return { severity: "blocking", note: "[" + o.severity + "/" + o.category + "] " + o.title }; }), tests_added: 0, gate_decision: "escalate", human_approval: null, item: "_cto-self" });
 }
 const newItems = rankBacklog(clean.reduce(function (acc, r) { return acc.concat(r.added); }, []));
 
 const counts = {
   swept: clean.length,
+  dropped: dropped.length,
   healthy: clean.filter(function (r) { return r.assess.status === "healthy"; }).length,
   degraded: clean.filter(function (r) { return r.assess.status === "degraded" || r.assess.status === "unknown"; }).length,
   down: clean.filter(function (r) { return r.assess.status === "down"; }).length,

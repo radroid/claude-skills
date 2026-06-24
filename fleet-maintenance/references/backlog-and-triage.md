@@ -35,7 +35,8 @@ source of truth.
 { app_id, category, severity, source, title, detail, status, first_seen, last_seen }
 ```
 
-- `category` ∈ `oracle | availability | error_rate | latency | security | deps | unverified`.
+- `category` ∈ `oracle | availability | error_rate | latency | security | deps | unverified | self`.
+  (`self` is the CTO self-heartbeat's own category — see `references/self-observability.md`.)
 - `severity` ∈ `sev1 | sev2 | sev3` (maps to the governance incident ladder).
 - `source` ∈ `poll | webhook | hygiene | self`.
 - `status` ∈ `open | in_progress | held | done`.
