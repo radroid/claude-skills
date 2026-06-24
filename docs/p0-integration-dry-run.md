@@ -31,11 +31,14 @@ registry validate → `healthAssess` → `mergeBacklog`/`rankBacklog` → diagno
   `DECISION_CLASSES` (the overlap is identical); the registry `governance_tier`
   drives the governance `AUTONOMY_MATRIX`; denylist refusal, the cost circuit-breaker,
   the prod-deploy HOLD, and the incident ladder all wire across boundaries.
-- **Canon is byte-identical across all 7 consumer scripts** (the two loop skills,
-  the registry validator, the maintenance sweep). The `AUDIT_LEDGER_ENTRY` /
-  verdict / gate schema is the same everywhere, so a ledger entry written by any
-  skill validates against every other's reader. This is the seam the whole regime
-  rests on, and it is intact.
+- **Canon is byte-identical across all 7 consumer scripts** — `orchestrated-delivery`
+  (review-and-verify, steward), `autonomous-build-loop` (peer-review,
+  perspective-verify, fat-iter-dispatch), `fleet-registry` (admission-validator),
+  and `fleet-maintenance` (monitor-sweep). The `AUDIT_LEDGER_ENTRY` / verdict / gate
+  schema is the same everywhere, so a ledger entry written by any skill validates
+  against every other's reader. This is the seam the whole regime rests on, and it
+  is intact. (Verified code-only — comments are role-localized per script by design;
+  the executable schema/helper lines match exactly.)
 - **Tier fail-closed across the boundary:** a garbled registry tier (`"platinum"`)
   → governance treats it as `critical` → escalate. A `dep_patch` that auto-approves
   at `standard` escalates at `critical`. The registry bounds governance exactly as

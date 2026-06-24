@@ -53,6 +53,9 @@ analysis (by `loop-supervisor`, read-only) and any external auditor read one fil
 
 ## Concurrency (the global-write seam the per-app lease does NOT cover)
 
+This is a **prospective** contract, not a bug discovered in a running fleet: v1 may
+well start single-writer, but the moment two app-sessions run at once the exposure is
+real, so the atomicity rule is fixed now rather than retrofitted after a torn line.
 The D2 lease serializes writes to one app's `state.json`; it does **not** serialize
 writes to this ONE global file. Many app-sessions run concurrently (the lease is
 per-app, the ledger is fleet-wide), so concurrent appends are the normal case, not
