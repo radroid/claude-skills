@@ -438,9 +438,22 @@ const fleet = (args && args.fleet) || EXAMPLE_FLEET;
 const self = (args && args.self) || EXAMPLE_SELF;
 const nowTs = (args && args.nowTs) || "1970-01-01T00:00:00Z"; // caller stamps; constant fallback (no clock in-script)
 
+// Skip apps the registry has retired/quarantined — they are INVISIBLE to MAINTAIN
+// (registry STATE_SCHEMA: retired/quarantined). Enforced HERE defensively rather than
+// trusting the caller to pre-filter: an unenforced "the caller passes only active apps"
+// is exactly the fail-open this regime rejects. Direction: a watchdog errs toward
+// WATCHING — only an EXPLICIT retire/quarantine removes an app; an absent/active status
+// is swept (and the assess path is itself fail-closed on missing signals).
+function appStatus(app) { return (app && app.state && app.state.status) || (app && app.status) || "active"; }
+const INVISIBLE_STATUSES = ["retired", "quarantined"];
+const activeFleet = fleet.filter(function (app) { return INVISIBLE_STATUSES.indexOf(appStatus(app)) === -1; });
+const skipped = fleet
+  .filter(function (app) { return INVISIBLE_STATUSES.indexOf(appStatus(app)) !== -1; })
+  .map(function (app) { return (app.config && app.config.app_id) || "?"; });
+
 phase("Monitor");
 const results = await pipeline(
-  fleet,
+  activeFleet,
   // Stage 1 — gather (use provided signals; else an agent gathers via I/O) + deterministic assess + dedupe.
   async function (app) {
     let signals = app.signals;
@@ -487,7 +500,9 @@ const clean = results.filter(Boolean);
 const dropped = [];
 for (let i = 0; i < results.length; i++) {
   if (!results[i]) {
-    const fa = fleet[i] || {};
+    // Index back into activeFleet — the SAME array the pipeline iterated (NOT fleet,
+    // which still includes the skipped apps; an off-by-skip here would mis-name a drop).
+    const fa = activeFleet[i] || {};
     dropped.push((fa.config && fa.config.app_id) || ("app#" + i));
   }
 }
@@ -509,6 +524,7 @@ const newItems = rankBacklog(clean.reduce(function (acc, r) { return acc.concat(
 const counts = {
   swept: clean.length,
   dropped: dropped.length,
+  skipped: skipped.length, // retired/quarantined apps deliberately left out of MAINTAIN
   healthy: clean.filter(function (r) { return r.assess.status === "healthy"; }).length,
   // degraded is a CATCH-ALL (everything clean that is neither healthy nor down) so a
   // future/unexpected status counts as degraded — never silently uncounted, never healthy.
@@ -516,6 +532,7 @@ const counts = {
   down: clean.filter(function (r) { return r.assess.status === "down"; }).length,
 };
 log("swept " + counts.swept + " app(s): " + counts.healthy + " healthy, " + counts.degraded + " degraded, " + counts.down + " down; " +
+  (counts.skipped ? counts.skipped + " skipped (retired/quarantined); " : "") +
   escalations.length + " escalation(s); self-heartbeat " + (heartbeat.ok ? "OK" : "FAILED"));
 
 return {
