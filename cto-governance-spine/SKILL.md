@@ -64,9 +64,10 @@ Evaluation order is fail-closed, highest-stakes first (full spec:
 
 1. **Unknown tier → treated as `critical`** (most restrictive); **unknown
    decision class → escalate.**
-2. **`graduation` → escalate** (always human). **`prod_deploy` → the HOLD rule**
+2. **Denylist hit → escalate** — an absolute refusal, checked FIRST so it overrides
+   even a human-approved prod deploy (surface the specific hit to a human).
+3. **`graduation` → escalate** (always human). **`prod_deploy` → the HOLD rule**
    (flag SHIP *and* a human approval, else hold/escalate).
-3. **Denylist hit → escalate** (refuse, never silently skip).
 4. **Class not on the tier's allow-list → escalate** (a human decides).
 5. **Class on the allow-list but oracle not green** (for any non-`docs` class)
    **→ hold**; **cost-breaker not clear → hold** (transient, retry later).

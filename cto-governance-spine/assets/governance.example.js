@@ -186,7 +186,16 @@ function autonomousModeGate(candidate) {
     return decide("escalate", reasons, "decision_class '" + cls + "' is unrecognized → escalate (fail-closed)");
   }
 
-  // 1) Always-human classes, regardless of tier.
+  // 1) Denylist refusal is ABSOLUTE and checked FIRST — a "never touch" path
+  //    refuses regardless of class, tier, or even a human-approved prod deploy
+  //    (the approval was for the action, not necessarily for touching a forbidden
+  //    path — so surface the specific hit to a human). Truthy = refuse (a danger
+  //    signal, fail-closed, same posture as is_prod_deploy below).
+  if (candidate.denylist_hit) {
+    return decide("escalate", reasons, "touches a per-app denylisted path — refuse + escalate");
+  }
+
+  // 2) Always-human classes, regardless of tier.
   if (cls === "graduation") {
     return decide("escalate", reasons, "graduation is always a human gate");
   }
@@ -196,11 +205,6 @@ function autonomousModeGate(candidate) {
     const r = prodDeployRule(candidate.prod_flag_ship === true, candidate.human_approval);
     return decide(r, reasons, "prod deploy → " + r + " (flag SHIP=" + (candidate.prod_flag_ship === true) +
       ", human_approval=" + (!!(candidate.human_approval && candidate.human_approval.approved)) + ")");
-  }
-
-  // 2) Denylist refusal — escalate, never silently skip.
-  if (candidate.denylist_hit === true) {
-    return decide("escalate", reasons, "touches a per-app denylisted path — refuse + escalate");
   }
 
   // 3) Is the class even auto-approvable at this tier? If not, a human decides;
@@ -312,6 +316,9 @@ const CASES = [
   { name: "is_prod_deploy=1 on small_fix, SHIP no approval", c: { decision_class: "small_fix", tier: "experimental", is_prod_deploy: 1, prod_flag_ship: true, human_approval: null }, expect: "escalate" },
   // removed class: incident_fix is no longer recognized → escalate (fail-closed):
   { name: "incident_fix (removed) → unrecognized escalate", c: { decision_class: "incident_fix", tier: "experimental", oracle_green: true, cost_ok: true }, expect: "escalate" },
+  // denylist is ABSOLUTE — overrides even a human-approved prod deploy, and is truthy-tested:
+  { name: "prod SHIP+approved BUT denylist_hit → refuse", c: { decision_class: "prod_deploy", tier: "standard", is_prod_deploy: true, prod_flag_ship: true, human_approval: APPROVED, denylist_hit: true }, expect: "escalate" },
+  { name: "denylist_hit truthy 'yes' on docs → refuse", c: { decision_class: "docs", tier: "experimental", denylist_hit: "yes" }, expect: "escalate" },
 ];
 
 let fail = 0;

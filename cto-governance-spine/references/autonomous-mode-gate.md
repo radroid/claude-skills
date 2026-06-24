@@ -45,11 +45,15 @@ is no `incident_fix` class — an incident fix is tagged by its actual change sh
 1. **Tier normalization** — an unknown/garbled tier is treated as `critical` (the
    most restrictive). A typo in the registry never widens autonomy.
 2. **Unknown class → escalate.**
-3. **`graduation` → escalate** (always human).
-4. **`prod_deploy` (or `is_prod_deploy`) → the HOLD rule** (`prod-and-cost.md`):
-   flag SHIP *and* a human approval → proceed; flag not SHIP → hold; flag SHIP but
-   no approval → escalate.
-5. **Denylist hit → escalate** — a refusal, never a silent skip.
+3. **Denylist hit → escalate** — an absolute refusal, checked FIRST (before the
+   always-human classes) so it overrides *everything*, including a human-approved
+   prod deploy: the approval was for the action, not necessarily for touching a
+   forbidden path, so the specific hit must reach a human. Truthy = refuse
+   (fail-closed); never a silent skip.
+4. **`graduation` → escalate** (always human).
+5. **`prod_deploy` (or any truthy `is_prod_deploy`) → the HOLD rule**
+   (`prod-and-cost.md`): flag SHIP *and* a human approval → proceed; flag not SHIP
+   → hold; flag SHIP but no approval → escalate.
 6. **Class not on the tier's allow-list → escalate** — a human decides; runtime
    preconditions are irrelevant for a non-auto-approvable class.
 7. **Allow-listed but oracle not green** (every class except `docs`, which can't
@@ -58,9 +62,9 @@ is no `incident_fix` class — an incident fix is tagged by its actual change sh
 8. **Allow-listed, oracle ok, but cost-breaker not clear → hold.**
 9. **Otherwise → proceed.**
 
-The ordering matters: human-only classes and refusals win before the cheap
-preconditions, and allow-list membership is checked before oracle/cost so a
-non-auto-approvable class always escalates (never "holds" as if it were one step
+The ordering matters: the denylist refusal and the human-only classes win before
+the cheap preconditions, and allow-list membership is checked before oracle/cost so
+a non-auto-approvable class always escalates (never "holds" as if it were one step
 from shipping).
 
 ## Why `docs` is the oracle exception
