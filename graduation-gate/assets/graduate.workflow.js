@@ -220,7 +220,7 @@ const DEMOTE_CONSECUTIVE_SEV1 = 3; // N consecutive sev1 sweeps = sustained, not
 // usable history → escalate (a human looks), NEVER silently demote OR silently keep.
 function demotionCheck(recentSeverities, opts) {
   opts = opts || {};
-  const threshold = typeof opts.threshold === "number" ? opts.threshold : DEMOTE_CONSECUTIVE_SEV1;
+  const threshold = (typeof opts.threshold === "number" && opts.threshold >= 1) ? opts.threshold : DEMOTE_CONSECUTIVE_SEV1; // clamp: a <1 threshold would quarantine a healthy app (run 0 >= 0)
   if (!Array.isArray(recentSeverities)) {
     return { action: "escalate", demote: false, escalate: true, reason: "no sweep history supplied — cannot confirm sustained failure; escalate to a human" };
   }

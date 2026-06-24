@@ -88,8 +88,9 @@ graduation again** and needs human approval (`readmitAllowed`). See
 The readiness gate is a CONCRETE Workflow script (`assets/graduate.workflow.js`),
 not prose on the honor system. It inlines the `workflow-runtime` canon preamble
 (the unified `APPROVE | REVISE | BLOCK` verdict + `AUDIT_LEDGER_ENTRY` schema +
-helpers — byte-identical to `workflow-runtime/assets/preamble.js`, no import) and
-the deterministic engine from `assets/graduation.js`, then:
+helpers — the executable consts/helpers byte-identical to
+`workflow-runtime/assets/preamble.js`, only the header comment role-localized; no
+import) and the deterministic engine from `assets/graduation.js`, then:
 
 - runs an **instrument** agent that verifies real instrumentation against reality
   (runs the oracle, hits the health endpoint) and fail-closes any check it cannot
@@ -104,7 +105,21 @@ The deterministic decisions — `graduationReady`, `graduationDecision`,
 `demotionCheck`, `buildEnrollmentState` — are pure functions in
 `assets/graduation.js` (no agents: these have a single correct answer, the same
 reason governance is deterministic). `assets/graduation.example.js` is that engine
-verbatim + a 32-assertion node self-test.
+verbatim + a 33-assertion node self-test.
+
+### What v1 exercises (and what it does not)
+
+The deterministic engine is verified by the node self-test (every gate, demotion,
+and enrollment path). The live `graduate.workflow.js` smoke exercises the
+**instrument + readiness judgment** end-to-end against an example app (and
+fail-closes correctly when the app can't be verified). What is NOT yet exercised
+end-to-end is the **file-mutating enrollment write** — `buildEnrollmentState` →
+`state.json` and `config.yaml` → a reviewed PR, plus the real handoff to
+`fleet-registry`'s admission-validator on a live candidate. Those are structurally
+correct (and contract-checked against the registry's `STATE_SCHEMA`) but await a
+live sacrificial app — the same integration edge the P0 dry-run
+(`docs/p0-integration-dry-run.md`) flagged. graduation-gate is the keystone that
+makes that live test possible.
 
 ## Hard rules
 

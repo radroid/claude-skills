@@ -92,7 +92,7 @@ const DEMOTE_CONSECUTIVE_SEV1 = 3; // N consecutive sev1 sweeps = sustained, not
 // usable history → escalate (a human looks), NEVER silently demote OR silently keep.
 function demotionCheck(recentSeverities, opts) {
   opts = opts || {};
-  const threshold = typeof opts.threshold === "number" ? opts.threshold : DEMOTE_CONSECUTIVE_SEV1;
+  const threshold = (typeof opts.threshold === "number" && opts.threshold >= 1) ? opts.threshold : DEMOTE_CONSECUTIVE_SEV1; // clamp: a <1 threshold would quarantine a healthy app (run 0 >= 0)
   if (!Array.isArray(recentSeverities)) {
     return { action: "escalate", demote: false, escalate: true, reason: "no sweep history supplied — cannot confirm sustained failure; escalate to a human" };
   }
@@ -188,6 +188,7 @@ ok("run BROKEN by a sev2 => counts only the trailing run", demotionCheck(["sev1"
 ok("non-array history => escalate (fail-closed, never silently demote/keep)", demotionCheck(null).action === "escalate" && demotionCheck(null).demote === false, demotionCheck(null));
 ok("empty history => none", demotionCheck([]).action === "none", demotionCheck([]));
 ok("custom threshold honored (2)", demotionCheck(["sev1", "sev1"], { threshold: 2 }).action === "quarantine", demotionCheck(["sev1", "sev1"], { threshold: 2 }));
+ok("threshold < 1 clamped to default (never quarantine a healthy app)", demotionCheck([], { threshold: 0 }).action === "none" && demotionCheck(["sev1", "sev1"], { threshold: 0 }).action === "none", demotionCheck([], { threshold: 0 }).action);
 ok("quarantine always escalates (human re-admit)", demotionCheck(["sev1", "sev1", "sev1"]).escalate === true, demotionCheck(["sev1", "sev1", "sev1"]).escalate);
 
 // ── applyDemotion (pure) ──
