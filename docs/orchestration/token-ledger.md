@@ -23,3 +23,4 @@ Soft budgets: unseeded (seed after ~3 runs of real data; do not invent numbers).
 | 2026-07-13T09:35Z | A1 | reviewer | PR #47 hostile re-review | APPROVE | ~99k | dedup premise PROVEN: byte-identical decoded pixels across 2 captures of animated fixture; CSP + full_page + validation matrix all exercised; 2 free-hunt candidates failed to break it |
 | 2026-07-13T09:50Z | A1 | steward | 9a7e84a | n/a | ~50k | 4 templates tuned, 7+1 friction resolved, changelog traced; A1 hard-gate CLEARED |
 | 2026-07-13T10:10Z | B1 | executor | PR #49 (wf via agent) | gate PASS | ~123k | slice 2/2 extractor; 9/9 checks on 75-proof; determinism cmp + independent recompute; NUL-byte Write corruption caught+fixed; 5 deviations |
+| 2026-07-13T10:20Z | A3 | planner | agent | n/a | ~145k | 34 anchors; EMPIRICAL: ffmpeg 8.1.1 lacks drawtext → Playwright banner PNGs + overlay, pipeline verified live; mp4.fps retirement exposed (blessed CFR 30) |

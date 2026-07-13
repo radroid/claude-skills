@@ -31,6 +31,11 @@ placeholders-only exit aborts the run (exit 3) with the child's stderr surfaced.
 - A3: frames.json `fail` entries embed multi-line Playwright stacks in `error`;
   A3 renders captions from this file — trim to first line at render time.
 
+**Orchestrator DELTA for A3 (2026-07-13 ~10:20Z):** A3 spec's Open choice 1 is
+DECIDED — `mp4.fps` is RETIRED; MP4 output is CFR 30 so variable-duration holds
+(badge scaling, speedthrough 83ms slots) survive encoding. The spec's alternative
+(keep mp4.fps) is dead. Config docs must mark mp4.fps as ignored/retired.
+
 Design spec: `docs/superpowers/specs/2026-07-13-change-aware-timelapse-design.md`
 
 Integration branch: `change-aware-timelapse` (spec + orchestration docs only).
