@@ -412,7 +412,7 @@ defaults apply (enabled true, threshold 0.005 — the frozen A1 defaults are the
    unknown-visual skips by some other means before it can badge honestly. If a DELTA flips this, it
    must land before A3's spec freezes against R3's table.
 
-## Execution notes (PR #TBD)
+## Execution notes (PR #50)
 
 - **Upsert helper relocated** (spec R2 allowance): A1 left `upsertFrameEntry` inline in
   `screenshot.mjs`; it moved mechanically into new `scripts/lib/frames.mjs`, split into
