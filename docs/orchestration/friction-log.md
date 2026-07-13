@@ -4,28 +4,46 @@ Entry format: `- [role-tag] (date, run) problem — implication`
 
 ## Open
 
+(none)
+
+## Resolved
+
 - [executor] (2026-07-13, B1s2/PR49) Write tool corrupted two template-literal spaces
   into NUL bytes (0x00), making git treat the .mjs as binary; caught via the "Bin"
   marker in the commit diff-stat, fixed with perl, amended pre-PR — implication:
   executor gate should include a control-byte scan on new files
   (`grep -P '[\x00-\x08]'`); the diff-stat "Bin" marker is the cheap detector.
+  RESOLVED (2026-07-13, steward/B1): executor.md GATE now mandates a per-file
+  control-byte scan — `perl -ne 'exit 1 if /[\x00-\x08]/'` (BSD-grep-safe; macOS
+  grep lacks `-P`) — and classes an unexpected diff-stat "Bin" marker on a text
+  file as a gate failure.
 - [planner] (2026-07-13, B1s2/PR49) spec check-5 phrasing "spot-check one level with
   a jq -cS-independent method" is ambiguous (independent-of-jq vs jq-as-independent
   -recompute) — implication: acceptance checks must name the exact command, not
   describe it.
+  RESOLVED (2026-07-13, steward/B1): planner.md now requires every acceptance check
+  to be LITERAL — one exact copy-pasteable command per check; descriptive phrasing
+  is classed a spec defect.
 - [planner] (2026-07-13, A2/PR50) spec check-9 doc-grep was case-sensitive against a
   naturally-capitalized heading — implication: anchor doc greps on verbatim
   error-message strings or use grep -i.
+  RESOLVED (2026-07-13, steward/B1): planner.md now requires doc/text greps to
+  anchor on verbatim strings copied from the target file or tool output, or use
+  `grep -i`; paraphrased/re-cased anchors are a spec defect.
 - [steward-candidate] (2026-07-13, A2/PR50) executor contract "Append ## Execution
   notes (PR #n)" is circular — PR number doesn't exist until after the push that must
   contain the notes; cost an extra pin commit — implication: bless the two-commit
   pattern or a "(this PR)" placeholder in executor.md.
+  RESOLVED (2026-07-13, steward/B1): executor.md heading is now
+  `## Execution notes (slice <N>)` — deterministic before the push, unique when
+  multiple slices append to one spec (unlike "(this PR)"), no pin commit needed.
 - [env-note] (2026-07-13, A2/PR50) kayvee's parent dir has a pre-existing
   .timelapse-worktrees/07c97586 shell (May 26) that runs touch by design; snapshot
   discipline should treat that sibling dir as expected-mutable. Also kayvee's
   .timelapse.yaml is UNTRACKED, not committed — snapshot caught it, no impact.
-
-## Resolved
+  RESOLVED (2026-07-13, steward/B1): planner.md live-repo snapshot protocol now
+  records untracked-vs-committed status of config files and names expected-mutable
+  sibling dirs so post-run diffs don't misclassify them.
 
 - [executor] (2026-07-13, B1s1/PR46) isolated worktree starts at MAIN tip, not the
   dispatch-named base branch — executor had to `git reset --hard origin/change-aware-timelapse`

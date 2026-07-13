@@ -34,3 +34,20 @@ KPI it targets.
   completed/dispatched counts; orchestrator adjudicates from surviving ballots;
   yield counts real ballots only (1.1M-token degraded panel vs 99k hostile single
   that proved the premise) — KPI: review yield (accounting), reviewer cost.
+- 2026-07-13 — B1 (steward, reviewed through PR #49 + A2/PR50 friction) —
+  executor.md — GATE gains a per-file control-byte scan
+  (`perl -ne 'exit 1 if /[\x00-\x08]/'`; macOS grep lacks `-P`) and treats an
+  unexpected diff-stat "Bin" marker on a text file as gate failure (Write-tool NUL
+  corruption in B1s2 was caught only by the "Bin" marker) — KPI: escaped defects.
+- 2026-07-13 — B1 (steward) — executor.md — execution-notes heading changed from
+  `(PR #n)` to `(slice <N>)`: deterministic pre-push, unique across multi-slice
+  specs, kills the extra pin commit the circular PR-number contract cost on
+  A2/PR50 — KPI: cycle overhead.
+- 2026-07-13 — B1 (steward) — planner.md — acceptance checks must be LITERAL (one
+  exact command per check; "an independent method" phrasing is a spec defect) and
+  doc greps must anchor on verbatim strings or use `grep -i` (two ambiguity hits:
+  B1s2 check 5, A2 check 9) — KPI: cycle overhead.
+- 2026-07-13 — B1 (steward) — planner.md — live-repo snapshot protocol extended:
+  record untracked-vs-committed config files and name expected-mutable sibling
+  dirs (kayvee `.timelapse-worktrees/` shell, untracked `.timelapse.yaml`) —
+  KPI: plan friction.
