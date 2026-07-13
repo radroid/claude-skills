@@ -4,6 +4,16 @@ Entry format: `- [role-tag] (date, run) problem — implication`
 
 ## Open
 
+- [executor] (2026-07-13, B1s2/PR49) Write tool corrupted two template-literal spaces
+  into NUL bytes (0x00), making git treat the .mjs as binary; caught via the "Bin"
+  marker in the commit diff-stat, fixed with perl, amended pre-PR — implication:
+  executor gate should include a control-byte scan on new files
+  (`grep -P '[\x00-\x08]'`); the diff-stat "Bin" marker is the cheap detector.
+- [planner] (2026-07-13, B1s2/PR49) spec check-5 phrasing "spot-check one level with
+  a jq -cS-independent method" is ambiguous (independent-of-jq vs jq-as-independent
+  -recompute) — implication: acceptance checks must name the exact command, not
+  describe it.
+
 ## Resolved
 
 - [executor] (2026-07-13, B1s1/PR46) isolated worktree starts at MAIN tip, not the
