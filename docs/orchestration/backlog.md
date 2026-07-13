@@ -1,7 +1,7 @@
 # Backlog — change-aware timelapses (overnight run, started 2026-07-13)
 
-**Progress:** A1 executing; B1-s1 = PR #46 in adversarial review; A2 + B2 planning
-one-ahead. Last shipped: none.
+**Progress:** A1 = PR #47 in adversarial review; B1-s1 = PR #46 in adversarial
+review; A2 + B2 planning one-ahead. Last shipped: none.
 
 Design spec: `docs/superpowers/specs/2026-07-13-change-aware-timelapse-design.md`
 
