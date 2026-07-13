@@ -16,6 +16,12 @@ as written — (1) boot-skipped commits record decision `duplicate` with the `ca
 key absent; (2) mid-run hole-resume is REFUSED (exit 3 with remedies), not replayed.
 A3's planner consumes these as frozen; the spec'd alternatives are dead.
 
+**DELTA for A2 executor (2026-07-13, from PR #47 fix round):** timelapse.mjs spawns
+the placeholders-only pass without checking exit status (timelapse.mjs:132-143,
+366-373 pre-A1 numbering), so screenshot.mjs's new exit-3 invalid-selector abort is
+not propagated. A2 (which owns timelapse.mjs) MUST wire the rc check: non-zero
+placeholders-only exit aborts the run (exit 3) with the child's stderr surfaced.
+
 Design spec: `docs/superpowers/specs/2026-07-13-change-aware-timelapse-design.md`
 
 Integration branch: `change-aware-timelapse`. Slice PRs target it and merge there on
