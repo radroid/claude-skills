@@ -42,6 +42,10 @@ export function loadConfig(treeRoot, configPath) {
     return { ...DEFAULTS };
   }
   const raw = yaml.parse(fs.readFileSync(p, 'utf8'));
+  if (raw !== null && (typeof raw !== 'object' || Array.isArray(raw))) {
+    const got = Array.isArray(raw) ? 'a list' : `a ${typeof raw}`;
+    throw new Error(`config root must be a YAML mapping, got ${got}: ${p}`);
+  }
   return { ...DEFAULTS, ...raw };
 }
 

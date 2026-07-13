@@ -20,13 +20,26 @@ function detectSystemName(projectDir) {
   return path.basename(path.resolve(projectDir));
 }
 
+const USAGE = 'usage: init-config.mjs [--out <path>] [--stdin-json]';
+
 function parseArgs() {
   const o = { out: '.arch-timelapse.yaml', stdin: null };
   for (let i = 2; i < process.argv.length; i++) {
     if (process.argv[i] === '--out') o.out = process.argv[++i];
     else if (process.argv[i] === '--stdin-json') {
-      o.stdin = JSON.parse(fs.readFileSync(0, 'utf8'));
+      try {
+        o.stdin = JSON.parse(fs.readFileSync(0, 'utf8'));
+      } catch (err) {
+        console.error(`init: invalid --stdin-json payload: ${String(err.message).replace(/\s+/g, ' ')}`);
+        console.error(USAGE);
+        process.exit(2);
+      }
     }
+  }
+  if (typeof o.out !== 'string' || o.out === '') {
+    console.error('init: --out requires a value');
+    console.error(USAGE);
+    process.exit(2);
   }
   return o;
 }
@@ -42,18 +55,23 @@ const config = {
 };
 
 const outPath = path.isAbsolute(args.out) ? args.out : path.join(repoRoot, args.out);
-fs.writeFileSync(outPath, yaml.stringify(config));
+try {
+  fs.writeFileSync(outPath, yaml.stringify(config));
 
-const gi = path.join(repoRoot, '.gitignore');
-const line = `${DEFAULTS.output_dir}/`;
-if (fs.existsSync(gi)) {
-  let content = fs.readFileSync(gi, 'utf8');
-  if (!content.includes(line)) {
-    content += `${content.endsWith('\n') || content === '' ? '' : '\n'}${line}\n`;
-    fs.writeFileSync(gi, content);
+  const gi = path.join(repoRoot, '.gitignore');
+  const line = `${config.output_dir}/`;
+  if (fs.existsSync(gi)) {
+    let content = fs.readFileSync(gi, 'utf8');
+    if (!content.includes(line)) {
+      content += `${content.endsWith('\n') || content === '' ? '' : '\n'}${line}\n`;
+      fs.writeFileSync(gi, content);
+    }
+  } else {
+    fs.writeFileSync(gi, `${line}\n`);
   }
-} else {
-  fs.writeFileSync(gi, `${line}\n`);
+} catch (err) {
+  console.error(`init: write failed: ${err.message}`);
+  process.exit(3);
 }
 
 console.log(JSON.stringify({ ok: true, path: outPath }));
