@@ -40,7 +40,10 @@ PR number, repo slug, SPEC path, INVARIANTS pointer (backlog.md), DELTAS, FRAME
    it and do NOT block: note the feature for
    `docs/orchestration/manual-verification.md` with an exact repro recipe. Visual
    output (video pacing, badge legibility, diagram layout) is the HIGHEST-escape
-   class here — it ALWAYS gets a queue entry with a concrete user-facing check.
+   class here — it ALWAYS gets a queue entry with a concrete user-facing check,
+   and every entry NAMES its closing condition — the item or E2E slice whose
+   landing retires it (e.g. "closes when A3 lands") — so the queue self-retires
+   instead of rotting or being drained early.
 5. FRAME DIVERSITY: when dispatched with `FRAME: hostile`, assume the author is wrong
    and try to prove it; with `FRAME: no-checklist`, review from diff + spec only,
    ignoring the invariant table.

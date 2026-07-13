@@ -51,3 +51,14 @@ KPI it targets.
   record untracked-vs-committed config files and name expected-mutable sibling
   dirs (kayvee `.timelapse-worktrees/` shell, untracked `.timelapse.yaml`) —
   KPI: plan friction.
+- 2026-07-13 — A2 (steward, reviewed through PR #50) — observation, no edit —
+  A2 executor + PR50 hostile reviewer reported ZERO worktree/spec-ambiguity
+  friction (friction-log `## Open` empty; PR50 APPROVED with zero issues at the
+  bar: I3 drift attack, six resume attacks, SIGKILL crash test all passed first
+  try) — the A1/B1 fetch-checkout, literal-acceptance-command, and live-repo
+  snapshot fixes held on first contact — KPI: plan friction (→ 0 for A2).
+- 2026-07-13 — A2 (steward) — reviewer.md — visual-output queue entries must
+  NAME their closing condition (the item/E2E slice whose landing retires the
+  entry, e.g. "closes when A3 lands"): both A1 and A2 reviews applied this
+  informally; codified so the manual-verification queue self-retires instead of
+  rotting or being drained early — KPI: escaped defects (visual class).
