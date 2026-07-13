@@ -12,6 +12,8 @@ subcommands:
   init      write .arch-timelapse.yaml into the target repo (non-interactive; accepts --stdin-json)
   extract   emit C1/C2/C3 model.json + hashes.json for a checked-out tree
             [--tree <dir>] [--out <dir>] [--config <path>] [--levels a,b,c]
+  render    render model.json levels to Mermaid .mmd + fixed-canvas .png
+            [--model <path>] [--out <dir>] [--levels a,b,c] [--config <path>]
 
 reserved for later items: run, stitch-only, clean`;
 
@@ -45,6 +47,10 @@ function main() {
     }
     console.error('extract: not implemented yet (extract-model.mjs ships in the next slice of B1)');
     process.exit(2);
+  }
+
+  if (cmd === 'render') {
+    runScript('render-diagrams.mjs', rest);
   }
 
   if (RESERVED.has(cmd)) {

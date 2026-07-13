@@ -15,6 +15,11 @@ and prints a stderr notice (read-only targets).
 | `source_extensions` | string list | `ts, tsx, js, jsx, mjs, cjs, mts, cts` | no |
 | `max_file_bytes` | int | `1048576` | no |
 | `output_dir` | string | `.arch-timelapse` | no |
+| `render.width` | int | `1920` | no (documented) |
+| `render.height` | int | `1080` | no |
+| `render.margin` | int | `40` | no |
+| `render.max_scale` | number | `2` | no |
+| `render.theme` | string | `neutral` | no |
 
 In the written YAML, `component_roots: null` and `import_aliases: null` mean
 "auto-derive at extract time" per the defaults above.
@@ -22,6 +27,11 @@ In the written YAML, `component_roots: null` and `import_aliases: null` mean
 `extra_externals` entries have the shape
 `{id, name, deps, env_prefixes, files, label}` and append to the built-in
 external-system rule table.
+
+The `render.*` fields control the render stage's fixed canvas: every PNG is
+exactly `render.width × render.height` pixels; the diagram SVG is scaled to
+fit inside a `render.margin` border, never above `render.max_scale`.
+`render.theme` is a mermaid theme name.
 
 ## Reserved field names
 

@@ -33,6 +33,14 @@ const DEFAULTS = {
   source_extensions: ['ts', 'tsx', 'js', 'jsx', 'mjs', 'cjs', 'mts', 'cts'],
   max_file_bytes: 1048576,
   output_dir: '.arch-timelapse',
+  // Render stage (B2). Fixed canvas: every PNG is exactly width×height.
+  render: {
+    width: 1920,
+    height: 1080,
+    margin: 40,
+    max_scale: 2,
+    theme: 'neutral',
+  },
 };
 
 export function loadConfig(treeRoot, configPath) {
