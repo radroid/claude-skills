@@ -18,3 +18,4 @@ Soft budgets: unseeded (seed after ~3 runs of real data; do not invent numbers).
 | 2026-07-13T08:05Z | A1 | reviewer | PR #47 (wf_f8a33ecf) | REVISE (degraded) | ~719k | 8/26 done, 18 died on spend limit; surviving ballots uphold all claims; adjudicated to 4-issue fix list |
 | 2026-07-13T08:55Z | B1 | fix | PR #46 (293c6e4) | gate PASS | ~71k | 5/5 fixed, 0 contested; exit-code contract + YAML-root rejection verified live |
 | 2026-07-13T09:00Z | A1 | fix | PR #47 (84dafeb) | gate PASS | ~72k | 4/4 fixed, 0 contested; kayvee restored byte-exact; surfaced timelapse.mjs rc-check seam → routed as A2 DELTA |
+| 2026-07-13T09:10Z | B1 | reviewer | PR #46 hostile re-review | REVISE — 1 | ~80k | REAL free-hunt catch: valid-JSON non-mapping stdin writes corrupt config exit 0; 14 probes, 5 prior fixes verified live; review-yield floor satisfied |
