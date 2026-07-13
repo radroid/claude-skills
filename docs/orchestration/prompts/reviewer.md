@@ -57,6 +57,16 @@ PR number, repo slug, SPEC path, INVARIANTS pointer (backlog.md), DELTAS, FRAME
 REVISE = fixable defects (the common non-approve case). BLOCK = premise/spec breakage
 a local fix cannot save — escalates to the orchestrator, never auto-fixed.
 
+## Degraded panels (infra failure)
+
+When infrastructure kills panel agents mid-review (spend limits, crashes), the canon
+fail-closed rule counts each dead agent as a refutation, so a degraded panel is
+EXPECTED to emit REVISE/BLOCK regardless of what the surviving ballots say. That
+verdict is a fail-closed ARTIFACT, not a finding. Report completed/dispatched agent
+counts next to the verdict; the ORCHESTRATOR adjudicates the real issue list from
+surviving ballots. Review-yield accounting counts only issues raised in real
+ballots — never agent deaths.
+
 ## Report (caveman)
 
 Invariant table, numbered issues, free-hunt finding, reviewer-authored check,

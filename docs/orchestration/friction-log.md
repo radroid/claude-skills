@@ -4,25 +4,40 @@ Entry format: `- [role-tag] (date, run) problem — implication`
 
 ## Open
 
+## Resolved
+
 - [executor] (2026-07-13, B1s1/PR46) isolated worktree starts at MAIN tip, not the
   dispatch-named base branch — executor had to `git reset --hard origin/change-aware-timelapse`
   before starting — implication: every executor dispatch must include the reset
   instruction explicitly or work is built on stale code.
+  RESOLVED (2026-07-13, steward/A1): executor.md now mandates
+  `git fetch origin && git checkout -b <BRANCH> origin/<BASE>` as first actions.
 - [planner] (2026-07-13, B1s1/PR46) acceptance check used unquoted `--include=*.mjs`
   globs that fail under zsh ("no matches found") — implication: spec acceptance
   commands must be shell-safe (quote globs) or explicitly say `bash -c`.
+  RESOLVED (2026-07-13, steward/A1): planner.md now requires zsh-safe acceptance
+  commands (quoted globs or `bash -c`); unquoted glob is classed a spec defect.
 - [planner] (2026-07-13, A1/PR47) spec check-4 grep pattern `YMIN:[0-9.]+` targets
   pre-v8 ffmpeg signalstats logging; ffmpeg 8 needs `,metadata=print` and emits
   `lavfi.signalstats.YMIN=` — implication: specs must pin acceptance commands to the
   installed tool versions (ffmpeg 8.1.1 here).
+  RESOLVED (2026-07-13, steward/A1): planner.md now requires probing installed tool
+  versions and writing checks against that version's actual output format.
 - [executor] (2026-07-13, A1/PR47) SECOND instance of worktree-at-main-HEAD (also hit
   in B1s1) — implication: executor template needs a mandatory
   `git reset --hard origin/<BASE>` first action, not just branch confirmation.
+  RESOLVED (2026-07-13, steward/A1): executor.md mandatory fetch+checkout block;
+  fix.md gained the same worktree warning with `git fetch origin` before
+  `gh pr checkout`.
 - [orchestrator] (2026-07-13, PR46 merge attempt) permission classifier denied
   `gh pr merge` — user grant was "open PRs", not "merge PRs"; orchestrator's
   integration-branch merge policy overstepped it — implication: switched to
   stacked-PR mode (see backlog); future runs must confirm merge authority
   explicitly at kickoff.
+  RESOLVED (2026-07-13, steward/A1): process fix on record in backlog.md
+  STACKED-PR MODE; "confirm merge authority at kickoff" is a canon
+  (orchestrated-delivery SKILL.md) change outside the steward's
+  docs/orchestration fence — flagged to the orchestrator in the steward report.
 - [infra] (2026-07-13, PR46+PR47 reviews) account MONTHLY SPEND LIMIT hit mid-run:
   10/26 review agents died on PR46, 18/26 on PR47; canon fail-closed rule counts
   deaths as refutations, so both verdicts degraded to REVISE regardless of ballot
@@ -30,9 +45,20 @@ Entry format: `- [role-tag] (date, run) problem — implication`
   unusable; reduce fan-out (≤3 refuters × ≤3 claims), retry dead agents, or
   orchestrator-adjudicate from surviving ballots. USER ACTION: raise limit at
   claude.ai/settings/usage.
+  RESOLVED (2026-07-13, steward/A1): reviewer.md now documents that infra-killed
+  panels yield expected fail-closed verdicts, orchestrator adjudicates from
+  surviving ballots, and yield counts real ballots only. Fan-out sizing stays a
+  canon/orchestrator decision; USER ACTION (raise spend limit) still outstanding.
 - [planner] (2026-07-13, A1/PR47) kayvee demo repo had pre-existing dirty git state
   (modified .gitignore, untracked .timelapse.yaml), making "nothing else modified"
   checks ambiguous — implication: specs with live-repo smoke checks should snapshot
   `git status --porcelain` before the run and diff against it after.
-
-## Resolved
+  RESOLVED (2026-07-13, steward/A1): planner.md now requires the before-snapshot /
+  after-diff protocol for any spec whose smoke checks touch a live demo repo.
+- [orchestrator] (2026-07-13, B1 review dispatch, from token-ledger) wrapper passed
+  agent args as a JSON string, script saw undefined — 2 wasted reviewer dispatches
+  (~56k tokens) — implication: dispatch wrapper must validate arg shape before
+  spawning.
+  RESOLVED (2026-07-13, same run): wrapper hardened at dispatch level mid-run (per
+  ledger note); recorded here so friction history lives in one place. No template
+  change — defect was orchestrator tooling, not a role contract.

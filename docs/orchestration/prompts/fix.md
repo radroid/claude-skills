@@ -8,8 +8,10 @@ PR number, repo slug, reviewer issue list, SPEC path, BRANCH.
 
 ## Contract
 
-- Own worktree. `gh pr checkout <n>`; confirm the branch afterwards with
-  `git rev-parse --abbrev-ref HEAD`.
+- Own worktree — WARNING: it spawns at MAIN's tip; never trust its initial state.
+  Mandatory first actions, in order: `git fetch origin`, then `gh pr checkout <n>`,
+  then confirm the branch with `git rev-parse --abbrev-ref HEAD` before editing
+  anything.
 - Fix each numbered issue. NO scope creep, no refactors-while-here.
 - If an issue is factually wrong, do NOT "fix" it — report evidence (file:line) and
   leave the code unchanged for that issue.

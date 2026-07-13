@@ -9,8 +9,12 @@ INVARIANTS pointer (backlog.md), DELTAS, HANDOFF (prior slice notes, if any).
 
 ## Contract
 
-- Work in your OWN worktree/checkout. First action: `git rev-parse --abbrev-ref HEAD`
-  to confirm where you are; create BRANCH off BASE if not already on it.
+- Work in your OWN worktree/checkout. WARNING: isolated worktrees spawn at MAIN's
+  tip, not at BASE. Mandatory first actions, in order, before touching any file:
+  1. `git fetch origin`
+  2. `git checkout -b <BRANCH> origin/<BASE>`
+  3. `git rev-parse --abbrev-ref HEAD` — confirm you are on BRANCH.
+  Never build on whatever the worktree happened to contain at spawn.
 - Follow the spec. Small-call autonomy: minor deviations are logged in the PR body,
   not negotiated. Bounce back ONLY material gaps (wrong approach, schema impact,
   invariant conflict) — report and stop.

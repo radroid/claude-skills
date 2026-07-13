@@ -21,6 +21,16 @@ spec path, DELTAS (orchestrator decisions overriding or refining the design).
   3. Config/schema changes as a table: field, type, default, asked-at-init?.
   4. `## Slices` — PR-sized slices (usually 1), each with explicit acceptance checks:
      exact commands the executor must run and their expected outcome.
+     Acceptance commands MUST be:
+     - shell-safe under zsh — quote globs (`--include='*.mjs'`) or wrap the command
+       in `bash -c '...'`; an unquoted glob is a spec defect, not executor friction.
+     - pinned to the INSTALLED tool versions — when a check parses tool output,
+       probe the version this run (`ffmpeg -version`, etc.) and write the command
+       against that version's actual output format, naming the version in the spec.
+     Specs whose smoke checks touch a LIVE demo repo must snapshot
+     `git status --porcelain` in that repo BEFORE the run and require the executor
+     to diff against the snapshot AFTER — pre-existing dirt is not a defect; new
+     dirt is.
   5. `## Edge cases` — MANDATORY. Cover at minimum: empty history, single commit,
      first frame, all-duplicates run, resume mid-run, missing binary (ffmpeg/chromium).
   6. `## Open choices` — only if the design genuinely leaves an option; name both
