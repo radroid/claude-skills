@@ -31,3 +31,4 @@ Soft budgets: unseeded (seed after ~3 runs of real data; do not invent numbers).
 | 2026-07-13T11:00Z | B1 | steward | 21b6dc1 | n/a | ~57k | 2 templates tuned (control-byte gate, slice-N notes heading, literal acceptance commands); 5 friction resolved; B1 hard-gate CLEARED |
 | 2026-07-13T11:20Z | A2 | reviewer | PR #50 hostile re-review | APPROVE — 0 issues | ~152k | engineered I3 drift attack passed at exact boundary; 6 resume attacks + SIGKILL reconverged; boot-skip contract verified; zero issues at bar (earned, not cheap: 51 tool uses) |
 | 2026-07-13T11:30Z | A2 | steward | df8b779 | n/a | ~49k | 1 template (visual queue entries name closing condition); KPI observation: plan friction hit 0 for A2 — prior steward fixes held; A2 hard-gate CLEARED |
+| 2026-07-13T11:40Z | B4 | planner | agent | n/a | ~142k | docs-only slice; 20 anchors incl. live init-pipe probes; no-threshold-question decision documented (hash equality); 24-field config-schema plan |
