@@ -33,3 +33,4 @@ Soft budgets: unseeded (seed after ~3 runs of real data; do not invent numbers).
 | 2026-07-13T11:30Z | A2 | steward | df8b779 | n/a | ~49k | 1 template (visual queue entries name closing condition); KPI observation: plan friction hit 0 for A2 — prior steward fixes held; A2 hard-gate CLEARED |
 | 2026-07-13T11:40Z | B4 | planner | agent | n/a | ~142k | docs-only slice; 20 anchors incl. live init-pipe probes; no-threshold-question decision documented (hash equality); 24-field config-schema plan |
 | 2026-07-13T11:45Z | A4 | planner | agent | n/a | ~139k | 31 anchors, 6 live probes; 8 question groups; caught partial-dedup-block persistence bug (checks 2/5/7 are the deliverable); init rc seam documented out-of-radius |
+| 2026-07-13T11:50Z | B2 | executor | PR #51 | gate PASS | ~163k | 11/11 checks; .mmd+.png byte-identical determinism; placeholder ladders both exercised; shared-Chromium lockfile pin; 4 friction |

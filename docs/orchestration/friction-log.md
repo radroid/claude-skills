@@ -4,7 +4,22 @@ Entry format: `- [role-tag] (date, run) problem — implication`
 
 ## Open
 
-(none)
+- [planner] (2026-07-13, B2/PR51) fence greps match comments — executor's own header
+  comment ("no mermaid-cli") tripped the check-10 grep — implication: fence greps
+  should exclude prose/comments, or executors must know banned strings can't appear
+  even in comments.
+- [orchestrator] (2026-07-13, B2/PR51) dispatch HANDOFF cited the NFD/NFC unicode
+  note as living in B1's execution notes; it actually lives in token-ledger + B4's
+  spec — cost a search detour — implication: handoffs must cite the file that
+  actually holds the note (verify before dispatch).
+- [executor] (2026-07-13, B2/PR51) zsh gotchas persist (unquoted $FILES loop didn't
+  word-split; PIPESTATUS is bash-only) — executors should run gate steps under
+  explicit `bash -c` as a standing habit — implication: executor.md gate section
+  could mandate bash for gate scripts.
+- [env-note] (2026-07-13, B2/PR51) pinning a lockfile version while keeping a semver
+  range in package.json (shared-Chromium trick) needs a two-step install (exact pin →
+  restore range → reinstall) — worth a reference note if other skills reuse the
+  pattern.
 
 ## Resolved
 
