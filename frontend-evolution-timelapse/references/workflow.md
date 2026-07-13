@@ -68,6 +68,7 @@ Resume **never** regenerates this file.
 
 For each entry in `commits.json`:
 
+0. **Boot-skip check** (only when `dedup.enabled`) — hash the commit's `frontend_paths` subtree (`git ls-tree`, no checkout); if byte-identical to a commit already proven unchanged-or-baseline, skip checkout/install/boot entirely and record per-page `frames.json` entries (`decision: duplicate` mirroring the twin, no `capture` key, `status=boot_skip` in the summary line)
 1. `git checkout -f <hash>` in worktree
 2. Skip if `project_root` missing → `project_root_absent`
 3. **Sync env** — copy `env_sync_files` (`.env.local`, etc.) from your checkout into worktree
@@ -77,8 +78,9 @@ For each entry in `commits.json`:
 7. Poll `ready.url` until HTTP OK
 8. Playwright: each page, `wait_for`, `settle_ms`, then `dedup.ignore_selectors` masking (flat cover rectangles, only when `dedup.enabled`) — capture is pristine, annotation happens at stitch time
 9. Write PNG + upsert the commit's entry in `frames.json`, both in target repo `.timelapse/<RUN_ID>/page-<name>/`
-10. Teardown server; append `progress.json` atomically
-11. Emit one stdout summary line
+10. **Dedup decision** (only when `dedup.enabled`) — decode the PNG to a 64×40 grayscale raster via ffmpeg and diff it against the page's last **kept** frame: `kept` advances the baseline; `duplicate` (diff ratio ≤ `dedup.threshold`) records `collapsed_into` and deletes the PNG; `no_route`/`fail`/undecodable entries record `skipped`
+11. Teardown server; append `progress.json` atomically
+12. Emit one stdout summary line
 
 ## 6. Stitch
 
@@ -88,6 +90,9 @@ For each entry in `commits.json`:
 - Duplicate final `file` line (ffmpeg quirk)
 - Output `<page>.gif` and `<page>.mp4`
 - `no_frames` if no captures
+- Interim note: duplicate PNGs are discarded by the dedup engine, so duplicates
+  appear as holds of the previous kept frame until stitch-time collapse
+  (`collapse_mode`) lands
 
 ## 7. Report
 

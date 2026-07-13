@@ -55,8 +55,8 @@ pages:
 
 | Field | Default | Notes |
 |-------|---------|-------|
-| `dedup.enabled` | `true` | Master switch; `false` restores pre-dedup (v1) behavior |
-| `dedup.threshold` | `0.005` | Number in [0,1]; change ratio below which a frame counts as a duplicate |
+| `dedup.enabled` | `true` | Master switch; `false` restores pre-dedup (v1) behavior. Also gates the tree-hash boot-skip: a commit whose frontend subtree is byte-identical to one already proven unchanged skips checkout/install/boot entirely |
+| `dedup.threshold` | `0.005` | Number in [0,1]. Signal: each PNG is decoded to a 64×40 8-bit grayscale raster via system ffmpeg; pixels differing by more than 8/255 count as changed; a frame is a duplicate iff its diff ratio vs the last **kept** frame is ≤ threshold |
 | `dedup.ignore_selectors` | `[]` | CSS selectors covered by a flat mask rectangle at capture; a selector matching nothing is a no-op, an invalid selector fails that page's capture loudly |
 | `dedup.collapse_mode` | `badge` | One of `badge`, `drop`, `speedthrough` — how duplicate runs collapse at stitch time |
 | `dedup.max_hold_ms` | `3000` | Positive integer; stitch-time pacing cap per held frame |

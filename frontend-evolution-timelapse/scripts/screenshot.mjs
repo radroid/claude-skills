@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { chromium } from 'playwright';
 import { loadConfig } from './lib/load-config.mjs';
+import { upsertFrameEntry } from './lib/frames.mjs';
 
 const DISABLE_ANIM_CSS = `
 *, *::before, *::after {
@@ -63,28 +64,6 @@ async function applyMasks(page, selectors) {
     },
     { selectors, color: MASK_COLOR },
   );
-}
-
-/** Upsert this commit's entry in page-<name>/frames.json (keyed by index,
- *  kept sorted), written atomically via temp-file-plus-rename. */
-function upsertFrameEntry(pageDir, entry) {
-  const framesPath = path.join(pageDir, 'frames.json');
-  let frames = [];
-  if (fs.existsSync(framesPath)) {
-    try {
-      const parsed = JSON.parse(fs.readFileSync(framesPath, 'utf8'));
-      if (Array.isArray(parsed)) frames = parsed;
-    } catch {
-      /* unreadable file — rebuild from this entry on */
-    }
-  }
-  const at = frames.findIndex((f) => f.index === entry.index);
-  if (at >= 0) frames[at] = entry;
-  else frames.push(entry);
-  frames.sort((a, b) => a.index - b.index);
-  const tmp = path.join(pageDir, 'frames.json.tmp');
-  fs.writeFileSync(tmp, JSON.stringify(frames, null, 2));
-  fs.renameSync(tmp, framesPath);
 }
 
 async function capturePage(browser, opts) {
@@ -151,6 +130,8 @@ async function capturePage(browser, opts) {
         msg.includes('Timeout') ||
         msg.includes('net::ERR') ||
         msg.includes('Target closed') ||
+        /* client-side navigation racing addStyleTag/applyMasks */
+        msg.includes('Execution context was destroyed') ||
         msg.includes('crashed');
       if (!transient || attempt >= 2) break;
     }

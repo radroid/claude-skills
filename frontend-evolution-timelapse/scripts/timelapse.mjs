@@ -10,6 +10,8 @@ import { canonicalStringify, sha256Hex } from './lib/canonical-json.mjs';
 import { acquireLock, releaseLock } from './lib/lock.mjs';
 import { pruneCache } from './lib/install-matrix.mjs';
 import { estimateRun } from './lib/estimate.mjs';
+import { compareRasters, decodeRaster, frontendTreeHash } from './lib/dedup.mjs';
+import { readFrames, upsertFrameEntry, writeFrames } from './lib/frames.mjs';
 
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 
@@ -129,7 +131,7 @@ function calibrateHead({ repoRoot, config, outputDir, runId, trust }) {
     git(['worktree', 'add', '--detach', wtPath, head], repoRoot);
   }
 
-  spawnSync(
+  const ph = spawnSync(
     process.execPath,
     [
       path.join(scriptDir, 'screenshot.mjs'),
@@ -139,8 +141,13 @@ function calibrateHead({ repoRoot, config, outputDir, runId, trust }) {
       wtPath,
       '--placeholders-only',
     ],
-    { cwd: repoRoot },
+    { cwd: repoRoot, encoding: 'utf8' },
   );
+  if (ph.status !== 0) {
+    /* surfaces e.g. the invalid-selector pre-validation abort */
+    if (ph.stderr) process.stderr.write(ph.stderr);
+    throw new Error(`placeholder capture failed (exit ${ph.status ?? `signal ${ph.signal}`})`);
+  }
 
   const rc = spawnSync(
     process.execPath,
@@ -363,19 +370,108 @@ async function main() {
     git(['worktree', 'add', '--detach', wtPath, commits[0]?.hash || 'HEAD'], repoRoot);
   }
 
-  spawnSync(process.execPath, [
+  const ph = spawnSync(process.execPath, [
     path.join(scriptDir, 'screenshot.mjs'),
     '--run-dir',
     runDir,
     '--worktree',
     wtPath,
     '--placeholders-only',
-  ], { cwd: repoRoot });
+  ], { cwd: repoRoot, encoding: 'utf8' });
+  if (ph.status !== 0) {
+    /* surfaces e.g. the invalid-selector pre-validation abort */
+    if (ph.stderr) process.stderr.write(ph.stderr);
+    throw new Error(`placeholder capture failed (exit ${ph.status ?? `signal ${ph.signal}`})`);
+  }
 
   const progressPath = path.join(runDir, 'progress.json');
   const progress = fs.existsSync(progressPath)
     ? JSON.parse(fs.readFileSync(progressPath, 'utf8'))
     : { config_hash: configHash, commit_plan_hash: commitPlanHash, commits: {} };
+
+  /* ---- dedup engine state (A2); fully inert when dedup.enabled is false ---- */
+  const dedupEnabled = config.dedup.enabled === true;
+  /* Per page name: { index, pngPath, raster } of the last KEPT frame (I3 —
+     comparison is never against merely the previous frame). Rasters are
+     decoded lazily and cached: at most one decode per PNG per run. */
+  const lastKept = new Map();
+  /* Boot-skip baseline set S: frontend-subtree hash → most recent commit
+     index whose frames are proven unchanged-or-baseline relative to the
+     CURRENT page baselines. */
+  const treeBaselines = new Map();
+  const pageDirOf = (name) => path.join(runDir, `page-${name}`);
+  /* A1 R3 made filenames deterministic, so a discarded duplicate's name is
+     reconstructible from its entry. */
+  const pngNameOf = (entry) =>
+    `${String(entry.index).padStart(3, '0')}_${entry.hash.slice(0, 7)}.png`;
+
+  if (dedupEnabled && args.cmd === 'resume') {
+    const doneFlags = commits.map((c) => progress.commits?.[c.hash]?.done === true);
+
+    /* Hole gate: recapturing into the middle of a decided sequence cannot be
+       replayed against already-discarded duplicates — refuse, never replay.
+       Tail resumes (contiguous not-done suffix) proceed. */
+    const lastDone = doneFlags.lastIndexOf(true);
+    const holes = commits.filter((c, i) => !doneFlags[i] && i < lastDone).map((c) => c.hash);
+    if (holes.length) {
+      throw new Error(
+        `resume refused: dedup cannot replay a mid-run gap. Incomplete commit(s) ${holes
+          .map((h) => h.slice(0, 7))
+          .join(', ')} precede completed ones, and recapturing them cannot be compared against already-discarded duplicates. Remedies: rerun with --fresh, or set dedup.enabled: false and rerun with --fresh for v1 behavior.`,
+      );
+    }
+
+    /* Hygiene + baseline seeding, per page. */
+    const doneByIndex = new Map(commits.map((c, i) => [c.index, doneFlags[i]]));
+    const capturedByIndex = new Set(); /* commit indexes with a `capture` key on any page */
+    const keptIndexes = new Set(); /* commit indexes where any page was kept */
+    for (const pageCfg of config.pages) {
+      const pageDir = pageDirOf(pageCfg.name);
+      const frames = readFrames(pageDir);
+      const retained = [];
+      let changed = false;
+      for (const f of frames) {
+        if (doneByIndex.get(f.index) !== true) {
+          /* partial-pass entry: drop it and any PNG it names — recapture rewrites both */
+          if (f.file) fs.rmSync(path.join(pageDir, f.file), { force: true });
+          changed = true;
+          continue;
+        }
+        if (f.decision === 'duplicate') {
+          /* R4 crash window: decision written but the duplicate PNG not yet deleted */
+          fs.rmSync(path.join(pageDir, pngNameOf(f)), { force: true });
+        }
+        if (Object.hasOwn(f, 'capture')) capturedByIndex.add(f.index);
+        if (f.decision === 'kept') keptIndexes.add(f.index);
+        retained.push(f);
+      }
+      if (changed) writeFrames(pageDir, retained);
+
+      const baseline = retained.filter((f) => f.decision === 'kept').at(-1);
+      if (baseline) {
+        const pngPath = path.join(pageDir, baseline.file);
+        if (!fs.existsSync(pngPath)) {
+          /* a silently absent baseline would poison every later comparison */
+          throw new Error(
+            `dedup baseline missing: ${pngPath} (page "${pageCfg.name}", kept frame index ${baseline.index}). Later frames cannot be compared against an absent baseline; rerun with --fresh.`,
+          );
+        }
+        lastKept.set(pageCfg.name, { index: baseline.index, pngPath, raster: null });
+      }
+    }
+
+    /* Rebuild S from done commits at/after the last kept index K. Boot-skip
+       entries (no `capture` key) and project_root_absent commits (no entries
+       at all) contribute nothing. */
+    const K = keptIndexes.size ? Math.max(...keptIndexes) : null;
+    for (let i = 0; i < commits.length; i++) {
+      const c = commits[i];
+      if (!doneFlags[i]) continue;
+      if (K !== null && c.index < K) continue;
+      if (!capturedByIndex.has(c.index)) continue;
+      treeBaselines.set(frontendTreeHash(repoRoot, c.hash, config.frontend_paths), c.index);
+    }
+  }
 
   const manifest = {
     run_id: runId,
@@ -397,6 +493,56 @@ async function main() {
   for (let i = 0; i < commits.length; i++) {
     const c = commits[i];
     if (progress.commits?.[c.hash]?.done && args.cmd === 'resume') continue;
+
+    /* R5 boot-skip: a frontend subtree byte-identical to a commit already
+       proven unchanged-or-baseline renders identically — skip checkout,
+       install, and boot entirely. The first plan commit can never skip
+       (S starts empty). */
+    let treeHash = null;
+    if (dedupEnabled) {
+      const skipStart = Date.now();
+      treeHash = frontendTreeHash(repoRoot, c.hash, config.frontend_paths);
+      const q = treeBaselines.get(treeHash);
+      if (q !== undefined) {
+        for (const pageCfg of config.pages) {
+          const pageDir = pageDirOf(pageCfg.name);
+          fs.mkdirSync(pageDir, { recursive: true });
+          const qEntry = readFrames(pageDir).find((f) => f.index === q);
+          /* mirror q's comparability: kept/duplicate ⇒ provably identical
+             render; otherwise visuals unknown */
+          const comparable = qEntry?.decision === 'kept' || qEntry?.decision === 'duplicate';
+          const baseline = lastKept.get(pageCfg.name);
+          upsertFrameEntry(pageDir, {
+            index: c.index,
+            hash: c.hash,
+            subject: c.subject,
+            date: c.date,
+            file: null,
+            /* no `capture` key: no capture was attempted, and A1's frozen
+               capture enum must not gain values */
+            decision: comparable ? 'duplicate' : 'skipped',
+            diff_ratio: null,
+            collapsed_into: baseline ? baseline.index : null,
+          });
+        }
+        const skipResult = {
+          status: 'boot_skip',
+          duration_ms: Date.now() - skipStart,
+          log_bytes: 0,
+        };
+        emitSummaryLine(i + 1, n, c.hash, skipResult);
+        summaryChars += `[${i + 1}/${n}] ${c.hash.slice(0, 7)} status=boot_skip\n`.length;
+        summaryLines += 1;
+        manifest.entries.push({ ...c, status: 'boot_skip' });
+        manifest.processed += 1;
+        progress.commits = progress.commits || {};
+        /* done so findLatestIncompleteRun and resume treat it as complete;
+           boot-skip is a success — the skipped counter stays untouched */
+        progress.commits[c.hash] = { done: true, boot_skip: true, pages: {} };
+        writeProgress(runDir, progress);
+        continue;
+      }
+    }
 
     const rc = spawnSync(
       process.execPath,
@@ -445,6 +591,87 @@ async function main() {
       }
     }
 
+    /* R3/R4 dedup decisions for every entry this commit's capture upserted,
+       regardless of commit-level status (ok pages of a failed commit still
+       get real decisions — coherent because hole-resume is refused). */
+    if (dedupEnabled) {
+      let anyKept = false;
+      for (const pageCfg of config.pages) {
+        const pageDir = pageDirOf(pageCfg.name);
+        const entry = readFrames(pageDir).find((f) => f.index === c.index);
+        if (!entry) continue; /* commit never reached this page */
+        const baseline = lastKept.get(pageCfg.name) || null;
+        if (entry.capture !== 'ok') {
+          /* no comparable frame; visuals unknown */
+          entry.decision = 'skipped';
+          entry.diff_ratio = null;
+          entry.collapsed_into = baseline ? baseline.index : null;
+          upsertFrameEntry(pageDir, entry);
+          continue;
+        }
+        const pngPath = path.join(pageDir, entry.file);
+        const decoded = decodeRaster(pngPath);
+        if (!decoded.ok) {
+          /* a silently mis-decided frame would poison every later comparison:
+             loud skip, PNG retained, baseline NOT advanced */
+          console.error(
+            `dedup: undecodable frame ${entry.file} (page "${pageCfg.name}"): ${decoded.error} — decision=skipped, PNG retained`,
+          );
+          fs.appendFileSync(
+            skippedLog,
+            `${c.hash} dedup_undecodable page-${pageCfg.name} ${decoded.error}\n`,
+          );
+          entry.decision = 'skipped';
+          entry.diff_ratio = null;
+          entry.collapsed_into = baseline ? baseline.index : null;
+          upsertFrameEntry(pageDir, entry);
+          continue;
+        }
+        if (!baseline) {
+          /* the first capture-ok frame of a page is always kept */
+          entry.decision = 'kept';
+          entry.diff_ratio = null;
+          entry.collapsed_into = null;
+          upsertFrameEntry(pageDir, entry);
+          lastKept.set(pageCfg.name, { index: entry.index, pngPath, raster: decoded.raster });
+          anyKept = true;
+          continue;
+        }
+        if (baseline.raster === null) {
+          /* lazily decode a resume-seeded baseline (at most once per run) */
+          const b = decodeRaster(baseline.pngPath);
+          if (!b.ok) {
+            throw new Error(
+              `dedup baseline undecodable: ${baseline.pngPath} (${b.error}). Later frames cannot be compared against it; rerun with --fresh.`,
+            );
+          }
+          baseline.raster = b.raster;
+        }
+        const diffRatio = compareRasters(baseline.raster, decoded.raster);
+        if (diffRatio <= config.dedup.threshold) {
+          /* order matters (R4): decision upsert first, then PNG delete */
+          entry.decision = 'duplicate';
+          entry.diff_ratio = diffRatio;
+          entry.collapsed_into = baseline.index;
+          entry.file = null;
+          upsertFrameEntry(pageDir, entry);
+          fs.rmSync(pngPath, { force: true });
+        } else {
+          entry.decision = 'kept';
+          entry.diff_ratio = diffRatio;
+          entry.collapsed_into = null;
+          upsertFrameEntry(pageDir, entry);
+          lastKept.set(pageCfg.name, { index: entry.index, pngPath, raster: decoded.raster });
+          anyKept = true;
+        }
+      }
+      /* R5 baseline-set maintenance: a kept frame supersedes older proofs;
+         only fully-ok commits become boot-skip baselines (a twin of a failed
+         commit must be retried, not skipped). */
+      if (anyKept) treeBaselines.clear();
+      if (result.status === 'ok') treeBaselines.set(treeHash, c.index);
+    }
+
     manifest.entries.push({ ...c, ...result });
     manifest.processed += 1;
     progress.commits = progress.commits || {};
@@ -487,6 +714,29 @@ async function main() {
     log_read_cost_avoided_est:
       tokensIfAll > 0 ? 1 - agentTokens / tokensIfAll : 0,
   };
+  if (dedupEnabled) {
+    /* whole-run truth, counted from frames.json decisions across all pages */
+    const counts = { kept: 0, duplicate: 0, skipped: 0, discarded: 0 };
+    for (const pageCfg of config.pages) {
+      for (const f of readFrames(pageDirOf(pageCfg.name))) {
+        if (f.decision === 'kept') counts.kept += 1;
+        else if (f.decision === 'duplicate') {
+          counts.duplicate += 1;
+          /* captured duplicates (entries with a `capture` key) each had a
+             PNG discarded; boot-skip duplicates never produced one */
+          if (Object.hasOwn(f, 'capture')) counts.discarded += 1;
+        } else if (f.decision === 'skipped') counts.skipped += 1;
+      }
+    }
+    cost.dedup = {
+      kept_frames: counts.kept,
+      duplicate_frames: counts.duplicate,
+      skipped_frames: counts.skipped,
+      boot_skipped_commits: Object.values(progress.commits || {}).filter((p) => p.boot_skip)
+        .length,
+      discarded_pngs: counts.discarded,
+    };
+  }
   fs.writeFileSync(path.join(runDir, 'cost.json'), JSON.stringify(cost, null, 2));
 
   spawnSync(process.execPath, [path.join(scriptDir, 'render-index.mjs'), '--run-dir', runDir], {
