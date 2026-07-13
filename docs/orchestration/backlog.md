@@ -22,11 +22,27 @@ the placeholders-only pass without checking exit status (timelapse.mjs:132-143,
 not propagated. A2 (which owns timelapse.mjs) MUST wire the rc check: non-zero
 placeholders-only exit aborts the run (exit 3) with the child's stderr surfaced.
 
+**DELTAs for A2/A3 from PR #47 hostile re-review (2026-07-13 ~09:35Z):**
+- A2: when touching screenshot.mjs's retry classifier, add `Execution context was
+  destroyed` to the transient list (client-side nav racing addStyleTag/applyMasks).
+- A2: the execution-note caveat "full_page + below-fold masks untested" is
+  DISPROVEN — reviewer verified below-fold masking works (capture never scrolls,
+  fixed masks render in place); drop the caveat when convenient.
+- A3: frames.json `fail` entries embed multi-line Playwright stacks in `error`;
+  A3 renders captions from this file — trim to first line at render time.
+
 Design spec: `docs/superpowers/specs/2026-07-13-change-aware-timelapse-design.md`
 
-Integration branch: `change-aware-timelapse`. Slice PRs target it and merge there on
-APPROVE. The integration→main PR is HELD for morning human review. Nothing lands on
-main unattended.
+Integration branch: `change-aware-timelapse` (spec + orchestration docs only).
+**STACKED-PR MODE (2026-07-13 ~09:30Z):** the permission classifier correctly blocked
+`gh pr merge` — the user authorized opening PRs, not merging them. NO PR is merged
+tonight, not even into the integration branch. Instead: each dependent slice branches
+off its predecessor's HEAD branch and its PR targets that predecessor branch (diffs
+stay slice-scoped). An APPROVE is recorded as a PR comment with the verdict + gate
+evidence, and dependent work proceeds on top of the approved branch. The user merges
+the chain bottom-up in the morning; the final report lists exact order. Steward
+commits its docs-only changes directly to `change-aware-timelapse` (same as the
+orchestrator's bookkeeping) so template tuning still takes effect mid-run.
 
 Demo targets:
 

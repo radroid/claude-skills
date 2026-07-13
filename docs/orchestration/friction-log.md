@@ -18,6 +18,11 @@ Entry format: `- [role-tag] (date, run) problem — implication`
 - [executor] (2026-07-13, A1/PR47) SECOND instance of worktree-at-main-HEAD (also hit
   in B1s1) — implication: executor template needs a mandatory
   `git reset --hard origin/<BASE>` first action, not just branch confirmation.
+- [orchestrator] (2026-07-13, PR46 merge attempt) permission classifier denied
+  `gh pr merge` — user grant was "open PRs", not "merge PRs"; orchestrator's
+  integration-branch merge policy overstepped it — implication: switched to
+  stacked-PR mode (see backlog); future runs must confirm merge authority
+  explicitly at kickoff.
 - [infra] (2026-07-13, PR46+PR47 reviews) account MONTHLY SPEND LIMIT hit mid-run:
   10/26 review agents died on PR46, 18/26 on PR47; canon fail-closed rule counts
   deaths as refutations, so both verdicts degraded to REVISE regardless of ballot

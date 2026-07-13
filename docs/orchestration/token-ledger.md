@@ -19,3 +19,5 @@ Soft budgets: unseeded (seed after ~3 runs of real data; do not invent numbers).
 | 2026-07-13T08:55Z | B1 | fix | PR #46 (293c6e4) | gate PASS | ~71k | 5/5 fixed, 0 contested; exit-code contract + YAML-root rejection verified live |
 | 2026-07-13T09:00Z | A1 | fix | PR #47 (84dafeb) | gate PASS | ~72k | 4/4 fixed, 0 contested; kayvee restored byte-exact; surfaced timelapse.mjs rc-check seam → routed as A2 DELTA |
 | 2026-07-13T09:10Z | B1 | reviewer | PR #46 hostile re-review | REVISE — 1 | ~80k | REAL free-hunt catch: valid-JSON non-mapping stdin writes corrupt config exit 0; 14 probes, 5 prior fixes verified live; review-yield floor satisfied |
+| 2026-07-13T09:20Z | B1 | fix | PR #46 (a4341ee) | gate PASS | ~38k | 1/1 stdin shape check; orchestrator ran reviewer-authored gate test green from scratch checkout |
+| 2026-07-13T09:35Z | A1 | reviewer | PR #47 hostile re-review | APPROVE | ~99k | dedup premise PROVEN: byte-identical decoded pixels across 2 captures of animated fixture; CSP + full_page + validation matrix all exercised; 2 free-hunt candidates failed to break it |

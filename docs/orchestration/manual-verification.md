@@ -6,4 +6,7 @@ legibility, diagram layout) always land here — build-green cannot see them.
 
 ## Queue
 
-(empty — populated during the run)
+- [ ] **Interim un-annotated videos (A1 window, closes when A3 lands):** on
+  kayvee-website run `timelapse.sh run --max-commits 2 --i-trust-this-repo`, open
+  `.timelapse/<RUN_ID>/page-home/home.gif` — frames carry NO commit caption between
+  A1 and A3 by design. Confirm acceptable; if A3 landed overnight this entry is moot.
