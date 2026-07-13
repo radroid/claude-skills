@@ -75,10 +75,12 @@ resume** (gh/git/Progress line). Then this index points to the control flow:
 - **Loop sequence:** planner → executor → reviewer → fix → merge → steward.
   (See **The loop**; note planner runs one item ahead.)
 - **Dispatch params:** ITEM / SPEC / SLICES / BRANCH / PR / INVARIANTS / DELTAS /
-  HANDOFF (DELTAS and HANDOFF as applicable). (See **Dispatch protocol**.)
-- **Scaffolding files:** the orchestration prompt templates, token ledger,
-  friction log, prompt changelog (the single version record), and the backlog
-  doc with its **Progress** line. (See **Phase 0**.)
+  HANDOFF / ANCHORS (DELTAS, HANDOFF, ANCHORS as applicable). (See **Dispatch
+  protocol**.)
+- **Scaffolding files:** the orchestration prompt templates (seeded from
+  `assets/templates/`), token ledger, friction log, prompt changelog (the
+  single version record), and the backlog doc with its **Progress** line.
+  (See **Phase 0**.)
 - **Verdict grammar (unified):** `VERDICT: APPROVE` · `VERDICT: REVISE — <n>
   issues` · `VERDICT: BLOCK — <n> issues`. APPROVE→merge, REVISE→fix loop,
   BLOCK→escalate. (See **The loop**, step 3, and **Canon & mechanism**.)
@@ -142,16 +144,24 @@ through the Persistence docs — they hold everything needed to resume.
    OUTWARD-FACING — see Persistence), and the PR tool (`gh`).
 2. Create the scaffolding (these are the system's whole memory):
    - `docs/orchestration/prompts/{planner,executor,reviewer,fix,steward}.md`
-     — one role-contract template each. Author each by deriving its content
-     from the matching numbered step in *The loop* below plus any relevant
-     ANTI-BIAS clauses; encode the caveman report style (see Comms) into each
-     template's report section. The reviewer template MUST embed the ANTI-BIAS
-     clauses verbatim and MUST end with the exact unified grammar — one of
-     `VERDICT: APPROVE` / `VERDICT: REVISE — <n> issues` / `VERDICT: BLOCK — <n>
-     issues`. *The loop* and ANTI-BIAS are the single source — do NOT fork
-     divergent copies into these files (the `assets/*.workflow.js` scripts and the
-     templates both DERIVE from here); when the contract changes, change it there
-     and re-derive.
+     — one role-contract template each. COPY the seed templates from this
+     skill's `assets/templates/` and tailor ONLY the `{{…}}` slots (repo slug,
+     gate commands, main branch, house-style pointers). Do NOT re-derive the
+     templates from the prose contract: measured across two same-night
+     bootstraps, hand-derivation cost 30–40 min plus tens of thousands of
+     tokens each and produced divergent contracts — one dropped the reviewer's
+     evidence-provenance clause and paid for it in a false-claim detour. The
+     seeds ARE the canonical derivation of *The loop* + ANTI-BIAS (the
+     reviewer seed embeds all six ANTI-BIAS clauses role-scoped — condensed to
+     the reviewer's actionable surface, never contradicting the authoritative
+     text here — and ends with the exact unified grammar `VERDICT: APPROVE` /
+     `VERDICT: REVISE — <n> issues` / `VERDICT: BLOCK — <n> issues`; the
+     caveman report style is encoded in every seed's report section). *The
+     loop* and ANTI-BIAS stay the single
+     source — the seeds and the `assets/*.workflow.js` scripts DERIVE from
+     them, and when the contract changes, the seeds change in the SAME commit.
+     Post-bootstrap, the steward tunes the REPO copies only; seeds stay
+     untouched.
    - `docs/orchestration/token-ledger.md` — one line per run + soft per-role
      budgets (seed them after a few runs; don't invent precise numbers).
    - `docs/orchestration/friction-log.md` — `## Open` / `## Resolved`; each
@@ -175,7 +185,13 @@ steward.
    where prose is genuinely ambiguous). Anchor everything: before binding a
    component to an interaction, verify it exposes that prop at its file:line;
    `.tsx` for anything that renders; never name an identifier that shadows a
-   language global. Runs ONE ITEM AHEAD while the previous item executes.
+   language global. Dispatch it WITH `ANCHORS` (see Dispatch protocol) so it
+   starts warm instead of re-deriving the repo tour (ANCHORS is a starting
+   index, not a trust boundary — verify-before-bind applies unchanged to
+   anchor-covered claims), and hold it to the SPEC TAX: a spec is read by
+   every downstream role (executor, reviewer, each fix pass), so every kchar
+   is a multiplied tax — decisions, anchors, edge cases; never repo tours or
+   restated house docs. Runs ONE ITEM AHEAD while the previous item executes.
 2. **Executor** implements ONE PR per slice, runs the FULL local gate (+ a
    schema-drift check on schema PRs), pushes, opens the PR, and appends a
    `## Execution notes (PR #n)` handoff to the spec IN ITS OWN PR. Stages by
@@ -186,7 +202,16 @@ steward.
    section.
 3. **Reviewer** verifies the diff via `gh pr diff <n> --repo <slug>`
    (cwd-independent; STOP LOUDLY if it fails — NEVER fall back to the local
-   working tree, which may hold another branch). Diff-only; ≥80% confidence
+   working tree, which may hold another branch). EVIDENCE PROVENANCE: every
+   factual claim in the review cites the diff hunk or exact `gh` output it
+   derives from; a claim about local working-tree/filesystem state is VOID by
+   contract, and the orchestrator DISCARDS it unexamined rather than spending
+   a cycle disproving it (measured: one stale tree-state claim cost the
+   orchestrator a ~6-minute verification detour) — but the discard itself is
+   RECORDED as a friction-log line ("provenance-void claim discarded — <role,
+   PR>") so a reviewer that habitually cites forbidden evidence is auditable
+   by the steward, and the claim's subject lands in `## Non-blocking` rather
+   than vanishing. Diff-only; ≥80% confidence
    to raise an issue; one-line fix directions, NEVER code. Ends with EXACTLY
    one unified verdict line: `VERDICT: APPROVE` (ship → step 5),
    `VERDICT: REVISE — <n> issues` (fixable defects → step 4), or
@@ -195,12 +220,19 @@ steward.
    reserve BLOCK for "this change cannot be salvaged by a local fix." The
    mechanized form is `assets/review-and-verify.workflow.js`. (Anti-bias clauses
    below are part of this contract.)
-4. **Fix executor** (on REVISE) applies exactly the reviewer's issues; gate;
-   push. A BLOCK does not come here — it escalates to the orchestrator, which
-   bounces the item back to the planner or to the user.
+4. **Fix executor** (on REVISE) applies exactly the reviewer's issues; an
+   issue it believes wrong is bounced back with one line of reasoning (the
+   orchestrator decides) — never silently skipped, never argued in code;
+   gate; push. A BLOCK does not come here — it escalates to the orchestrator,
+   which bounces the item back to the planner or to the user.
 5. **Orchestrator merges** (on APPROVE only; squash; detach HEAD first; CONFIRM `state: MERGED`
    before deleting any branch — GitHub may still be computing mergeability and
-   a premature delete closes the PR). The squash lands on REMOTE main, so the
+   a premature delete closes the PR). EVERY PR needs its recorded verdict
+   BEFORE the merge attempt — docs-only and scaffolding PRs included — and the
+   merge command's stated justification cites the verdict + PR number: in
+   auto-mode sessions the permission classifier reads that justification and
+   DENIES an unevidenced self-merge (measured: one such denial cost a
+   ~10-minute dispatch-review-wait-remerge detour). The squash lands on REMOTE main, so the
    detached local main is now BEHIND — fast-forward it (`git pull`) before the
    next tree-mutator branches, or that branch forks off pre-merge code. Append
    ledger lines; file friction.
@@ -231,7 +263,12 @@ steward.
 ## Dispatch protocol
 
 A dispatch is PARAMETERS, not prose: point the agent at its template and pass
-ITEM / SPEC / SLICES / BRANCH / PR / INVARIANTS / DELTAS / HANDOFF. Be precise
+ITEM / SPEC / SLICES / BRANCH / PR / INVARIANTS / DELTAS / HANDOFF / ANCHORS.
+ANCHORS (planner dispatches) is the file:line map from your Phase-0
+repo-learning plus prior specs' `## Execution notes`, so the planner starts
+warm — measured: an unanchored planner burned 27 exploratory reads / 147k
+context / 10 minutes on one item, and the NEXT planner re-read the same
+orientation set from scratch. Be precise
 — quote rules exactly; state the spec-slice→PR-N mapping when they differ;
 when a DELTA resolves a spec-open choice, name both sides ("spec offers X|Y;
 DELTA picks X"). Match each agent's TYPE to the tools its template needs (a
@@ -249,6 +286,18 @@ stages, which is exactly why the executor stages by EXPLICIT PATH and never
 `git add -A`s (see above). The reviewer NEVER touches the tree at all; the
 steward works in an ISOLATED git worktree (a separate checkout, not the shared
 tree) and edits only the orchestration docs.
+
+Dispatch role agents in the BACKGROUND by default and sequence on their
+completion notifications — the orchestrator's job between notifications is
+routing the other lanes (the one-ahead planner, research pre-steps, merges),
+not sitting in a blocking wait. Hold a LONG fallback heartbeat (a ≥1200 s
+wakeup) so a hung or silently-dead agent can't strand the loop overnight, and
+never poll on short timers. Go synchronous only when NOTHING can advance
+without the result — and even then, launch the parallel lanes BEFORE entering
+the wait (measured: a synchronous review dispatch idled the orchestrator ~6
+minutes; the run had pre-launched its planner + research lanes first and lost
+nothing). More concurrency means more shared-HEAD movement — the runtime
+re-confirm rules below apply unchanged.
 
 The git tree is not the only shared resource. Parallel agents also contend for
 RUNTIME state — one `.git` shared across multiple worktrees, booted
@@ -377,6 +426,13 @@ only — the full counter-move lives at the cited section; do NOT re-explain her
 - Deferring the steward "to the end" under delivery momentum → it runs zero
   times; friction never drains and the self-improvement loop never executes.
   [The loop, Steward]
+- Merging without that PR's recorded verdict ("docs-only, skip review") → the
+  auto-mode permission classifier denies the self-merge; multi-minute detour.
+  [The loop, Orchestrator merges]
+- Disproving a reviewer claim that cites no diff/`gh` provenance → void it
+  unexamined; provenance is the reviewer's burden. [The loop, Reviewer]
+- Hand-deriving role templates at bootstrap → copy the `assets/templates/`
+  seeds and tailor only the `{{…}}` slots. [Phase 0]
 
 ## Comms (optional)
 

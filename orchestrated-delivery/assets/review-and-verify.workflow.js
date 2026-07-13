@@ -168,10 +168,13 @@ function lensKind(lens) {
 // >=0.80 confidence bar. nonblocking=true registers a doubt BELOW the bar without
 // forcing the expensive BLOCK path (rule 6: non-blocking findings are first-class).
 // premise_break distinguishes a spec/premise breakage (=> BLOCK) from a fixable
-// defect (=> REVISE).
+// defect (=> REVISE). citation is EVIDENCE PROVENANCE (SKILL.md, loop step 3):
+// the diff hunk lines or exact `gh` output the finding derives from — required at
+// the schema layer so an uncited ballot never validates; local working-tree /
+// filesystem state is NOT valid evidence.
 const REFUTER_BALLOT_SCHEMA = {
   type: "object",
-  required: ["lens", "refuted", "confidence", "finding", "premise_break"],
+  required: ["lens", "refuted", "confidence", "finding", "premise_break", "citation"],
   additionalProperties: false,
   properties: {
     lens: { type: "string" },
@@ -180,6 +183,7 @@ const REFUTER_BALLOT_SCHEMA = {
     finding: { type: "string" },
     nonblocking: { type: "boolean" },
     premise_break: { type: "boolean" },
+    citation: { type: "string", minLength: 8 },
   },
 };
 
@@ -215,6 +219,9 @@ async function adversarialVerify(claim, diff, opts) {
           "Claim: " + claim + "\n\nDiff:\n" + diff + "\n\n" +
           "Set refuted=true ONLY at >=0.80 confidence (the reviewer bar). " +
           "Below the bar, set refuted=false and nonblocking=true but STILL record the finding. " +
+          "citation = EVIDENCE PROVENANCE: quote the diff hunk lines (or exact `gh` output) your " +
+          "finding derives from. Local working-tree/filesystem state is NOT valid evidence — never " +
+          "cite it, and never cast refuted=true on a finding you cannot cite from the diff/gh. " +
           "Set premise_break=true ONLY when the change cannot be salvaged by a local fix — a " +
           "wrong spec/premise/approach. A FIXABLE defect (off-by-one, a missing wire-up, a bad " +
           "bound) is NOT a premise break even when it makes the claim false: leave premise_break " +
@@ -237,6 +244,7 @@ async function adversarialVerify(claim, diff, opts) {
         finding: "no ballot returned (skip/death) — defaulted to refuted",
         nonblocking: false,
         premise_break: false,
+        citation: "(none — synthesized ballot: refuter skip/death)",
       };
     }
     // CODE-ENFORCE the >=0.80 reviewer bar the schema models: a refutation below
@@ -250,6 +258,7 @@ async function adversarialVerify(claim, diff, opts) {
         finding: v.finding,
         nonblocking: true,
         premise_break: false,
+        citation: v.citation,
       };
     }
     return v; // already schema-validated; at/above the bar (or a non-refutation)
@@ -276,9 +285,18 @@ function claimToVerdict(av) {
       // the majority tally already cleared it. Only mark blocking when the claim
       // was killed; otherwise an APPROVE would carry blocking issues, violating the
       // ledger invariant (empty [] on APPROVE) and inflating the smell-probe count.
-      issues.push({ severity: upheld ? "non_blocking" : "blocking", note: "[" + lensKind(v.lens) + "] " + v.finding });
+      // The citation rides in the note so EVIDENCE PROVENANCE survives into
+      // issues[] / per_claim / the audit ledger — collected-but-unread evidence
+      // is decorative (a claim's citation must be auditable downstream).
+      issues.push({
+        severity: upheld ? "non_blocking" : "blocking",
+        note: "[" + lensKind(v.lens) + "] " + v.finding + " [cites: " + (v.citation || "(uncited)") + "]",
+      });
     } else if (v.nonblocking) {
-      issues.push({ severity: "non_blocking", note: "[" + lensKind(v.lens) + "] " + v.finding });
+      issues.push({
+        severity: "non_blocking",
+        note: "[" + lensKind(v.lens) + "] " + v.finding + " [cites: " + (v.citation || "(uncited)") + "]",
+      });
     }
   }
   if (av.survives) return { verdict: "APPROVE", issues };
@@ -303,9 +321,19 @@ function verdictLine(verdict, issueCount) {
 }
 
 // =====================================================================
-// BODY — args may be undefined; inline constants are the safe fallback.
+// BODY — claims come from the DISPATCH, and a malformed dispatch FAILS
+// CLOSED. Reviewing fallback samples and emitting a plausible verdict about
+// NOTHING is the rubber-stamp failure this gate exists to prevent (observed
+// live: a dispatch whose args arrived JSON-encoded silently reviewed the old
+// inline samples). The one malformation repaired losslessly is a
+// JSON-encoded-string args; everything else throws. SAMPLE_CLAIMS are for
+// docs/smoke only, behind an EXPLICIT args.useSampleClaims opt-in.
 // =====================================================================
-const claims = (args && args.claims) || [
+let A = args;
+if (typeof A === "string") {
+  try { A = JSON.parse(A); } catch (e) { A = null; }
+}
+const SAMPLE_CLAIMS = [
   {
     pr: 41,
     claim: "PR #41 paginate() fix is correct and regresses nothing.",
@@ -318,8 +346,15 @@ const claims = (args && args.claims) || [
     diff: "--- a/auth.js\n+++ b/auth.js\n@@\n+ const SENTINEL = Symbol('unauth');",
   },
 ];
+const claims = A && A.useSampleClaims ? SAMPLE_CLAIMS : A && A.claims;
+if (!Array.isArray(claims) || claims.length === 0) {
+  throw new Error(
+    "review-and-verify: dispatch carried no claims — failing closed rather than " +
+      "reviewing samples (pass args.claims, or args.useSampleClaims:true for a smoke run)",
+  );
+}
 
-const N = (args && args.refutersPerClaim) || REFUTER_LENSES.length;
+const N = (A && A.refutersPerClaim) || REFUTER_LENSES.length;
 
 phase("review");
 log("reviewing " + claims.length + " claim(s) with " + N + " hostile refuters each (lenses: " + REFUTER_LENSES.length + ")");
