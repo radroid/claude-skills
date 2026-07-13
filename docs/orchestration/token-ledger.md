@@ -24,3 +24,4 @@ Soft budgets: unseeded (seed after ~3 runs of real data; do not invent numbers).
 | 2026-07-13T09:50Z | A1 | steward | 9a7e84a | n/a | ~50k | 4 templates tuned, 7+1 friction resolved, changelog traced; A1 hard-gate CLEARED |
 | 2026-07-13T10:10Z | B1 | executor | PR #49 (wf via agent) | gate PASS | ~123k | slice 2/2 extractor; 9/9 checks on 75-proof; determinism cmp + independent recompute; NUL-byte Write corruption caught+fixed; 5 deviations |
 | 2026-07-13T10:20Z | A3 | planner | agent | n/a | ~145k | 34 anchors; EMPIRICAL: ffmpeg 8.1.1 lacks drawtext → Playwright banner PNGs + overlay, pipeline verified live; mp4.fps retirement exposed (blessed CFR 30) |
+| 2026-07-13T10:25Z | B3 | planner | agent | n/a | ~151k | 2 slices, 34 anchors; git-archive walk design (0.08s/commit, no hooks); independently confirmed no-drawtext; corrected 75-proof first-parent count to 80 |

@@ -87,7 +87,7 @@ Demo targets:
 | B2 | Mermaid render pipeline: model→Mermaid fixed template, rasterised via Playwright Chromium | B1 | pending |
 | B3 | History walk + per-level change detection + collapse/badge stitch + index.html | B2 | pending |
 | B4 | Init interview (levels, collapse mode, pacing) + SKILL.md + references | B3 | pending |
-| B5 | E2E proof on 75-proof: 3 videos; determinism assertion (same commit ⇒ byte-identical Mermaid); pacing stress report over 278 commits | B4 | pending |
+| B5 | E2E proof on 75-proof: 3 videos; determinism assertion (same commit ⇒ byte-identical Mermaid); pacing stress report (first-parent walk = 80 commits; 278 incl. side branches) | B4 | pending |
 
 ## Loop policy
 
