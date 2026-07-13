@@ -34,6 +34,11 @@ function parseArgs() {
         console.error(USAGE);
         process.exit(2);
       }
+      if (typeof o.stdin !== 'object' || o.stdin === null || Array.isArray(o.stdin)) {
+        console.error('init: invalid --stdin-json payload: root must be a JSON object');
+        console.error(USAGE);
+        process.exit(2);
+      }
     }
   }
   if (typeof o.out !== 'string' || o.out === '') {
