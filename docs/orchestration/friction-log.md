@@ -13,6 +13,17 @@ Entry format: `- [role-tag] (date, run) problem — implication`
   a jq -cS-independent method" is ambiguous (independent-of-jq vs jq-as-independent
   -recompute) — implication: acceptance checks must name the exact command, not
   describe it.
+- [planner] (2026-07-13, A2/PR50) spec check-9 doc-grep was case-sensitive against a
+  naturally-capitalized heading — implication: anchor doc greps on verbatim
+  error-message strings or use grep -i.
+- [steward-candidate] (2026-07-13, A2/PR50) executor contract "Append ## Execution
+  notes (PR #n)" is circular — PR number doesn't exist until after the push that must
+  contain the notes; cost an extra pin commit — implication: bless the two-commit
+  pattern or a "(this PR)" placeholder in executor.md.
+- [env-note] (2026-07-13, A2/PR50) kayvee's parent dir has a pre-existing
+  .timelapse-worktrees/07c97586 shell (May 26) that runs touch by design; snapshot
+  discipline should treat that sibling dir as expected-mutable. Also kayvee's
+  .timelapse.yaml is UNTRACKED, not committed — snapshot caught it, no impact.
 
 ## Resolved
 
