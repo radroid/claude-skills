@@ -390,8 +390,18 @@ function enumerateComponents(tree, roots, excludes, sourceExts) {
   return entries;
 }
 
-/** §2.7.4 ids incl. deterministic collision suffixes (-2, -3, … by name). */
+/**
+ * §2.7.4 ids incl. deterministic collision suffixes (-2, -3, … by name).
+ * Deviation from the literal per-group recipe (recorded in spec execution
+ * notes): ids are assigned GLOBALLY — pass 1 collects every entry's sanitized
+ * candidate, pass 2 skips any suffix whose resulting id equals another
+ * entry's candidate or an already-assigned id, so ids stay unique across the
+ * whole model (§2.3) even when `app/foo!` would suffix to `app/foo-2`'s
+ * candidate. Deterministic (I1): candidates, grouping, and assignment order
+ * derive only from the bytewise-sorted entries.
+ */
 function assignComponentIds(entries) {
+  // Pass 1: sanitize candidates, group entries by candidate.
   const byCandidate = new Map();
   for (const e of entries) {
     let segments = e.name.split('/');
@@ -400,11 +410,18 @@ function assignComponentIds(entries) {
     if (!byCandidate.has(candidate)) byCandidate.set(candidate, []);
     byCandidate.get(candidate).push(e);
   }
+  // Pass 2: resolve collisions against the full candidate set + assigned ids.
+  const assigned = new Set();
   for (const [candidate, group] of byCandidate) {
     group.sort((a, b) => cmpBytes(a.name, b.name));
-    group.forEach((e, i) => {
-      e.id = i === 0 ? candidate : `${candidate}-${i + 1}`;
-    });
+    for (const e of group) {
+      let id = candidate;
+      for (let n = 2; assigned.has(id) || (id !== candidate && byCandidate.has(id)); n++) {
+        id = `${candidate}-${n}`;
+      }
+      e.id = id;
+      assigned.add(id);
+    }
   }
 }
 

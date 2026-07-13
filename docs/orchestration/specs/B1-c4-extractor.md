@@ -448,3 +448,4 @@ Acceptance (`TREE=/private/tmp/claude-501/-Users-rajdholakia-Documents-claude-sk
   bytewise (`(` sorts before letters), so `app/(dashboard)` keeps the bare id
   over `app/dashboard`. Convex `calls` targets resolve against unsuffixed
   ids; a collided convex module would miss — accepted, deterministic.
+- **Deviation (globally unique ids):** §2.7.4's literal per-group suffix recipe can mint an id equal to a sibling's sanitized candidate (`app/foo` + `app/foo!` + `app/foo-2` ⇒ `comp.web.app.foo-2` twice, violating §2.3 uniqueness); the implementation deviates to global-unique assignment — suffixes skip any id that is another entry's candidate or already assigned (still deterministic, I1).
