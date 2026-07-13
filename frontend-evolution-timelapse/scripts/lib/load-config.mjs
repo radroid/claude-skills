@@ -54,6 +54,14 @@ const DEFAULTS = {
 const COLLAPSE_MODES = ['badge', 'drop', 'speedthrough'];
 
 function validateDedup(dedup) {
+  /* Reject unknown keys: a `treshold:` typo would otherwise merge in
+     silently, validation would pass against the untouched default, and the
+     user's intent would silently not apply. */
+  for (const key of Object.keys(dedup)) {
+    if (!Object.hasOwn(DEFAULTS.dedup, key)) {
+      throw new Error(`unknown dedup field: ${key}`);
+    }
+  }
   if (typeof dedup.enabled !== 'boolean') {
     throw new Error('dedup.enabled must be a boolean');
   }

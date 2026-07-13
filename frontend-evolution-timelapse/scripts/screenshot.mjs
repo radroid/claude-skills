@@ -119,7 +119,20 @@ async function capturePage(browser, opts) {
         await context.close();
         return { status: 'no_route', http: res.status() };
       }
-      await page.addStyleTag({ content: DISABLE_ANIM_CSS });
+      if (config.dedup.enabled) {
+        /* Pixel comparison needs frozen pixels — a failed freeze is loud. */
+        await page.addStyleTag({ content: DISABLE_ANIM_CSS });
+      } else {
+        /* I5: with dedup disabled, capture exactly what v1 captured — v1
+           swallowed injection failures (strict CSP), so degrade to a warning. */
+        try {
+          await page.addStyleTag({ content: DISABLE_ANIM_CSS });
+        } catch (e) {
+          console.error(
+            `warning: animation-freeze CSS injection failed (${String(e?.message || e)}); capturing without frozen animations`,
+          );
+        }
+      }
       await page.waitForTimeout(config.settle_ms || 500);
       if (config.dedup.enabled && config.dedup.ignore_selectors.length > 0) {
         await applyMasks(page, config.dedup.ignore_selectors);
@@ -154,6 +167,7 @@ async function placeholder(runDir, pageName, config) {
   await page.setContent(
     `<html><body style="background:#f4f4f5;font:24px sans-serif;padding:40px;color:#666">${pageName}<br><small>awaiting first frame</small></body></html>`,
   );
+  await page.addStyleTag({ content: DISABLE_ANIM_CSS });
   const dir = path.join(runDir, `page-${pageName}`);
   fs.mkdirSync(dir, { recursive: true });
   const out = path.join(dir, '000_placeholder.png');
@@ -183,6 +197,29 @@ const repoRoot = process.cwd();
 const config = loadConfig(repoRoot);
 
 if (args.placeholdersOnly) {
+  /* Pre-validate ignore_selectors before any commit work: an invalid entry
+     would otherwise fail every page capture deterministically, burning the
+     whole N-commit run (checkout+install+serve per commit) for a typo. */
+  if (config.dedup.enabled && config.dedup.ignore_selectors.length > 0) {
+    const browser = await chromium.launch({ headless: true });
+    const page = await browser.newPage();
+    for (const sel of config.dedup.ignore_selectors) {
+      const valid = await page.evaluate((s) => {
+        try {
+          document.querySelector(s);
+          return true;
+        } catch {
+          return false;
+        }
+      }, sel);
+      if (!valid) {
+        await browser.close();
+        console.error(`invalid ignore_selectors entry: ${sel}`);
+        process.exit(3);
+      }
+    }
+    await browser.close();
+  }
   for (const p of config.pages) {
     await placeholder(args.runDir, p.name, config);
   }

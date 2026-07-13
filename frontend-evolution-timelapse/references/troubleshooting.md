@@ -84,6 +84,10 @@ Or `timelapse.sh clean`.
 
 An entry in `dedup.ignore_selectors` is not a valid CSS selector for the browser. The page capture fails loudly rather than shipping an unmasked frame (a silently-unmasked frame would poison dedup's baseline). Fix the selector in `.timelapse.yaml`, then start a `--fresh` run — `dedup.ignore_selectors` is part of `config_hash`, so resume is refused after the edit.
 
+## Strict CSP blocks the animation-freeze CSS
+
+A strict `style-src` CSP can reject the injected animation-freeze stylesheet. With `dedup.enabled: false` the capture proceeds anyway with a one-line stderr warning (v1 behaviour). With `dedup.enabled: true` the failure is loud and fails the page capture — pixel comparison needs frozen pixels. Relax the CSP for local capture, or set `dedup.enabled: false`.
+
 ## Node version
 
 v1 does not auto-switch Node. Use the correct Node version before running (`nvm use`, `fnm`, `mise`).
