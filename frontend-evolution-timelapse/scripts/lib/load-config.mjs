@@ -26,6 +26,13 @@ const DEFAULTS = {
   output_dir: '.timelapse',
   annotate: true,
   full_page: false,
+  dedup: {
+    enabled: true,
+    threshold: 0.005,
+    ignore_selectors: [],
+    collapse_mode: 'badge',
+    max_hold_ms: 3000,
+  },
   gif: { fps: 1.5, width: 1200, hold_skipped_ms: 400 },
   mp4: { fps: 1.5, crf: 22 },
   max_commits: 80,
@@ -44,6 +51,34 @@ const DEFAULTS = {
   use_historical_env: false,
 };
 
+const COLLAPSE_MODES = ['badge', 'drop', 'speedthrough'];
+
+function validateDedup(dedup) {
+  if (typeof dedup.enabled !== 'boolean') {
+    throw new Error('dedup.enabled must be a boolean');
+  }
+  if (
+    typeof dedup.threshold !== 'number' ||
+    Number.isNaN(dedup.threshold) ||
+    dedup.threshold < 0 ||
+    dedup.threshold > 1
+  ) {
+    throw new Error('dedup.threshold must be a number between 0 and 1');
+  }
+  if (
+    !Array.isArray(dedup.ignore_selectors) ||
+    dedup.ignore_selectors.some((s) => typeof s !== 'string' || s.length === 0)
+  ) {
+    throw new Error('dedup.ignore_selectors must be an array of non-empty strings');
+  }
+  if (!COLLAPSE_MODES.includes(dedup.collapse_mode)) {
+    throw new Error(`dedup.collapse_mode must be one of: ${COLLAPSE_MODES.join(', ')}`);
+  }
+  if (!Number.isInteger(dedup.max_hold_ms) || dedup.max_hold_ms <= 0) {
+    throw new Error('dedup.max_hold_ms must be a positive integer');
+  }
+}
+
 export function loadConfig(repoRoot, configPath) {
   const p = configPath || path.join(repoRoot, '.timelapse.yaml');
   if (!fs.existsSync(p)) {
@@ -55,6 +90,12 @@ export function loadConfig(repoRoot, configPath) {
     url: config.ready?.url ?? `http://localhost:${config.port}`,
     timeout_ms: config.ready?.timeout_ms ?? 120000,
   };
+  const rawDedup = raw?.dedup;
+  if (rawDedup != null && (typeof rawDedup !== 'object' || Array.isArray(rawDedup))) {
+    throw new Error('dedup must be a mapping of dedup.* fields');
+  }
+  config.dedup = { ...DEFAULTS.dedup, ...(rawDedup ?? {}) };
+  validateDedup(config.dedup);
   if (!Array.isArray(config.pages) || config.pages.length === 0) {
     throw new Error('config.pages must be a non-empty array');
   }

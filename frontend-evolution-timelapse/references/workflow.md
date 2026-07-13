@@ -75,8 +75,8 @@ For each entry in `commits.json`:
 5. Install (cached per PM)
 6. Start `dev` or `build`+`start`; tail dev log for port
 7. Poll `ready.url` until HTTP OK
-8. Playwright: each page, `wait_for`, `settle_ms`, optional overlay
-9. Write PNG to target repo `.timelapse/<RUN_ID>/page-<name>/`
+8. Playwright: each page, `wait_for`, `settle_ms`, then `dedup.ignore_selectors` masking (flat cover rectangles, only when `dedup.enabled`) — capture is pristine, annotation happens at stitch time
+9. Write PNG + upsert the commit's entry in `frames.json`, both in target repo `.timelapse/<RUN_ID>/page-<name>/`
 10. Teardown server; append `progress.json` atomically
 11. Emit one stdout summary line
 

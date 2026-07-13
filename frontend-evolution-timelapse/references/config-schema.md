@@ -46,10 +46,20 @@ pages:
 |-------|---------|
 | `viewport.width` | `1440` |
 | `viewport.height` | `900` |
-| `annotate` | `true` |
+| `annotate` | `true` — annotation is stitch-time as of pristine capture; it has no capture-time effect (screenshots are never overlaid) |
 | `full_page` | `false` |
 | `settle_ms` | `500` |
 | `base_url` | `null` (framework detection at capture) |
+
+## Dedup
+
+| Field | Default | Notes |
+|-------|---------|-------|
+| `dedup.enabled` | `true` | Master switch; `false` restores pre-dedup (v1) behavior |
+| `dedup.threshold` | `0.005` | Number in [0,1]; change ratio below which a frame counts as a duplicate |
+| `dedup.ignore_selectors` | `[]` | CSS selectors covered by a flat mask rectangle at capture; a selector matching nothing is a no-op, an invalid selector fails that page's capture loudly |
+| `dedup.collapse_mode` | `badge` | One of `badge`, `drop`, `speedthrough` — how duplicate runs collapse at stitch time |
+| `dedup.max_hold_ms` | `3000` | Positive integer; stitch-time pacing cap per held frame |
 
 ## Output video
 
@@ -95,6 +105,8 @@ Lifecycle scripts disabled unless `--i-trust-this-repo`.
 
 ## Hashes for resume
 
-`config_hash` includes: `pages`, `viewport`, `capture_mode`, `dev`/`build`/`start`, `history_mode`, `base_url`, `frontend_paths`, `annotate`, `full_page`, `project_root`, `settle_ms`, `env_file`, `env_sync_files`, `required_env`, `use_historical_env`.
+`config_hash` includes: `pages`, `viewport`, `capture_mode`, `dev`/`build`/`start`, `history_mode`, `base_url`, `frontend_paths`, `annotate`, `full_page`, `project_root`, `settle_ms`, `env_file`, `env_sync_files`, `required_env`, `use_historical_env`, `dedup.enabled`, `dedup.threshold`, `dedup.ignore_selectors`.
+
+The stitch-time knobs `dedup.collapse_mode` and `dedup.max_hold_ms` are deliberately excluded: `stitch-only` re-runs without a hash gate, so a pacing tweak never forces `--fresh`.
 
 `commit_plan_hash` = SHA256 of frozen `commits.json`.

@@ -80,9 +80,9 @@ git worktree remove --force <path>
 
 Or `timelapse.sh clean`.
 
-## CSP / overlay missing
+## Capture fails with `invalid ignore_selectors entry`
 
-Annotation inject failed; metadata is in filename and `index.html` captions instead.
+An entry in `dedup.ignore_selectors` is not a valid CSS selector for the browser. The page capture fails loudly rather than shipping an unmasked frame (a silently-unmasked frame would poison dedup's baseline). Fix the selector in `.timelapse.yaml`, then start a `--fresh` run — `dedup.ignore_selectors` is part of `config_hash`, so resume is refused after the edit.
 
 ## Node version
 

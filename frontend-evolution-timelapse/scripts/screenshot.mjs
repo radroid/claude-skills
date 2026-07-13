@@ -24,30 +24,71 @@ function detectFramework(projectDir) {
   return 'unknown';
 }
 
-async function injectOverlay(page, meta, annotate) {
-  if (!annotate) return true;
-  try {
-    await page.addStyleTag({ content: DISABLE_ANIM_CSS });
-    const text = `${meta.hash.slice(0, 7)} | ${meta.date} | ${meta.subject}`.replace(/'/g, "\\'");
-    await page.addScriptTag({
-      content: `
-        (function() {
-          var bar = document.createElement('div');
-          bar.id = '__timelapse_overlay__';
-          bar.textContent = '${text}';
-          bar.style.cssText = 'position:fixed;bottom:0;left:0;right:0;padding:8px 12px;background:rgba(0,0,0,0.75);color:#fff;font:12px monospace;z-index:2147483647';
-          if (document.body) document.body.appendChild(bar);
-        })();
-      `,
-    });
-    return true;
-  } catch {
-    return false;
+/* One fixed flat colour, identical across commits, pages, and runs — a mask
+   that varied would itself register as change between frames. */
+const MASK_COLOR = '#7f7f7f';
+
+async function applyMasks(page, selectors) {
+  await page.evaluate(
+    ({ selectors: sels, color }) => {
+      for (const sel of sels) {
+        let matches;
+        try {
+          matches = document.querySelectorAll(sel);
+        } catch {
+          throw new Error(`invalid ignore_selectors entry: ${sel}`);
+        }
+        for (const el of matches) {
+          const r = el.getBoundingClientRect();
+          if (r.width <= 0 || r.height <= 0) continue;
+          /* Cover, never remove: an out-of-flow rectangle over the bounding
+             box cannot reflow surrounding content. */
+          const mask = document.createElement('div');
+          const set = (p, v) => mask.style.setProperty(p, v, 'important');
+          set('position', 'fixed');
+          set('left', `${r.left}px`);
+          set('top', `${r.top}px`);
+          set('width', `${r.width}px`);
+          set('height', `${r.height}px`);
+          set('background', color);
+          set('z-index', '2147483647');
+          set('margin', '0');
+          set('padding', '0');
+          set('border', 'none');
+          set('display', 'block');
+          set('pointer-events', 'none');
+          document.documentElement.appendChild(mask);
+        }
+      }
+    },
+    { selectors, color: MASK_COLOR },
+  );
+}
+
+/** Upsert this commit's entry in page-<name>/frames.json (keyed by index,
+ *  kept sorted), written atomically via temp-file-plus-rename. */
+function upsertFrameEntry(pageDir, entry) {
+  const framesPath = path.join(pageDir, 'frames.json');
+  let frames = [];
+  if (fs.existsSync(framesPath)) {
+    try {
+      const parsed = JSON.parse(fs.readFileSync(framesPath, 'utf8'));
+      if (Array.isArray(parsed)) frames = parsed;
+    } catch {
+      /* unreadable file — rebuild from this entry on */
+    }
   }
+  const at = frames.findIndex((f) => f.index === entry.index);
+  if (at >= 0) frames[at] = entry;
+  else frames.push(entry);
+  frames.sort((a, b) => a.index - b.index);
+  const tmp = path.join(pageDir, 'frames.json.tmp');
+  fs.writeFileSync(tmp, JSON.stringify(frames, null, 2));
+  fs.renameSync(tmp, framesPath);
 }
 
 async function capturePage(browser, opts) {
-  const { url, pageCfg, config, meta, outPath } = opts;
+  const { url, pageCfg, config, outPath } = opts;
   let lastErr = null;
   for (let attempt = 0; attempt < 3; attempt++) {
     const context = await browser.newContext({
@@ -78,8 +119,11 @@ async function capturePage(browser, opts) {
         await context.close();
         return { status: 'no_route', http: res.status() };
       }
+      await page.addStyleTag({ content: DISABLE_ANIM_CSS });
       await page.waitForTimeout(config.settle_ms || 500);
-      await injectOverlay(page, meta, config.annotate);
+      if (config.dedup.enabled && config.dedup.ignore_selectors.length > 0) {
+        await applyMasks(page, config.dedup.ignore_selectors);
+      }
       await page.screenshot({
         path: outPath,
         fullPage: config.full_page === true,
@@ -160,16 +204,20 @@ for (const pageCfg of config.pages) {
   fs.mkdirSync(dir, { recursive: true });
   const idx = String(args.index).padStart(3, '0');
   const short = args.hash.slice(0, 7);
-  const safeSubj = args.subject.slice(0, 24).replace(/\W+/g, '_');
-  const fname = `${idx}_${short}${config.annotate ? '' : `_${safeSubj}`}.png`;
+  const fname = `${idx}_${short}.png`;
   const outPath = path.join(dir, fname);
-  results[pageCfg.name] = await capturePage(browser, {
-    url,
-    pageCfg,
-    config,
-    meta: { hash: args.hash, date: args.date, subject: args.subject },
-    outPath,
-  });
+  const result = await capturePage(browser, { url, pageCfg, config, outPath });
+  results[pageCfg.name] = result;
+  const entry = {
+    index: args.index,
+    hash: args.hash,
+    subject: args.subject,
+    date: args.date,
+    file: result.status === 'ok' ? fname : null,
+    capture: result.status,
+  };
+  if (result.status === 'fail') entry.error = result.error;
+  upsertFrameEntry(dir, entry);
 }
 
 await browser.close();
