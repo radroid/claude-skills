@@ -18,6 +18,13 @@ Entry format: `- [role-tag] (date, run) problem — implication`
 - [executor] (2026-07-13, A1/PR47) SECOND instance of worktree-at-main-HEAD (also hit
   in B1s1) — implication: executor template needs a mandatory
   `git reset --hard origin/<BASE>` first action, not just branch confirmation.
+- [infra] (2026-07-13, PR46+PR47 reviews) account MONTHLY SPEND LIMIT hit mid-run:
+  10/26 review agents died on PR46, 18/26 on PR47; canon fail-closed rule counts
+  deaths as refutations, so both verdicts degraded to REVISE regardless of ballot
+  content — implication: under infra failure the 25-agent review is structurally
+  unusable; reduce fan-out (≤3 refuters × ≤3 claims), retry dead agents, or
+  orchestrator-adjudicate from surviving ballots. USER ACTION: raise limit at
+  claude.ai/settings/usage.
 - [planner] (2026-07-13, A1/PR47) kayvee demo repo had pre-existing dirty git state
   (modified .gitignore, untracked .timelapse.yaml), making "nothing else modified"
   checks ambiguous — implication: specs with live-repo smoke checks should snapshot

@@ -1,7 +1,15 @@
 # Backlog — change-aware timelapses (overnight run, started 2026-07-13)
 
-**Progress:** A1 = PR #47 in adversarial review; B1-s1 = PR #46 in adversarial
-review; A2 + B2 specs written (1 slice each). Last shipped: none.
+**Progress:** A1 (PR #47) + B1-s1 (PR #46) reviews returned REVISE — degraded by
+account-spend-limit agent deaths; all surviving ballots non-blocking. Fix executors
+dispatched with orchestrator-adjudicated issue lists. A2 + B2 specs ready. Last
+shipped: none.
+
+**Orchestrator adjudication (2026-07-13 ~08:10Z):** PR46/PR47 REVISE verdicts are
+fail-closed artifacts of refuter deaths (monthly spend limit), not code judgments.
+Issue lists = the surviving substantive non-blocking findings. Post-fix, each PR gets
+ONE light hostile re-review (single agent) instead of the 25-agent panel until the
+account limit clears; the panel resumes when infra allows.
 
 **Orchestrator DELTA decisions (2026-07-13):** A2 spec's primary bindings are BLESSED
 as written — (1) boot-skipped commits record decision `duplicate` with the `capture`
