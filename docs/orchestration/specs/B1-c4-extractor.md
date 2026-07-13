@@ -392,3 +392,24 @@ Acceptance (`TREE=/private/tmp/claude-501/-Users-rajdholakia-Documents-claude-sk
 3. Curated external table: services outside the shipped rows are invisible until a row
    or `extra_externals` entry exists — a C1 completeness gap on unfamiliar repos, not a
    correctness gap on 75-proof.
+
+## Execution notes (PR #46) — slice 1
+
+- **Deviation (dispatcher self-heal):** `arch-timelapse.mjs` `extract` spawns
+  `extract-model.mjs` when that file exists, else prints the not-implemented
+  notice and exits 2. Today = the blessed exit-2 stub; slice 2 lands the
+  extractor without editing the dispatcher (flags pass through untouched).
+- **Deviation (auto defaults as `null`):** the written YAML encodes the §3
+  "auto" defaults as `component_roots: null` and `import_aliases: null`
+  (documented in `references/config-schema.md`); `extract` must treat `null`
+  as derive-at-extract-time.
+- **`system_name` semantics:** init resolves it concretely (stdin JSON → root
+  `package.json` name → dir basename) and writes it; `DEFAULTS.system_name`
+  stays `null` so config-less extract re-resolves per §2.4 against the tree.
+- **For slice 2:** `loadConfig(treeRoot, configPath)` returns merged config and
+  already emits the single stderr notice on missing config (slice-2 check 8);
+  `canonical-json.mjs` is a faithful duplicate — `sha256Hex` is **async**
+  (reference semantics), remember to `await`. Dispatcher exit-code convention:
+  child status propagates; spawn failure maps to 3.
+- **Gotcha (zsh):** slice-1 check 5's bare `--include=*.mjs` globs fail under
+  zsh; run under bash (as the spec's "run from repo root" implies) or quote.
