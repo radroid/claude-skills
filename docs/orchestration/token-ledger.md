@@ -21,3 +21,4 @@ Soft budgets: unseeded (seed after ~3 runs of real data; do not invent numbers).
 | 2026-07-13T09:10Z | B1 | reviewer | PR #46 hostile re-review | REVISE — 1 | ~80k | REAL free-hunt catch: valid-JSON non-mapping stdin writes corrupt config exit 0; 14 probes, 5 prior fixes verified live; review-yield floor satisfied |
 | 2026-07-13T09:20Z | B1 | fix | PR #46 (a4341ee) | gate PASS | ~38k | 1/1 stdin shape check; orchestrator ran reviewer-authored gate test green from scratch checkout |
 | 2026-07-13T09:35Z | A1 | reviewer | PR #47 hostile re-review | APPROVE | ~99k | dedup premise PROVEN: byte-identical decoded pixels across 2 captures of animated fixture; CSP + full_page + validation matrix all exercised; 2 free-hunt candidates failed to break it |
+| 2026-07-13T09:50Z | A1 | steward | 9a7e84a | n/a | ~50k | 4 templates tuned, 7+1 friction resolved, changelog traced; A1 hard-gate CLEARED |
