@@ -1,7 +1,12 @@
 # Backlog — change-aware timelapses (overnight run, started 2026-07-13)
 
 **Progress:** A1 = PR #47 in adversarial review; B1-s1 = PR #46 in adversarial
-review; A2 + B2 planning one-ahead. Last shipped: none.
+review; A2 + B2 specs written (1 slice each). Last shipped: none.
+
+**Orchestrator DELTA decisions (2026-07-13):** A2 spec's primary bindings are BLESSED
+as written — (1) boot-skipped commits record decision `duplicate` with the `capture`
+key absent; (2) mid-run hole-resume is REFUSED (exit 3 with remedies), not replayed.
+A3's planner consumes these as frozen; the spec'd alternatives are dead.
 
 Design spec: `docs/superpowers/specs/2026-07-13-change-aware-timelapse-design.md`
 
