@@ -413,3 +413,38 @@ Acceptance (`TREE=/private/tmp/claude-501/-Users-rajdholakia-Documents-claude-sk
   child status propagates; spawn failure maps to 3.
 - **Gotcha (zsh):** slice-1 check 5's bare `--include=*.mjs` globs fail under
   zsh; run under bash (as the spec's "run from repo root" implies) or quote.
+
+## Execution notes (PR #49, slice 2)
+
+- **Deviation (`--out` default):** `<tree>/<config.output_dir>/model`, not a
+  hard-coded `.arch-timelapse/model` — identical under default config, honors
+  a user-set `output_dir`.
+- **Deviation (seam shape):** `extractModel` returns
+  `{ model, modelHash, levelHashes }` — the frozen two keys plus an additive
+  `modelHash` (the CLI needs it for `hashes.json`; B3 may ignore it).
+- **Deviation (C3 parents):** when components exist but their container was
+  not detected at C2 (e.g. `app/` with no `package.json`), the parent
+  container node is synthesized with the generic name (`Web app` /
+  `Convex backend`) so every component keeps a rendering subgraph parent.
+- **Deviation (`--config` explicit-but-missing):** behaves like the
+  default-missing case (DEFAULTS + one stderr notice), matching slice-1
+  `loadConfig` uniformly rather than erroring.
+- **For B2 (render):** C3 parent container nodes are IN
+  `levels.component.nodes` (kind `container`); components point at them via
+  the `container` field. There are no container→component edges at C3 —
+  parenting is field-based, edges are only `imports`/`calls`.
+- **For B3 (history walk):** level hashes are independent of the `--levels`
+  filter (a `--levels context` run emits the same `levels.context` hash as a
+  full run), so partial extractions compare cleanly. `extract` writes nothing
+  outside `--out`; hash spot-check trick: `jq -cSj .levels.<L> model.json |
+  shasum -a 256` reproduces `hashes.json` exactly (canonicalStringify and
+  `jq -cS` agree on this content).
+- **Gotcha (evidence edges):** C2 container→external evidence matches BARE
+  import specifiers (package of `@clerk/nextjs/server` etc.) and env names
+  per container file set; alias/relative imports never count as evidence.
+  `ext.<rule>` edges to suppressed/unfired externals are dropped by the
+  missing-endpoint rule, not special-cased.
+- **Gotcha (id collisions):** `-2`/`-3` suffixes order by ORIGINAL name
+  bytewise (`(` sorts before letters), so `app/(dashboard)` keeps the bare id
+  over `app/dashboard`. Convex `calls` targets resolve against unsuffixed
+  ids; a collided convex module would miss — accepted, deterministic.
