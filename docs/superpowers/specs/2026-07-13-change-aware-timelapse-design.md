@@ -144,3 +144,18 @@ Both skills are proven by an actual artifact, not just tests:
 - 75-proof: three C4 videos; assert that re-running extraction on the same commit twice produces
   byte-identical Mermaid (the determinism guarantee), and that commits touching only e.g. styling
   produce no new architecture frame.
+
+## Decisions — 2026-07-13 (pre-overnight, from the user)
+
+- **Every new behavior is an invocation-time option.** `init` (both skills) interviews the user:
+  dedup on/off (default on), collapse mode `badge | drop | speedthrough` (default `badge`), diff
+  threshold (default 0.005), pacing (fps / max hold), and for the C4 skill which levels to render
+  (context/container/component, default all three). Answers persist to the config file; `run`
+  honors config without re-asking.
+- **The badge is the default, not mandatory.** `collapse_mode: drop` produces the badge-free cut.
+- **Pacing check:** 75-proof's 278-commit C4 run doubles as the pacing stress test. Both E2E
+  proofs report per-video duration and the longest static stretch; default fps/hold get tuned
+  from those observations.
+- **Merge policy tonight:** slice PRs target integration branch `change-aware-timelapse` and are
+  merged there on reviewer APPROVE; the integration→main PR is HELD for morning review. Nothing
+  lands on main unattended.
