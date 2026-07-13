@@ -1,0 +1,9 @@
+{
+  "name": "architecture-evolution-timelapse-scripts",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "minimatch": "^9.0.5",
+    "yaml": "^2.6.1"
+  }
+}
