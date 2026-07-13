@@ -27,3 +27,5 @@ Soft budgets: unseeded (seed after ~3 runs of real data; do not invent numbers).
 | 2026-07-13T10:25Z | B3 | planner | agent | n/a | ~151k | 2 slices, 34 anchors; git-archive walk design (0.08s/commit, no hooks); independently confirmed no-drawtext; corrected 75-proof first-parent count to 80 |
 | 2026-07-13T10:30Z | A2 | executor | PR #50 | gate PASS | ~159k | 10/10 checks incl. real kayvee duplicate discard; 4 DELTAs applied; 4 blessed deviations; 5 friction notes |
 | 2026-07-13T10:40Z | B1 | reviewer | PR #49 hostile re-review | REVISE — 1 (real) | ~102k | duplicate-node-id contract violation proven via hostile fixture; determinism spine survived ~40 attack candidates / 9 executed probes; NFD/NFC cross-machine note for B3 docs |
+| 2026-07-13T10:55Z | B1 | fix | PR #49 (0da6d61) | gate PASS | ~69k | global-unique id assignment; 75-proof bytes unchanged; orchestrator gate-ran reproducer green → APPROVE recorded |
+| 2026-07-13T11:00Z | B1 | steward | 21b6dc1 | n/a | ~57k | 2 templates tuned (control-byte gate, slice-N notes heading, literal acceptance commands); 5 friction resolved; B1 hard-gate CLEARED |
