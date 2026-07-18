@@ -15,6 +15,7 @@ Skills for [Claude Code](https://claude.com/claude-code).
 | [`idea-to-loop`](./idea-to-loop/) | **Greenfield bootstrap** — idea → PRD → tech stack → runnable scaffold → hands off to the loop. Runs lifecycle stages S0 (Alignment & Scope) → S1 (System Design & Tech Stack) → S2 (Scaffold & Wire). New in M2. |
 | [`prd-to-screens`](./prd-to-screens/) | **PRD → approved HTML mockups** — phased conversation that turns an existing PRD into the baseline frontend: P1 intake → P2 screen inventory → P3 user workflows → P4 wireframes → P5 self-contained HTML with shared mock data → P6 cross-link & walkthrough. Optional but high-leverage between S0 and S1 — the approved HTML becomes the spec the loop builds against. Runs standalone too. |
 | [`screen-design-loop`](./screen-design-loop/) | **Mobbin-powered design refinement loop** — iterative loop that grounds HTML mockups in real shipped-app references via the Mobbin MCP server. One screen per iter: Mobbin research → HTML synthesis → chrome-devtools render + Class A design-critique gate → commit. Refines the baseline `prd-to-screens` produces (same `docs/screens/html/` output dir, artifacts stack); runs standalone too. Targets mobile or desktop. |
+| [`mobbin-replica`](./mobbin-replica/) | **Screenshots → pixel-perfect web replica.** Takes a folder of app screenshots (e.g. Mobbin exports) and builds a working replica in a given web stack: first a functional app (one route per screen at the screenshot's exact viewport, hybrid cropped-photo / rebuilt-icon assets, shared verbatim mock data), then a smoke test and a per-screen pixel loop that scores each route against its reference with `pixel-diff.mjs` (pixelmatch heatmap) and gates on **≤3% diff plus a side-by-side design-critique APPROVE** (hard cap 8 rounds). Fail-closed on missing capture tooling; interactions deferred and catalogued in `.replica/report.md`. Unlike `screen-design-loop` (refines HTML mockups from real-app inspiration), this reproduces a *specific* app from *its own* screenshots. |
 | [`auto-loop-bootstrap`](./auto-loop-bootstrap/) | **Brownfield bootstrap** — stands up loop machinery on an **existing repo** (skips S0–S2). Scaffolds `CLAUDE.md`, `GOALS.md`, `ARCHITECTURE.md`, `PLAN.md`, `logs/`, and `.loop/state.json`. Invokes `grill-me` to extract a backlog when one doesn't exist. Pairs with `autonomous-build-loop`. |
 | [`autonomous-build-loop`](./autonomous-build-loop/) | The **loop runtime** — runs S3+ (feature dev). Per-iteration checklist, tiered read strategy (shrink the per-iter cold-boot cost), fat-iter parallel-dispatch protocol, Class A/B sub-agent discipline, peer-review triggers, frontend-critique gate, phase-boundary arch passes, log hygiene, no-halt continuous loop semantics. |
 | [`orchestrated-delivery`](./orchestrated-delivery/) | **Multi-PR backlog delivery (orchestration).** Ships a multi-PR backlog with a team of role subagents — planner → executor → reviewer → fix → merge → steward — working off repo-resident, code-free plans that don't go stale. Keeps a token ledger, a friction feedback loop, a self-improving steward, and an adversarial anti-bias check that stops reviewers rubber-stamping. Review + steward steps are wired to the `workflow-runtime` canon as concrete Workflow scripts emitting the unified `APPROVE \| REVISE \| BLOCK` verdict. ultracode-gated. |
@@ -257,6 +258,10 @@ claude-skills/
 │   ├── SKILL.md
 │   ├── assets/templates/         .design-loop/state.json seed
 │   └── references/               per-iter checklist, mobbin patterns, critique, integration
+├── mobbin-replica/               skill source — screenshots → pixel-perfect web replica
+│   ├── SKILL.md
+│   ├── scripts/pixel-diff.mjs    pixelmatch scorer + heatmap
+│   └── references/               device-profiles (viewport lookup)
 ├── scripts/
 │   └── build.sh                  package all skills into dist/
 └── dist/                         packaged .skill files (built from source)
@@ -270,7 +275,8 @@ claude-skills/
     ├── idea-to-loop.skill
     ├── orchestrated-delivery.skill
     ├── prd-to-screens.skill
-    └── screen-design-loop.skill
+    ├── screen-design-loop.skill
+    └── mobbin-replica.skill
 ```
 
 ## Development workflow
