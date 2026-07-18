@@ -92,7 +92,7 @@ The Class A design-critique sub-agent reads this doc when judging the rendered m
 
 - Re-query with a broader vertical (drop "personal finance", try just "finance")
 - Re-query with the platform flipped (you asked for mobile, try desktop — often the desktop pattern translates)
-- After two failed re-queries, log to `logs/blocks.md` and mark the screen `blocked` per `references/per-iteration-checklist.md` step 2
+- After two failed re-queries, log to `logs/blocks.md`, mark the screen `blocked`, and move to the next pending screen
 
 ## Privacy / scope note
 

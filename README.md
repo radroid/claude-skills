@@ -218,10 +218,11 @@ claude-skills/
 ├── auto-loop-bootstrap/          skill source — brownfield loop bootstrap
 │   ├── SKILL.md
 │   ├── assets/
-│   └── references/
+│   └── references/               backlog format + permissions template
 ├── autonomous-build-loop/        skill source — the loop runtime (S3+)
 │   ├── SKILL.md
-│   └── references/
+│   ├── assets/                   fat-iter dispatch + peer-review + perspective-verify workflows
+│   └── references/               lifecycle stage definitions (S0–S4)
 ├── cto-governance-spine/         skill source — policy contract (CTO infra)
 │   ├── SKILL.md
 │   ├── assets/                   governance.js policy module + runnable self-test
@@ -241,22 +242,20 @@ claude-skills/
 ├── grill-to-prd/                 skill source — persona-aware PRD interview
 │   ├── SKILL.md
 │   ├── assets/templates/         persona-specific PRD templates
-│   └── references/               persona probe + question banks + synthesis
+│   └── references/               question banks (technical / designer / vibe)
 ├── idea-to-loop/                 skill source — greenfield S0 → S1 → S2
 │   ├── SKILL.md
-│   ├── assets/
-│   └── references/
+│   └── assets/
 ├── orchestrated-delivery/        skill source — multi-PR backlog delivery (orchestration)
 │   ├── SKILL.md
 │   └── assets/                   review-and-verify + steward Workflow scripts (canon-bound)
 ├── prd-to-screens/               skill source — PRD → approved HTML mockups
 │   ├── SKILL.md
-│   ├── assets/templates/         page.html, mock-data.js, etc
-│   └── references/               p1-intake … p6-walkthrough
+│   └── assets/templates/         page.html, mock-data.js, etc
 ├── screen-design-loop/           skill source — Mobbin-powered design refinement loop
 │   ├── SKILL.md
 │   ├── assets/templates/         .design-loop/state.json seed
-│   └── references/               per-iter checklist, mobbin patterns, critique, integration
+│   └── references/               mobbin patterns, html conventions, critique charter
 ├── scripts/
 │   └── build.sh                  package all skills into dist/
 └── dist/                         packaged .skill files (built from source)

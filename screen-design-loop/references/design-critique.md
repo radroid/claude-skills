@@ -21,7 +21,7 @@ If chrome-devtools-mcp isn't available, fall back: instruct the user to open the
 
 ## Class A `design-review` sub-agent charter
 
-**Type:** Class A (read-only, fresh context, returns verdict text only). Pattern per `autonomous-build-loop/references/sub-agent-protocol.md`.
+**Type:** Class A (read-only, fresh context, returns verdict text only — the review class defined in `autonomous-build-loop`).
 
 **Inputs given to the sub-agent (verbatim in the prompt):**
 
@@ -68,7 +68,7 @@ Do not modify files. Do not return prose beyond the verdict block.
 
 ## Reading the verdict
 
-| Verdict | Loop action (per `references/per-iteration-checklist.md` § 6) |
+| Verdict | Loop action |
 |---|---|
 | `PASS` | Mark `screens[i].status: "approved"`. Commit. Advance `current`. |
 | `REVISE` | Keep `current`. Log critique verbatim to `logs/blocks.md`. Next iter re-enters synthesis with the critique in context. |
