@@ -1,9 +1,20 @@
 # Backlog — change-aware timelapses (overnight run, started 2026-07-13)
 
-**Progress:** A1 (PR #47) + B1-s1 (PR #46) reviews returned REVISE — degraded by
-account-spend-limit agent deaths; all surviving ballots non-blocking. Fix executors
-dispatched with orchestrator-adjudicated issue lists. A2 + B2 specs ready. Last
-shipped: none.
+**Progress (corrected 2026-07-22):** the run halted mid-flight on 2026-07-13 at 09:59
+EDT. A1, A2, B1-s1 and B1-s2 reached APPROVE and are open as PRs #47, #50, #46, #49.
+B2 shipped as PR #51 but its review was dispatched and **never returned** — that PR
+carries no verdict of any kind. A3 was implemented but the executor never committed;
+the work was recovered from an agent worktree on 2026-07-22 and is now PR #54,
+likewise unreviewed. A4, B3 and B4 have full specs but were never executed. Nothing
+is merged: the run was in stacked-PR mode, and the integration branch itself had no
+PR to main until 2026-07-22.
+
+> **Warning to future readers:** between 2026-07-13 08:40 and 2026-07-22 this line and
+> the Status column below were stale — they claimed "Last shipped: none" and `pending`
+> across the board while four items had in fact reached APPROVE. Per
+> `orchestrated-delivery/SKILL.md`, the orchestrator must refresh both at each item
+> completion. `docs/orchestration/token-ledger.md` stayed accurate throughout and is
+> the better source of truth if these two ever disagree again.
 
 **Orchestrator adjudication (2026-07-13 ~08:10Z):** PR46/PR47 REVISE verdicts are
 fail-closed artifacts of refuter deaths (monthly spend limit), not code judgments.
@@ -78,16 +89,16 @@ Demo targets:
 
 | ID | Item | Needs | Status |
 |----|------|-------|--------|
-| A1 | Pristine capture: remove capture-time overlay, `dedup` config schema, `ignore_selectors` masking, per-frame metadata for stitch | — | pending |
-| A2 | Dedup engine: ffmpeg raster diff vs last-kept frame, `frames.json`, duplicate-PNG discard, tree-hash boot-skip | A1 | pending |
-| A3 | Stitch-time annotation + collapse modes (`badge` default / `drop` / `speedthrough`), hold scaling, index.html | A2 | pending |
-| A4 | Init interview: options asked at invocation (dedup, collapse mode, threshold, pacing); SKILL.md + references | A3 | pending |
-| A5 | E2E proof on kayvee-website: full run; ≈6 kept frames expected on home; pacing report (duration, longest static stretch) | A4 | pending |
-| B1 | New skill `architecture-evolution-timelapse`: scaffold + deterministic C4 extractor (C1/C2/C3 model) + canonicalisation + hash | — | pending |
-| B2 | Mermaid render pipeline: model→Mermaid fixed template, rasterised via Playwright Chromium | B1 | pending |
-| B3 | History walk + per-level change detection + collapse/badge stitch + index.html | B2 | pending |
-| B4 | Init interview (levels, collapse mode, pacing) + SKILL.md + references | B3 | pending |
-| B5 | E2E proof on 75-proof: 3 videos; determinism assertion (same commit ⇒ byte-identical Mermaid); pacing stress report (first-parent walk = 80 commits; 278 incl. side branches) | B4 | pending |
+| A1 | Pristine capture: remove capture-time overlay, `dedup` config schema, `ignore_selectors` masking, per-frame metadata for stitch | — | APPROVE — PR #47 (open) |
+| A2 | Dedup engine: ffmpeg raster diff vs last-kept frame, `frames.json`, duplicate-PNG discard, tree-hash boot-skip | A1 | APPROVE — PR #50 (open) |
+| A3 | Stitch-time annotation + collapse modes (`badge` default / `drop` / `speedthrough`), hold scaling, index.html | A2 | implemented, PR #54 (open) — UNREVIEWED, recovered from worktree 2026-07-22 |
+| A4 | Init interview: options asked at invocation (dedup, collapse mode, threshold, pacing); SKILL.md + references | A3 | spec written, never executed |
+| A5 | E2E proof on kayvee-website: full run; ≈6 kept frames expected on home; pacing report (duration, longest static stretch) | A4 | no spec |
+| B1 | New skill `architecture-evolution-timelapse`: scaffold + deterministic C4 extractor (C1/C2/C3 model) + canonicalisation + hash | — | APPROVE — PR #46 (s1) + PR #49 (s2), both open |
+| B2 | Mermaid render pipeline: model→Mermaid fixed template, rasterised via Playwright Chromium | B1 | PR #51 (open) — review dispatched 2026-07-13 09:59, NEVER RETURNED |
+| B3 | History walk + per-level change detection + collapse/badge stitch + index.html | B2 | spec written, never executed |
+| B4 | Init interview (levels, collapse mode, pacing) + SKILL.md + references | B3 | spec written, never executed |
+| B5 | E2E proof on 75-proof: 3 videos; determinism assertion (same commit ⇒ byte-identical Mermaid); pacing stress report (first-parent walk = 80 commits; 278 incl. side branches) | B4 | no spec |
 
 ## Loop policy
 
