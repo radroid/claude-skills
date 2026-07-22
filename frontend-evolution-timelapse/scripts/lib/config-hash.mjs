@@ -10,7 +10,6 @@ const HASH_FIELDS = [
   'history_mode',
   'base_url',
   'frontend_paths',
-  'annotate',
   'full_page',
   'project_root',
   'settle_ms',
@@ -21,8 +20,10 @@ const HASH_FIELDS = [
 ];
 
 /* Only the dedup subfields that affect captured or kept pixels. Stitch-time
-   knobs (collapse_mode, max_hold_ms) are excluded on purpose: stitch-only
-   re-runs without a hash gate, and a pacing tweak must not force --fresh. */
+   knobs (annotate, collapse_mode, max_hold_ms) are excluded on purpose:
+   stitch-only re-runs without a hash gate, and a pacing or annotation tweak
+   must not force --fresh. annotate stopped affecting captured pixels when
+   annotation moved to stitch-time burn-in. */
 const DEDUP_HASH_FIELDS = ['enabled', 'threshold', 'ignore_selectors'];
 
 export function configSubset(config) {

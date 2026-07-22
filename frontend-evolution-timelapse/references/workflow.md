@@ -84,15 +84,31 @@ For each entry in `commits.json`:
 
 ## 6. Stitch
 
-`stitch.mjs` builds per-page `frames.txt` for ffmpeg concat demuxer:
+`stitch.mjs` re-reads config (`annotate`, `dedup.collapse_mode`,
+`dedup.max_hold_ms` are stitch-time knobs — tweak and re-run `stitch-only`, no
+`--fresh` needed) and builds a per-page timeline from `frames.json` joined
+against `commits.json` order:
 
-- Hold frame = previous PNG or `000_placeholder.png`
-- Duplicate final `file` line (ffmpeg quirk)
-- Output `<page>.gif` and `<page>.mp4`
-- `no_frames` if no captures
-- Interim note: duplicate PNGs are discarded by the dedup engine, so duplicates
-  appear as holds of the previous kept frame until stitch-time collapse
-  (`collapse_mode`) lands
+- `kept` → a display slot; in `badge` mode it holds
+  `min(max_hold_ms, round(base_ms × (1 + log2(1 + N))))` for N collapsed
+  duplicates, where `base_ms = round(1000 / gif.fps)`
+- `duplicate` → collapsed into its kept frame via `collapsed_into`: `badge`
+  counts it into N (and the badge row reads `×N commits · no visual change`);
+  `drop` omits it; `speedthrough` shows the kept frame's pixels in a fast slot
+  of `max(40, round(base_ms / 8))` ms with the duplicate's own commit banner
+- `skipped` / absent → repeat the previous slot (or `000_placeholder.png`) at
+  `gif.hold_skipped_ms`; contributes nothing in `drop`
+- No `frames.json` at all (pre-dedup run dirs) → entries are synthesized from
+  the v1 filename matcher, so `stitch-only` still works
+
+When `annotate: true` (default; `--no-annotate` overrides per invocation), a
+banner — `short-hash | date | subject` plus the badge row — is rendered by
+Playwright Chromium and composited onto each displayed frame with ffmpeg
+`overlay` under `<run>/stitch-frames/` (the installed ffmpeg has no `drawtext`;
+pristine PNGs are never modified). Encoding: duplicate final `file` line
+(ffmpeg concat quirk); GIF keeps variable frame durations (no fps resample);
+MP4 encodes CFR 30 (`mp4.fps` is ignored). Output `<page>.gif` and
+`<page>.mp4`; `no_frames` if the timeline is empty.
 
 ## 7. Report
 

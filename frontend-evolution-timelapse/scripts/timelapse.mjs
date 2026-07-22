@@ -230,11 +230,26 @@ async function main() {
       process.exit(3);
     }
     const runDir = path.join(outputDir, rid);
-    spawnSync(process.execPath, [path.join(scriptDir, 'stitch.mjs'), '--run-dir', runDir], {
+    const stitchArgs = [path.join(scriptDir, 'stitch.mjs'), '--run-dir', runDir];
+    if (args.noAnnotate) stitchArgs.push('--no-annotate');
+    const st = spawnSync(process.execPath, stitchArgs, {
       cwd: repoRoot,
       encoding: 'utf8',
-      stdio: 'inherit',
     });
+    if (st.stderr) process.stderr.write(st.stderr);
+    if (st.status !== 0) {
+      console.error(`stitch failed (exit ${st.status ?? `signal ${st.signal}`})`);
+      process.exit(3);
+    }
+    if (st.stdout) process.stdout.write(st.stdout);
+    /* reflect the re-stitch in index.html: refresh pages_summary when a
+       manifest exists, then re-render */
+    const manifestPath = path.join(runDir, 'manifest.json');
+    const manifest = readJson(manifestPath);
+    if (manifest) {
+      manifest.pages_summary = JSON.parse(st.stdout || '[]');
+      fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2));
+    }
     spawnSync(process.execPath, [path.join(scriptDir, 'render-index.mjs'), '--run-dir', runDir], {
       cwd: repoRoot,
     });
@@ -681,11 +696,15 @@ async function main() {
     writeProgress(runDir, progress);
   }
 
-  const stitchOut = spawnSync(
-    process.execPath,
-    [path.join(scriptDir, 'stitch.mjs'), '--run-dir', runDir],
-    { cwd: repoRoot, encoding: 'utf8' },
-  );
+  const stitchArgs = [path.join(scriptDir, 'stitch.mjs'), '--run-dir', runDir];
+  if (args.noAnnotate) stitchArgs.push('--no-annotate');
+  const stitchOut = spawnSync(process.execPath, stitchArgs, { cwd: repoRoot, encoding: 'utf8' });
+  if (stitchOut.stderr) process.stderr.write(stitchOut.stderr);
+  if (stitchOut.status !== 0) {
+    /* surface the failure instead of silently writing an empty pages_summary */
+    console.error(`stitch failed (exit ${stitchOut.status ?? `signal ${stitchOut.signal}`})`);
+    process.exit(3);
+  }
   const stitchResults = JSON.parse(stitchOut.stdout || '[]');
 
   manifest.pages_summary = stitchResults;
