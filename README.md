@@ -16,21 +16,23 @@ Skills for [Claude Code](https://claude.com/claude-code).
 | [`prd-to-screens`](./prd-to-screens/) | **PRD → approved HTML mockups** — phased conversation that turns an existing PRD into the baseline frontend: P1 intake → P2 screen inventory → P3 user workflows → P4 wireframes → P5 self-contained HTML with shared mock data → P6 cross-link & walkthrough. Optional but high-leverage between S0 and S1 — the approved HTML becomes the spec the loop builds against. Runs standalone too. |
 | [`screen-design-loop`](./screen-design-loop/) | **Mobbin-powered design refinement loop** — iterative loop that grounds HTML mockups in real shipped-app references via the Mobbin MCP server. One screen per iter: Mobbin research → HTML synthesis → chrome-devtools render + Class A design-critique gate → commit. Refines the baseline `prd-to-screens` produces (same `docs/screens/html/` output dir, artifacts stack); runs standalone too. Targets mobile or desktop. |
 | [`auto-loop-bootstrap`](./auto-loop-bootstrap/) | **Brownfield bootstrap** — stands up loop machinery on an **existing repo** (skips S0–S2). Scaffolds `CLAUDE.md`, `GOALS.md`, `ARCHITECTURE.md`, `PLAN.md`, `logs/`, and `.loop/state.json`. Invokes `grill-me` to extract a backlog when one doesn't exist. Pairs with `autonomous-build-loop`. |
+| [`archive-loop-scaffolding`](./archive-loop-scaffolding/) | **Loop teardown** — the reverse edge of `auto-loop-bootstrap`. Non-destructively archives loop scaffolding out of a target repo into a gitignored `.archive/` directory keyed by timestamp. Conservative by construction: touches only known loop artifacts, never deletes, and preserves user content in mixed files (`CLAUDE.md`, `.gitignore`) by excising just the loop-managed sections. |
 | [`autonomous-build-loop`](./autonomous-build-loop/) | The **loop runtime** — runs S3+ (feature dev). Per-iteration checklist, tiered read strategy (shrink the per-iter cold-boot cost), fat-iter parallel-dispatch protocol, Class A/B sub-agent discipline, peer-review triggers, frontend-critique gate, phase-boundary arch passes, log hygiene, no-halt continuous loop semantics. |
 | [`orchestrated-delivery`](./orchestrated-delivery/) | **Multi-PR backlog delivery (orchestration).** Ships a multi-PR backlog with a team of role subagents — planner → executor → reviewer → fix → merge → steward — working off repo-resident, code-free plans that don't go stale. Keeps a token ledger, a friction feedback loop, a self-improving steward, and an adversarial anti-bias check that stops reviewers rubber-stamping. Review + steward steps are wired to the `workflow-runtime` canon as concrete Workflow scripts emitting the unified `APPROVE \| REVISE \| BLOCK` verdict. ultracode-gated. |
 | [`loop-supervisor`](./loop-supervisor/) | **Read-only oversight** — runs in a parallel Claude Code window alongside `autonomous-build-loop`. Reconciles shipped diff vs. claimed backlog, curates the TODO list (re-order, split, mark blocked, add discovered), escalates serious issues to `logs/blocks.md`. Never writes production code. |
-| [`frontend-evolution-timelapse`](./frontend-evolution-timelapse/) | **Frontend history timelapse** — walks git history on a Node web app, screenshots configured pages at each frontend-relevant commit, stitches per-page GIF/MP4 and an `index.html` summary. Isolated worktrees, resume checkpoints, token/cost accounting. Standalone analysis skill (not part of the build loop pipeline). |
 
 ### Standalone analysis skills
 
+Not part of the build-loop pipeline — point them at any repo.
+
 | Skill | Purpose |
 |-------|---------|
-| [`frontend-evolution-timelapse`](./frontend-evolution-timelapse/) | Visual "construction progress" timelapse of a web UI across branch history. Requires a JavaScript/TypeScript (or Node web) repo with a dev server. |
+| [`frontend-evolution-timelapse`](./frontend-evolution-timelapse/) | **Frontend history timelapse** — walks git history on a Node web app, screenshots configured pages at each frontend-relevant commit, stitches per-page GIF/MP4 and an `index.html` summary. Isolated worktrees, resume checkpoints, token/cost accounting. Requires a JavaScript/TypeScript (or Node web) repo with a dev server. |
 
 ### How the skills fit together
 
-Six skills covering the product lifecycle from idea → running app → continuous build.
-Each works standalone; together they form a pipeline:
+Six of these skills form the product-lifecycle pipeline, idea → running app →
+continuous build. Each works standalone; together they chain:
 
 ```text
 Greenfield (no code yet):
@@ -80,7 +82,9 @@ Canonical stage defs: [`autonomous-build-loop/references/lifecycle-stages.md`](.
 
 ## Roadmap
 
-[`ROADMAP.md`](./ROADMAP.md) — the strategic plan of record for evolving these skills into a **lifecycle-staged build loop** (S0 Alignment → S1 Tech Stack → S2 Scaffold & Wire → S3+ Feature Dev), with feature-PR mode, a machine-readable loop-state file, human checkpoints, a super-reviewer, auto-research, and a multi-repo testbed. Rollout is milestone-based (M0–M5).
+[`docs/cto-system-design.md`](./docs/cto-system-design.md) — **the current plan of record.** The autonomous-CTO system design: the BUILD → MAINTAIN lifecycle, the P0 governance spine (`fleet-registry` → `cto-governance-spine` → `fleet-maintenance`), and the trigger model (loop / schedule / webhook).
+
+[`ROADMAP.md`](./ROADMAP.md) — **historical.** The original milestone plan (M0–M5) for evolving these skills into a lifecycle-staged build loop. Last revised 2026-05-15 and superseded by the CTO system design above; kept for provenance. It predates the entire P0 spine and doesn't mention 12 of the 15 skills now in this repo.
 
 ## Install
 
@@ -88,16 +92,16 @@ Canonical stage defs: [`autonomous-build-loop/references/lifecycle-stages.md`](.
 
 ```bash
 git clone https://github.com/radroid/claude-skills.git ~/Documents/claude-skills
+mkdir -p ~/.claude/skills
 
-# Link each skill into ~/.claude/skills/
-ln -s ~/Documents/claude-skills/grill-to-prd ~/.claude/skills/grill-to-prd
-ln -s ~/Documents/claude-skills/idea-to-loop ~/.claude/skills/idea-to-loop
-ln -s ~/Documents/claude-skills/prd-to-screens ~/.claude/skills/prd-to-screens
-ln -s ~/Documents/claude-skills/screen-design-loop ~/.claude/skills/screen-design-loop
-ln -s ~/Documents/claude-skills/auto-loop-bootstrap ~/.claude/skills/auto-loop-bootstrap
-ln -s ~/Documents/claude-skills/autonomous-build-loop ~/.claude/skills/autonomous-build-loop
-ln -s ~/Documents/claude-skills/frontend-evolution-timelapse ~/.claude/skills/frontend-evolution-timelapse
+# Link every skill (any dir with a SKILL.md) into ~/.claude/skills/
+for d in ~/Documents/claude-skills/*/; do
+  [ -f "$d/SKILL.md" ] || continue
+  ln -sfn "${d%/}" ~/.claude/skills/"$(basename "$d")"
+done
 ```
+
+To install a subset, replace the loop with individual `ln -sfn` lines.
 
 Restart Claude Code. Run `/skills` to confirm the skills are loaded.
 
@@ -108,29 +112,19 @@ Updates: `git pull` in the cloned dir — symlinks always reflect the latest com
 Grab the latest release from [GitHub Releases](https://github.com/radroid/claude-skills/releases):
 
 ```bash
-curl -L -o /tmp/grill-to-prd.skill \
-  https://github.com/radroid/claude-skills/releases/latest/download/grill-to-prd.skill
-curl -L -o /tmp/idea-to-loop.skill \
-  https://github.com/radroid/claude-skills/releases/latest/download/idea-to-loop.skill
-curl -L -o /tmp/prd-to-screens.skill \
-  https://github.com/radroid/claude-skills/releases/latest/download/prd-to-screens.skill
-curl -L -o /tmp/screen-design-loop.skill \
-  https://github.com/radroid/claude-skills/releases/latest/download/screen-design-loop.skill
-curl -L -o /tmp/auto-loop-bootstrap.skill \
-  https://github.com/radroid/claude-skills/releases/latest/download/auto-loop-bootstrap.skill
-curl -L -o /tmp/autonomous-build-loop.skill \
-  https://github.com/radroid/claude-skills/releases/latest/download/autonomous-build-loop.skill
-curl -L -o /tmp/frontend-evolution-timelapse.skill \
-  https://github.com/radroid/claude-skills/releases/latest/download/frontend-evolution-timelapse.skill
+mkdir -p ~/.claude/skills
 
-# .skill files are zip archives — extract into your skills dir
-unzip /tmp/grill-to-prd.skill -d ~/.claude/skills/
-unzip /tmp/idea-to-loop.skill -d ~/.claude/skills/
-unzip /tmp/prd-to-screens.skill -d ~/.claude/skills/
-unzip /tmp/screen-design-loop.skill -d ~/.claude/skills/
-unzip /tmp/auto-loop-bootstrap.skill -d ~/.claude/skills/
-unzip /tmp/autonomous-build-loop.skill -d ~/.claude/skills/
-unzip /tmp/frontend-evolution-timelapse.skill -d ~/.claude/skills/
+# .skill files are zip archives. Pick the ones you want, or take all of them:
+SKILLS="archive-loop-scaffolding auto-loop-bootstrap autonomous-build-loop \
+cto-governance-spine fleet-maintenance fleet-registry frontend-evolution-timelapse \
+graduation-gate grill-to-prd idea-to-loop loop-supervisor orchestrated-delivery \
+prd-to-screens screen-design-loop workflow-runtime"
+
+for s in $SKILLS; do
+  curl -fL -o "/tmp/$s.skill" \
+    "https://github.com/radroid/claude-skills/releases/latest/download/$s.skill" &&
+  unzip -oq "/tmp/$s.skill" -d ~/.claude/skills/
+done
 ```
 
 ## Quick start — run your own build loop
