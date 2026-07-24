@@ -1,7 +1,9 @@
 # Decision log
 
-Append-only judgment-call log. See `idea-to-loop/references/decision-log.md` for what
-belongs here vs. `docs/adr/` and the entry format.
+Append-only judgment-call log: one dated entry per judgment call made without the
+human, with the options considered and why. Architectural decisions go to
+`docs/adr/` instead; this log is for the smaller calls that would otherwise be
+invisible. Never rewrite past entries.
 
 <!--
 ## YYYY-MM-DD — short title

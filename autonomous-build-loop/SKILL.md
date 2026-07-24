@@ -1,103 +1,77 @@
 ---
 name: autonomous-build-loop
-description: Run a long-horizon autonomous build loop that ships features iteratively across many sessions. Use when the user wants Claude to keep building on its own — phrases like "autonomous loop", "/loop", "/auto", "keep building", "wake yourself up", "self-pace iterations", "iter-NNN logs", "fat-iter mode", "scheduled iteration"; or when the project has an `iter-NNN.md` log directory, a `GOALS.md` backlog, a `ScheduleWakeup`/cron resume contract, or a CLAUDE.md "autonomous build loop protocol" section. Provides per-iteration checklist, fat-iter parallel-dispatch protocol, Class A/B sub-agent discipline, peer-review triggers, phase-boundary arch passes, log hygiene, and continuous-loop (no-halt) semantics.
+description: Use when the user wants Claude to keep building on its own across many sessions — "autonomous loop", "/loop", "keep building", "wake yourself up", "iter-NNN logs", "fat-iter"; or the project has iter-NNN.md logs, a GOALS.md backlog, .loop/state.json, or a CLAUDE.md autonomous-build-loop protocol section.
 ---
 
-# Autonomous Build Loop
+# Autonomous build loop
 
-## Overview
+## Goal
 
-This skill codifies the patterns that keep a long-horizon autonomous build loop healthy: one bounded turn per iteration, `ScheduleWakeup` schedules the next, parallel sub-agent dispatch when work is independent, structured logs the user can review at their own pace. The loop NEVER halts on a semantic event — blocks, failures, and user-decision-needed all become log entries while the next iteration is scheduled.
+Ship the backlog feature by feature across many self-scheduled iterations,
+unattended. Each iteration is one bounded turn that reads state from disk, does
+the work, verifies it, logs, commits, and schedules the next wake-up. The loop
+runs in-session only — no external driver — and never halts on a semantic
+event: blocks become log entries and the loop moves on.
 
-The loop runs **in-session only** in an interactive Claude Code session. Each iteration ends by calling `ScheduleWakeup` (or `CronCreate` for fixed cadence) with the same prompt verbatim — the harness fires the next iter when the timer elapses. There is no external driver, no `claude -p` invocation, no separate process.
+## Where to start
 
-Read `references/per-iteration-checklist.md` at the start of every iteration. Use `references/tiered-read-strategy.md` to decide what to read on wake-up (tiered — not every file every iter). Use `references/fat-iter-mode.md` when picking 2+ features. **Default mode is direct-commit to the active branch** (`pr_mode: false`); use `references/feature-pr-mode.md` ONLY when `.loop/state.json` has `pr_mode: true` (opt-in). Use `references/sub-agent-protocol.md` when dispatching sub-agents. Use `references/log-hygiene.md` when writing the iter log + handoff. Use `references/continuous-loop.md` when something would normally halt the loop.
+Read `CLAUDE.md`, `.loop/state.json` (stage, iter, `pr_mode`, `base_branch`,
+`backlog_source`), `logs/latest.md`, and the backlog source. On warm
+same-session wake-ups, skim only what changed. Then pick the next work: up to
+four backlog features with zero pairwise overlap (schema, API, component tree)
+for a parallel "fat" iteration, or a single item when overlap, architecture
+passes, or bookkeeping says so.
 
-## Canon & mechanism (workflow-runtime)
+## Contracts
 
-The loop's fan-out-and-verify steps are not prose followed on the honor system — they are CONCRETE Workflow scripts built on the `workflow-runtime` canon (the runner contract, the copy-paste preamble, the named pipeline patterns). The canon's core principle holds here: **a quality gate is a pipeline STAGE, not a paragraph** — its verdict is a typed object and the absence of its output is visible downstream, so it cannot be silently skipped. All emit the unified `APPROVE | REVISE | BLOCK` verdict (legacy `approve|request_changes|block` and `APPROVE|REQUEST_CHANGES|BLOCK` both map in: `request_changes` → REVISE).
+- **One iteration = one bounded turn**, ending with `ScheduleWakeup` (same
+  prompt verbatim, or `<<autonomous-loop-dynamic>>`) or `CronCreate` for fixed
+  cadence. Never a second iteration in the same turn; never a semantic halt.
+- **Blocks never halt.** A block verdict, smoke failure, or user-decision
+  blocker becomes a structured entry in `logs/blocks.md`; pick the next
+  non-conflicting item and continue.
+- **Logs:** `logs/iter-NNN.md` per iteration (≤50 lines), `logs/latest.md`
+  pointer, plain human-readable English. Never delete logs — archive under
+  `logs/archive/`. Commit as `iter NNN: <summary>`; push roughly every 5 iters
+  or 8 commits ahead.
+- **Two sub-agent classes:** Class A = review/analysis, read-only, returns a
+  verdict; Class B = implementation, owns a disjoint file allowlist and stops
+  if it needs a file outside it. Verdicts use the unified
+  `APPROVE | REVISE | BLOCK` grammar.
+- **Every feature-bearing iteration gets a peer review** — one Class A
+  reviewer over the integrated diff and all scoping plans. Log the verdict to
+  `logs/blocks.md` regardless of outcome.
+- **Phase boundary → invoke the `improve-codebase-architecture` skill** as a
+  real Skill call before the next phase's first feature iteration.
+- **UI has no free signal.** Any user-visible change gets a screenshot and a
+  critique against the design reference (`docs/screens/html/` when present)
+  before commit — "it rendered" never closes a UI iteration.
+- Default commit mode is direct-to-branch (`pr_mode: false`); per-feature
+  branches + PRs are opt-in via `.loop/state.json`.
+- Safety: no dev-server launches unless the project's CLAUDE.md authorizes it;
+  no force-push, `--no-verify`, or amending pushed commits; harden scaffolded
+  defaults (strict tsconfig, lint, parse-boundary validation) in a new
+  project's first iteration.
+- **Trust auto-compaction — never manage tokens.** Don't ration context, scope
+  work down, or stretch cadence for token reasons; cadence is work-type-driven
+  only.
 
-Three steps ship as canon-bound scripts in `assets/` (inline the canon preamble VERBATIM — executable code byte-identical to `workflow-runtime/assets/preamble.js`; there is NO runtime import):
+Fan-out and review gates ship as canon-bound Workflow scripts in `assets/`
+(fat-iter dispatch, peer review, perspective verify), built on the
+`workflow-runtime` canon — read that skill before editing them. Without a
+Workflow runner, run the same roles as sub-agents and verify each yourself;
+verdicts and gates are identical.
 
-- **`assets/fat-iter-dispatch.workflow.js`** — Phase-2 parallel dispatch as a worktree-isolated code-gen fan-out: one Class B implementation agent PER feature, each `isolation:"worktree"` (its own tree + branch — the canonical "one editor per slice" case), owning that feature's DISJOINT allowlist + the stop-rule. It REFUSES to dispatch on overlapping allowlists and surfaces a dead slice as BLOCKED (never silently dropped). This is the per-feature-branch (`pr_mode`) form; for direct-commit mode with provably-disjoint slices in ONE combined diff, stay on the shared-tree dispatch (canon worktree guidance — separate trees would only add merge-back overhead there).
-- **`assets/peer-review.workflow.js`** — Phase-4 peer review as adversarial-verify: N hostile refuters, EACH over the whole integrated diff + all scoping plans on a distinct peer-review lens (contract-drift / dead-code / test-gap / cross-feature-integration / hostile), refute-by-majority (null/dead vote = kill, tie = kill), unified verdict, zero-block smell probe. Preserves the "one coherent reviewer over everything" intent while diversity defeats the single-reviewer rubber-stamp.
-- **`assets/perspective-verify.workflow.js`** — the super-reviewer and the design-review gate as perspective-diverse verification: exactly ONE verifier per distinct lens (super-reviewer: architecture/ADR-consistency, contract, security, test-adequacy; design: visual hierarchy, ≥44px touch targets, AA contrast, design-reference fidelity), aggregated worst-wins, FAILS CLOSED when a lens dies.
+## Your judgment
 
-The macro-loop (iteration cadence, `ScheduleWakeup`, integration, logs) stays SESSION-driven — a Workflow run is a bounded fan-out WITHIN an iter, not the loop itself. Where the harness exposes NO Workflow runner, fall back to the same roles as sub-agents and verify each yourself; the verdicts, lenses, and gates are identical. Read the `workflow-runtime` skill before editing any script.
-
-## Core principles
-
-1. **One iteration = one bounded turn.** End by scheduling the next wake-up via `ScheduleWakeup` (or `CronCreate` for fixed cadence). Never start a second iteration in the same turn.
-
-2. **Read state by tier, and by warm-vs-cold.** Wake-ups in the same session land in a warm prompt cache and retain working memory — re-reading everything every iter pays cache-creation cost the next auto-compaction will then have to summarize. Read the tiered strategy (`references/tiered-read-strategy.md`): on a **cold-boot iter** (first iter of the session OR first iter after auto-compaction) do the full Tier 1 read (`CLAUDE.md`, `.loop/state.json`, `logs/latest.md`, the configured backlog source); on a **warm iter** read only `logs/latest.md` + the backlog source (the supervisor may have edited it) and skip the rest unless something signals they changed. Tier 2 is on trigger (`ARCHITECTURE.md` section, `PLAN.md`, `docs/*`, `logs/blocks.md`); Tier 3 (archived iter logs, summaries) is never read back. Missing Tier-1 file on a cold boot → create a stub only for file-backed backlog sources (for external sources, fetch the provider and log an empty/missing response instead).
-
-3. **Continuous loop, never halt.** A sub-agent `block` verdict, a smoke failure, a user-decision blocker, a contract-drift signal — all become a structured entry in `logs/blocks.md` or the backlog, then the agent picks the next non-conflicting item and proceeds. There is no halt: the loop runs across auto-compaction boundaries by design.
-
-4. **Fat-iter by default in implementation phases.** Target 3–4 FULL features per iter using parallel Class B sub-agents with disjoint file allowlists. Phase target: 3–5 iters. Hard cap: 4 features per iter — beyond that integration risk grows non-linearly.
-
-5. **Two sub-agent classes, different write authority.** Class A = review/analysis, READ-ONLY, returns verdict text only. Class B = implementation, write-authorized, owns a disjoint file allowlist, must STOP if a file outside the list needs editing.
-
-6. **Peer-review every feature-bearing iter.** One Class A reviewer per fat-iter (not one-per-feature — a single reviewer reads all scoping plans + the integrated diff for coherence). Log to `logs/blocks.md` regardless of verdict.
-
-7. **Phase boundary = mandatory arch-pass.** Invoke the `Skill` tool with `skill: "improve-codebase-architecture"`. This is a real tool call, not a concept — reading the doc and doing manual refactors is NOT compliance. Log result to `logs/blocks.md` with `**Source:** arch-pass`.
-
-8. **Trust auto-compaction — do not manage tokens.** The loop runs on a large-context model with harness auto-compaction (configured to fire at ~40% of the context window). The loop is designed to survive compaction: `logs/latest.md` + the tiered read manifest make every cold-boot iter self-contained, so a mid-loop compaction is safe and expected. Do NOT eyeball context budget, do NOT scope work down, do NOT space out wake-ups, and do NOT recommend the user restart Claude Code for token reasons — context is not a scarce runway to ration. Wake-up cadence is driven by work type only (impl vs. plan), never by context usage.
-
-9. **Frontend has no free signal.** TDD gets a binary pass/fail in-context — the loop knows instantly whether it succeeded. UI quality has no such signal. Any iter touching user-visible UI must MANUFACTURE one: screenshot via chrome-MCP + a forced critique pass against the design reference (typically `docs/screens/html/<slug>.html` when produced by `prd-to-screens` or `screen-design-loop`; mobile viewport, ≥44px touch targets, hierarchy, AA contrast) before commit. Never close a UI iter on "it rendered." Design-sensitive surface → dispatch a Class A `design-review` sub-agent instead of self-critiquing. See `references/fat-iter-mode.md` Phase 3.
-
-10. **Scaffolded defaults are not safe defaults.** In the first iter of any new project, audit framework-generated config (`tsconfig` strict flags, ESLint rules, persistence-layer connection lifecycle, parse-boundary validation) and harden it before building features. Modern scaffolders (`npm create vite`, `create-next-app`, etc.) ship intentionally minimal defaults that lag the community's best-practice posture — e.g. Vite's current React+TS template does not enable `tsconfig "strict": true`, IndexedDB tutorials show per-op `open()`+`close()` instead of a cached singleton-promise, and JSON-parse boundaries habitually `as unknown as T` without entity validation. Downstream code inherits every gap silently. When in doubt about the canonical posture for a stack, web-research it before locking the config in.
-
-11. **Narrate in caveman mode; write artifacts in normal English.** The agent's in-iter prose (between tool calls, sub-agent dispatch prompts, internal reasoning narration) is model-to-model — the user is AFK and isn't reading it, but it bloats the running context until auto-compaction. Invoke `Skill: caveman` on the cold-boot iter (see `references/tiered-read-strategy.md`); warm iters retain the style until compaction. **Carve-out — these are human-read, never caveman:** `logs/latest.md`, `logs/iter-NNN.md`, `logs/blocks.md`, `GOALS.md` (or any other backlog source the human edits), commit messages, PR titles/bodies. On-disk artifacts follow their format references (`log-hygiene.md`, etc.), not caveman.
-
-## Quick-start: starting an iteration
-
-1. Read `references/per-iteration-checklist.md` — the 13-step procedure.
-2. Pick 1–4 features from the configured backlog source (verify pairwise independence — schema, api, component tree must have ZERO overlap to bundle).
-3. If 2+ features → fat-iter dispatch (read `references/fat-iter-mode.md`).
-4. If 1 feature or non-feature work → single-agent or direct implementation.
-5. Integrate + verify (tsc, tests, contracts check, smoke).
-6. Class A peer-review if feature-bearing.
-7. Write `logs/iter-NNN.md` (cap 50 lines fat-iter / 40 lines otherwise — see `references/log-hygiene.md`).
-8. Commit `iter NNN: <one-line summary>`.
-9. Push if push cadence triggers (default: 5 iters since last push OR ≥8 commits ahead).
-10. End the iter by calling `ScheduleWakeup` for the next iter (default: 600s impl, 1500s plan — cadence is work-type-driven, never adjusted for context usage). Use `CronCreate` instead for fixed-interval cadence. Pass the same prompt back verbatim, or `<<autonomous-loop-dynamic>>` for the autonomous-loop sentinel.
-
-## When NOT to fat-iter
-
-- **Phase-boundary architecture pass** — one-shot refactor; parallel impl doesn't help.
-- **Bookkeeping iters** — decade rollups (every 10 iters), GOALS.md restructure, log archival.
-- **User-decision-blocked items** — no work CAN advance; skip the iter via `ScheduleWakeup` at a longer interval.
-- **Carry-forward tail** — at the end of a phase when only single-file nits remain, ship them solo. The fat-iter overhead exceeds the diff size.
-
-## Hard rules
-
-- Always read `CLAUDE.md` first if it exists at the project root.
-- Never start a second iteration in the same turn.
-- Never delete logs; archive them under `logs/archive/` after a decade rollup.
-- End every iteration by scheduling the next via `ScheduleWakeup` (or `CronCreate` for fixed cadence). Always. No semantic halt.
-- A sub-agent `block` verdict → log to `logs/blocks.md`, pick next non-conflicting `GOALS.md` item, continue. Do NOT write a halt-marker file.
-- Never run dev-server commands unless the project's CLAUDE.md authorizes it (typically the dev server is user-managed).
-- Never update git config without explicit `GOALS.md` authorization.
-- Never `push --no-verify`, `--force`, or amend pushed commits without explicit authorization.
-- Phase boundary → MUST invoke `Skill` tool `skill: "improve-codebase-architecture"` (an actual tool call) before the next phase's first feature iter.
-
-## Tiebreaker — coin-toss rule
-
-If the same `issue-id` is raised across 3 consecutive iterations without resolution:
-
-1. Name the two competing positions concisely (A and B).
-2. `echo $((RANDOM % 2))` — 0 = A, 1 = B.
-3. Log toss result + chosen position under "Decisions" in the iter log.
-4. Adopt the chosen position. Mark resolved in `GOALS.md`. Reset counter.
-5. Do NOT re-litigate. Sub-agents who keep raising it must be told the call has been made.
+How to slice features, what to read on a given wake-up, cadence within reason
+(implementation ~10 min, planning ~25 min), when to fat-iter versus go solo,
+how to verify — decide from the state on disk. If the same decision deadlocks
+for three iterations, name the two positions, flip a coin
+(`echo $((RANDOM % 2))`), log the result, and never re-litigate.
 
 ## Resources
 
-- `references/per-iteration-checklist.md` — the 13-step per-iter procedure.
-- `references/tiered-read-strategy.md` — tiered context-loading rules; what to read every iter vs. on-trigger vs. never.
-- `references/fat-iter-mode.md` — parallel feature dispatch protocol with disjoint allowlists.
-- `references/feature-pr-mode.md` — branch + PR + review + auto-merge per feature. **Opt-in only** (`.loop/state.json` `pr_mode: true`). Default is direct-commit.
-- `references/sub-agent-protocol.md` — Class A vs Class B charters, prompt boilerplate.
-- `references/log-hygiene.md` — iter log format, growth control, archive cadence.
-- `references/continuous-loop.md` — block / fail / user-decision routing without halting.
-- `references/peer-review-triggers.md` — when peer-review fires + charter template.
+- `references/lifecycle-stages.md` — the canonical S0–S4 stage definitions
+  shared with `idea-to-loop` and `auto-loop-bootstrap`.
+- `assets/*.workflow.js` — the canon-bound fan-out and review gates.

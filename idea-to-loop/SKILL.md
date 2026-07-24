@@ -1,95 +1,49 @@
 ---
 name: idea-to-loop
-description: Take a product idea from zero to a running app on which the autonomous-build-loop can take over. Use for greenfield builds — phrases like "I have an idea for X, help me build it", "start a new product from scratch", "greenfield project", "/idea-to-loop", or when there is no existing codebase and the user wants to go from concept → PRD → tech stack → runnable scaffold → loop handoff. Runs three lifecycle stages (S0 Alignment & Scope, S1 System Design & Tech Stack, S2 Scaffold & Wire) ending by invoking `auto-loop-bootstrap` and handing off to `autonomous-build-loop`. For existing repos, use `auto-loop-bootstrap` directly instead — this skill is greenfield only.
+description: Use for greenfield builds — "I have an idea for X, help me build it", "start a product from scratch", "/idea-to-loop" — when there is no existing codebase and the user wants concept → PRD → stack → runnable scaffold → autonomous loop handoff. For existing repos use auto-loop-bootstrap instead.
 ---
 
-# Idea-to-Loop
+# Idea to loop
 
-## Overview
+## Goal
 
-Greenfield bootstrap. Stands a product up from an idea to a running scaffold, then hands off
-to the autonomous build loop. Three stages, each with a human gate:
+Take a product idea from zero to a running scaffold the autonomous build loop
+can take over. Strictly staged, each stage with a human gate, tracked in
+`.loop/state.json` `stage`:
 
-| Stage | What it produces | Human gate | Reference |
-|---|---|---|---|
-| S0 — Alignment & Scope | Scope/PRD doc + `GOALS.md` backlog + a runnable `prototype` | Heavy: scope is accepted before S1 starts | `references/s0-alignment-and-scope.md` |
-| S1 — System Design & Tech Stack | `ARCHITECTURE.md` (stack + data model + bottlenecks) | Checkpoint: defaults to **auto** with super-reviewer vetting; human-override asked during planning | `references/s1-tech-stack-selection.md` |
-| S2 — Scaffold & Wire | Bare-bones app that runs + integrations wired + loop machinery laid down | Light: API keys / accounts only | `references/s2-scaffold-and-wire.md` |
+- **S0 — Alignment & scope** → a PRD (produce it via `grill-to-prd`), a
+  `GOALS.md` backlog, and a runnable prototype — always end S0 by invoking the
+  `prototype` skill; the gate artifact is something the user can touch, not a
+  paper spec. Heavy human gate: scope accepted before S1.
+- **S1 — System design & tech stack** → `ARCHITECTURE.md` (stack, data model,
+  bottlenecks). Defaults to auto: research sub-agents synthesize a
+  recommendation and a super-reviewer-style vetting pass checks it before
+  commit. During S0, ask whether the human wants to gate S1 manually instead,
+  and record the choice in `.loop/state.json` `checkpoints`.
+- **S2 — Scaffold & wire** → a bare-bones app that **actually runs** —
+  verified with evidence, not "should run" — with integrations wired. Light
+  gate: API keys and accounts only.
+- **Handoff to S3** → at the S2 exit gate, invoke `auto-loop-bootstrap` via
+  the Skill tool. It lays down the loop machinery and writes `"stage": "S3"`
+  itself — the handoff is atomic, with no separate flip step. From there the
+  user runs `autonomous-build-loop`.
 
-Stage definitions (canonical): `autonomous-build-loop/references/lifecycle-stages.md`.
+## Contracts
 
-## When to use this skill (not `auto-loop-bootstrap`)
+- Read `.loop/state.json` first; `stage` routes you. `"S3"` → wrong skill,
+  invoke `autonomous-build-loop`.
+- Never skip a stage; never roll one back. A scope regression is a
+  `logs/blocks.md` entry surfaced for the human, not a rewind.
+- Same bounded-turn, never-halt iteration semantics as
+  `autonomous-build-loop`: one turn, then `ScheduleWakeup` or a clean exit.
+- Log judgment calls to the append-only decision log (`docs/decision-log.md`
+  — template in `assets/templates/docs/`).
+- Canonical stage definitions live in
+  `autonomous-build-loop/references/lifecycle-stages.md`.
 
-| Situation | Skill |
-|---|---|
-| No code yet, idea only | **`idea-to-loop`** (this skill) |
-| Existing repo with code, no loop machinery | `auto-loop-bootstrap` |
-| Existing repo, loop machinery in place, want to drain backlog | `autonomous-build-loop` (the runtime) |
+## Your judgment
 
-## Per-stage protocol
-
-Each iter through this skill runs ONE bounded turn that ends by scheduling the next wake-up
-(`ScheduleWakeup`) or exiting cleanly (external-scheduler mode). Same continuous-loop semantics
-as `autonomous-build-loop` — read `autonomous-build-loop/references/continuous-loop.md`.
-
-**Read `.loop/state.json` first.** `stage` tells you where you are.
-
-- `Stage: "S0"` → read `references/s0-alignment-and-scope.md`
-- `Stage: "S1"` → read `references/s1-tech-stack-selection.md`
-- `Stage: "S2"` → read `references/s2-scaffold-and-wire.md`
-- `Stage: "S3"` → **wrong skill** — invoke `autonomous-build-loop` instead
-
-## S1 default behavior
-
-S1 tech-stack selection defaults to `"auto"` — auto-research dispatches 3–5 Class A research
-sub-agents, synthesizes a recommendation, and the **super-reviewer** vets it before commit
-(see `autonomous-build-loop/references/super-reviewer.md`).
-
-During S0 planning, ask the human if they want to override the default and gate S1 on
-manual review instead. Record the choice in `.loop/state.json` →
-`checkpoints.tech-stack-accepted: "passed" | "auto-delegated"`.
-
-## S2 → S3 handoff
-
-At the S2 exit gate (bare-bones app runs cleanly), invoke `auto-loop-bootstrap` via the
-`Skill` tool to lay down loop machinery (`CLAUDE.md`, `GOALS.md` mirror, `logs/` skeleton,
-`auto-loop.py` if external-driver path is wanted, **and `.loop/state.json` written with
-`"stage": "S3"`**).
-
-```
-Skill: auto-loop-bootstrap
-```
-
-The handoff is atomic — `auto-loop-bootstrap` writes the final `Stage: "S3"` itself, so the
-next iter wakes up against the loop runtime. No separate flip step.
-
-> Implementation note (tracked for the M2 `auto-loop-bootstrap` light touch): the bootstrap
-> skill must accept an optional `--from-stage S2` invocation that knows to mirror
-> `idea-to-loop`'s in-progress `GOALS.md` / `ARCHITECTURE.md` rather than re-running its
-> own grilling pass. Until that lands, the greenfield path runs `auto-loop-bootstrap` in its
-> default mode and accepts a one-iter overlap.
-
-## Hard rules
-
-- Never skip a stage. Greenfield path is strictly S0 → S1 → S2 → S3.
-- Never roll back a stage. A scope regression blocks the iter via `logs/blocks.md` and
-  surfaces for human resolution.
-- S2 exit gate is **the app actually runs.** Not "should run" — verified, evidence-based.
-  Per `superpowers:verification-before-completion`.
-- Keep `.loop/state.json` Tier-1 (read every iter; see
-  `autonomous-build-loop/references/tiered-read-strategy.md`).
-- S0 always ends with a `prototype` skill invocation — runnable artifact, not a paper PRD.
-
-## Resources
-
-- `references/s0-alignment-and-scope.md` — grill / brainstorm / PRD / prototype workflow
-- `references/s1-tech-stack-selection.md` — auto-research-driven stack pick + accept gate
-- `references/s2-scaffold-and-wire.md` — scaffold + runnable-app exit gate + handoff
-- `references/auto-research-mode.md` — multi-agent research pattern used in S1 / S2
-- `references/decision-log.md` — append-only judgment-call log workflow
-
-Cross-skill:
-
-- `autonomous-build-loop/references/lifecycle-stages.md` — canonical Stage: defs
-- `autonomous-build-loop/references/super-reviewer.md` — vets auto-delegated S1 decisions
-- `autonomous-build-loop/references/continuous-loop.md` — no-halt iter semantics
+How to run each stage — the interview depth, the research fan-out, the
+scaffold shape — is yours; the stage's exit artifact and its human gate are
+not. When a stage's gate artifact exists and the human has accepted it, move
+on; until then, stay.
