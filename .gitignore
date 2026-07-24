@@ -7,6 +7,16 @@ node_modules/
 # Claude Code session runtime + local settings — never committed
 .claude/scheduled_tasks.lock
 .claude/settings.local.json
+.claude/worktrees/
+
+# Playwright/browser-MCP capture artifacts. These accumulate from QA sessions
+# against OTHER repos and have leaked PII (session tokens, account emails) into
+# this working tree before.
+.playwright-mcp/
+
+# Ad-hoc screenshots dropped at repo root by browser sessions. Root-anchored on
+# purpose — skills are free to ship image assets in their own subdirectories.
+/*.png
 
 # packaged artifacts are committed in dist/ so users can download them from
 # GitHub Releases without rebuilding. Uncomment to exclude:
