@@ -238,3 +238,31 @@ None. The DELTA fixed the collapse-mode enum (`badge` \| `drop` \| `speedthrough
 and the design's "blanked to a flat colour" wording binds masking to opaque cover rectangles (an
 element-hiding approach was rejected: whatever is beneath the element may itself be dynamic).
 `dedup.max_hold_ms` default 3000 is provisional by design — A5's pacing report tunes it.
+
+## Execution notes (PR #47)
+
+- **Mask implementation**: `MASK_COLOR = '#7f7f7f'` (luma 125). Masks are `position:fixed` divs
+  appended to `documentElement`, sized/placed from `getBoundingClientRect()`, all styles set with
+  `!important` so page CSS cannot restyle them. Viewport-relative coordinates are correct because
+  capture never scrolls. Untested interplay: `full_page: true` + fixed-position *target* elements
+  (kayvee is `full_page: false`); if a repo needs that combination, revisit mask positioning
+  (absolute + scroll offsets) — flagged for A2's comparator testing.
+- **Animation-freeze failure mode changed**: the old overlay injector swallowed injection errors
+  (CSP etc.); the freeze CSS now goes through `addStyleTag` inside the attempt loop, so a hard
+  injection failure surfaces as a page `fail` after the retry loop instead of silently capturing
+  animated pixels. Consistent with R2's rationale (unstable pixels poison A2), noting it for the
+  reviewer since it is a behavior change beyond deleting the overlay.
+- **Acceptance check 4's ffmpeg grep** assumes pre-v8 signalstats logging. With ffmpeg 8.1.1 use
+  `-vf signalstats,metadata=print` and match `lavfi.signalstats.YMIN=`/`YMAX=`. A5 should carry
+  this adaptation into its E2E proof.
+- **`annotate` stays in `HASH_FIELDS`** (spec did not ask to remove it). Once A3 re-binds annotate
+  to stitch time, it becomes a stitch-only knob and arguably belongs out of the hash for the same
+  reason as `collapse_mode`/`max_hold_ms` — A3's call.
+- **frames.json details for A2/A3**: `no_route` entries do not carry the HTTP status (capturePage's
+  `http` field is dropped); `error` is present only on `fail`; the write is per page-attempt, so a
+  commit that fails mid-pages still has entries for the pages already attempted. A corrupt/
+  non-array `frames.json` is rebuilt from the current entry onward (atomic writes make this
+  near-impossible in practice).
+- **Deviations**: (1) check-4 ffmpeg command adapted for ffmpeg 8 output format; (2) workflow.md
+  step 9 also mentions the frames.json upsert; (3) load-config additionally rejects a non-mapping
+  `dedup:` value with `dedup must be a mapping of dedup.* fields`.

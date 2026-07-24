@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { chromium } from 'playwright';
 import { loadConfig } from './lib/load-config.mjs';
+import { upsertFrameEntry } from './lib/frames.mjs';
 
 const DISABLE_ANIM_CSS = `
 *, *::before, *::after {
@@ -24,30 +25,49 @@ function detectFramework(projectDir) {
   return 'unknown';
 }
 
-async function injectOverlay(page, meta, annotate) {
-  if (!annotate) return true;
-  try {
-    await page.addStyleTag({ content: DISABLE_ANIM_CSS });
-    const text = `${meta.hash.slice(0, 7)} | ${meta.date} | ${meta.subject}`.replace(/'/g, "\\'");
-    await page.addScriptTag({
-      content: `
-        (function() {
-          var bar = document.createElement('div');
-          bar.id = '__timelapse_overlay__';
-          bar.textContent = '${text}';
-          bar.style.cssText = 'position:fixed;bottom:0;left:0;right:0;padding:8px 12px;background:rgba(0,0,0,0.75);color:#fff;font:12px monospace;z-index:2147483647';
-          if (document.body) document.body.appendChild(bar);
-        })();
-      `,
-    });
-    return true;
-  } catch {
-    return false;
-  }
+/* One fixed flat colour, identical across commits, pages, and runs — a mask
+   that varied would itself register as change between frames. */
+const MASK_COLOR = '#7f7f7f';
+
+async function applyMasks(page, selectors) {
+  await page.evaluate(
+    ({ selectors: sels, color }) => {
+      for (const sel of sels) {
+        let matches;
+        try {
+          matches = document.querySelectorAll(sel);
+        } catch {
+          throw new Error(`invalid ignore_selectors entry: ${sel}`);
+        }
+        for (const el of matches) {
+          const r = el.getBoundingClientRect();
+          if (r.width <= 0 || r.height <= 0) continue;
+          /* Cover, never remove: an out-of-flow rectangle over the bounding
+             box cannot reflow surrounding content. */
+          const mask = document.createElement('div');
+          const set = (p, v) => mask.style.setProperty(p, v, 'important');
+          set('position', 'fixed');
+          set('left', `${r.left}px`);
+          set('top', `${r.top}px`);
+          set('width', `${r.width}px`);
+          set('height', `${r.height}px`);
+          set('background', color);
+          set('z-index', '2147483647');
+          set('margin', '0');
+          set('padding', '0');
+          set('border', 'none');
+          set('display', 'block');
+          set('pointer-events', 'none');
+          document.documentElement.appendChild(mask);
+        }
+      }
+    },
+    { selectors, color: MASK_COLOR },
+  );
 }
 
 async function capturePage(browser, opts) {
-  const { url, pageCfg, config, meta, outPath } = opts;
+  const { url, pageCfg, config, outPath } = opts;
   let lastErr = null;
   for (let attempt = 0; attempt < 3; attempt++) {
     const context = await browser.newContext({
@@ -78,8 +98,24 @@ async function capturePage(browser, opts) {
         await context.close();
         return { status: 'no_route', http: res.status() };
       }
+      if (config.dedup.enabled) {
+        /* Pixel comparison needs frozen pixels — a failed freeze is loud. */
+        await page.addStyleTag({ content: DISABLE_ANIM_CSS });
+      } else {
+        /* I5: with dedup disabled, capture exactly what v1 captured — v1
+           swallowed injection failures (strict CSP), so degrade to a warning. */
+        try {
+          await page.addStyleTag({ content: DISABLE_ANIM_CSS });
+        } catch (e) {
+          console.error(
+            `warning: animation-freeze CSS injection failed (${String(e?.message || e)}); capturing without frozen animations`,
+          );
+        }
+      }
       await page.waitForTimeout(config.settle_ms || 500);
-      await injectOverlay(page, meta, config.annotate);
+      if (config.dedup.enabled && config.dedup.ignore_selectors.length > 0) {
+        await applyMasks(page, config.dedup.ignore_selectors);
+      }
       await page.screenshot({
         path: outPath,
         fullPage: config.full_page === true,
@@ -94,6 +130,8 @@ async function capturePage(browser, opts) {
         msg.includes('Timeout') ||
         msg.includes('net::ERR') ||
         msg.includes('Target closed') ||
+        /* client-side navigation racing addStyleTag/applyMasks */
+        msg.includes('Execution context was destroyed') ||
         msg.includes('crashed');
       if (!transient || attempt >= 2) break;
     }
@@ -110,6 +148,7 @@ async function placeholder(runDir, pageName, config) {
   await page.setContent(
     `<html><body style="background:#f4f4f5;font:24px sans-serif;padding:40px;color:#666">${pageName}<br><small>awaiting first frame</small></body></html>`,
   );
+  await page.addStyleTag({ content: DISABLE_ANIM_CSS });
   const dir = path.join(runDir, `page-${pageName}`);
   fs.mkdirSync(dir, { recursive: true });
   const out = path.join(dir, '000_placeholder.png');
@@ -139,6 +178,29 @@ const repoRoot = process.cwd();
 const config = loadConfig(repoRoot);
 
 if (args.placeholdersOnly) {
+  /* Pre-validate ignore_selectors before any commit work: an invalid entry
+     would otherwise fail every page capture deterministically, burning the
+     whole N-commit run (checkout+install+serve per commit) for a typo. */
+  if (config.dedup.enabled && config.dedup.ignore_selectors.length > 0) {
+    const browser = await chromium.launch({ headless: true });
+    const page = await browser.newPage();
+    for (const sel of config.dedup.ignore_selectors) {
+      const valid = await page.evaluate((s) => {
+        try {
+          document.querySelector(s);
+          return true;
+        } catch {
+          return false;
+        }
+      }, sel);
+      if (!valid) {
+        await browser.close();
+        console.error(`invalid ignore_selectors entry: ${sel}`);
+        process.exit(3);
+      }
+    }
+    await browser.close();
+  }
   for (const p of config.pages) {
     await placeholder(args.runDir, p.name, config);
   }
@@ -160,16 +222,20 @@ for (const pageCfg of config.pages) {
   fs.mkdirSync(dir, { recursive: true });
   const idx = String(args.index).padStart(3, '0');
   const short = args.hash.slice(0, 7);
-  const safeSubj = args.subject.slice(0, 24).replace(/\W+/g, '_');
-  const fname = `${idx}_${short}${config.annotate ? '' : `_${safeSubj}`}.png`;
+  const fname = `${idx}_${short}.png`;
   const outPath = path.join(dir, fname);
-  results[pageCfg.name] = await capturePage(browser, {
-    url,
-    pageCfg,
-    config,
-    meta: { hash: args.hash, date: args.date, subject: args.subject },
-    outPath,
-  });
+  const result = await capturePage(browser, { url, pageCfg, config, outPath });
+  results[pageCfg.name] = result;
+  const entry = {
+    index: args.index,
+    hash: args.hash,
+    subject: args.subject,
+    date: args.date,
+    file: result.status === 'ok' ? fname : null,
+    capture: result.status,
+  };
+  if (result.status === 'fail') entry.error = result.error;
+  upsertFrameEntry(dir, entry);
 }
 
 await browser.close();

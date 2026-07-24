@@ -411,3 +411,35 @@ defaults apply (enabled true, threshold 0.005 — the frozen A1 defaults are the
    skipped` line: mark boot-skips `skipped`; then A3 must distinguish provably-unchanged skips from
    unknown-visual skips by some other means before it can badge honestly. If a DELTA flips this, it
    must land before A3's spec freezes against R3's table.
+
+## Execution notes (PR #50)
+
+- **Upsert helper relocated** (spec R2 allowance): A1 left `upsertFrameEntry` inline in
+  `screenshot.mjs`; it moved mechanically into new `scripts/lib/frames.mjs`, split into
+  `readFrames`/`writeFrames`/`upsertFrameEntry` so the engine shares the same atomic
+  read/write path. No behavior change; `screenshot.mjs` now imports it.
+- **`git ls-tree -r -z`** (NUL-delimited) instead of bare `-r`: `core.quotePath` C-quotes
+  non-ASCII paths in line mode, which would feed quoted paths to minimatch. The hash is
+  still SHA-256 over reconstructed `<objectname> <path>` lines in ls-tree path order.
+- **Deltas applied, all verified live**: (1) both placeholders-only spawn sites
+  (`calibrateHead` and the main run path) now abort exit 3 on non-zero child exit with the
+  child's stderr surfaced — tested with an invalid selector: stderr shows
+  `invalid ignore_selectors entry: :::bad` then `placeholder capture failed (exit 3)`;
+  (2) `Execution context was destroyed` added to screenshot.mjs's transient-retry list;
+  (3) boot-skips record `duplicate` with the `capture` key ABSENT; (4) hole-resume REFUSED —
+  tested by punching a hole in progress.json: exit 3 naming the hole commit + both remedies.
+- **Undecodable seeded baseline aborts** (exit 3, `--fresh` message): R1's skipped-decision
+  path covers only the newly captured frame. A resume-seeded baseline PNG that exists but
+  fails to decode would otherwise silently poison every later comparison, so it gets the
+  same fatal treatment as a missing baseline. Missing-baseline abort also verified live.
+- **cost.json dedup counters are whole-run truth**, computed at run end from frames.json
+  decisions plus progress `boot_skip` flags (not per-pass increments), so a resumed run
+  reports correct totals. `discarded_pngs` = duplicate entries carrying a `capture` key.
+- **For A3**: boot-skip entries carry `index`/`hash`/`subject`/`date`/`file: null`/
+  `decision`/`diff_ratio: null`/`collapsed_into` and no `capture` key. Resolve displayed
+  frames via `collapsed_into`, never via a duplicate's `file` (always null).
+- **Acceptance**: checks 1–10 all pass. Fixture run shape exact (C1 kept, C2 captured
+  duplicate, C3 boot-skipped, C4 kept + S reset, C5 re-booted and kept). Kayvee smoke:
+  entry 2 was the `duplicate` branch on both pages (home `diff_ratio` 0.0015625, story-1
+  0) — the real-app discard path was exercised. Kayvee repo left byte-identical
+  (`git status --porcelain` diff empty before/after; run dir removed).

@@ -467,3 +467,41 @@ the pinned versions):
    and a per-mode multiplier is not among them. If A4's "pacing" question wants to expose it, that is
    an A4 config addition (`dedup.speedthrough_multiplier` would need no resume-hash entry — stitch-time
    only, same rationale as `collapse_mode`).
+
+## Execution notes (slice 1)
+
+- **Concat trailing-file duration is STICKY, not tiny** (deviation, live-probed on
+  ffmpeg 8.1.1): a final `file` line without a `duration` directive inherits the
+  LAST `duration` value, not the image's nominal 0.04s. The spec's R4 probe used a
+  0.083s final slot so the effect was invisible; with a 500ms final hold the MP4
+  came out at 3.167s — outside check 2's [2.60, 2.90] window. Fix kept R1's frozen
+  concat mechanics (trailing line still has no duration) and instead bounds the MP4
+  encode with `-t (video_duration_ms + 1000/30)/1000`, so the trailing repeat only
+  flushes the final directive. GIF untouched (its trailing frame was probed and
+  accepted by the spec). A5's pacing report should expect MP4 format duration ≈
+  `video_duration_ms` + one output frame + centisecond-grid rounding.
+- **`p.name` → `p.page` in render-index** (deviation): stitch results have always
+  used the `page` key, so v1's `esc(p.name)` heading rendered empty on every run.
+  Summary headings now use `p.page ?? p.name`. Latent v1 bug, surfaced while
+  extending the summary line.
+- **Stitch results are emitted in sorted page-name order** (deviation): v1 used
+  raw `readdirSync` order (filesystem-dependent). Acceptance jq assertions index
+  into the array, so ordering is now deterministic.
+- **stitch-only forwards stitch stdout/stderr on success too** — v1's
+  `stdio: 'inherit'` visibility is preserved even though the output is now
+  captured for the rc-check and the manifest `pages_summary` refresh.
+- **Banner intermediates** persist as `<NNN>_banner.png` next to the
+  `<NNN>_annotated.png` composites (spec R3 allows). Banner text is styled
+  `#f5f5f5` on `#111111`; signalstats on the composite reads YMIN=31 / YMAX=226
+  (limited-range luma), matching the spec's probed output form.
+- **In-code comments avoid the name of the missing ffmpeg text filter** — check 10
+  greps the scripts tree for it permanently, and that includes comments.
+- **For A4/A5**: `annotate` left `HASH_FIELDS` (comment there updated); stitch
+  accepts `--no-annotate` directly and `timelapse.mjs` forwards it from both the
+  run flow and `stitch-only`. Stitch exits 3 (whole process) only for: missing
+  `commits.json`, unreadable config, or Chromium launch failure while banners are
+  needed; everything else stays per-page `fail` with stage `stitch`/`annotate`/
+  `mp4`/`gif` and exit 0.
+- **Acceptance**: checks 1–10 and 12 pass verbatim (fixture); check 11 kayvee smoke
+  pass — see PR body transcript. Kayvee left byte-identical (`git status
+  --porcelain` diff empty; run dir removed).

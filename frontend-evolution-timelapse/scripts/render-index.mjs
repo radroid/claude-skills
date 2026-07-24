@@ -26,11 +26,49 @@ function esc(v) {
     .replaceAll("'", '&#39;');
 }
 
+/* fail entries carry multi-line Playwright stacks in `error`; render only the
+   first line everywhere */
+function firstLine(v) {
+  return String(v ?? '').split('\n')[0];
+}
+
+function secs(ms) {
+  return typeof ms === 'number' ? `${(ms / 1000).toFixed(2)}s` : '—';
+}
+
+/* Per-page decision table, read straight from page-<name>/frames.json.
+   Missing file (pre-dedup runs) ⇒ no block. */
+function decisionsBlock(pageName) {
+  if (!pageName) return '';
+  const framesPath = path.join(runDir, `page-${pageName}`, 'frames.json');
+  if (!fs.existsSync(framesPath)) return '';
+  let frames;
+  try {
+    frames = JSON.parse(fs.readFileSync(framesPath, 'utf8'));
+  } catch {
+    return '';
+  }
+  if (!Array.isArray(frames) || frames.length === 0) return '';
+  const rows = frames
+    .map((f) => {
+      const err = f.capture === 'fail' ? firstLine(f.error) : '';
+      return `<tr><td>${esc(f.index)}</td><td>${esc(String(f.hash ?? '').slice(0, 7))}</td><td>${esc(String(f.date ?? '').slice(0, 10))}</td><td>${esc(f.subject)}</td><td>${esc(f.decision ?? '—')}</td><td>${esc(f.diff_ratio ?? '—')}</td><td>${esc(err)}</td></tr>`;
+    })
+    .join('\n');
+  return `<h3>Decisions</h3><table><thead><tr><th>#</th><th>hash</th><th>date</th><th>subject</th><th>decision</th><th>diff ratio</th><th>error</th></tr></thead><tbody>
+${rows}
+</tbody></table>`;
+}
+
 const pageBlocks = (manifest.pages_summary || []).map((p) => {
+  const name = p.page ?? p.name ?? '';
   const gif = p.gif ? `<a href="${esc(p.gif)}">GIF</a>` : '—';
   const mp4 = p.mp4 ? `<a href="${esc(p.mp4)}">MP4</a>` : '—';
-  const thumb = p.thumb ? `<img src="${esc(p.thumb)}" alt="${esc(p.name)}" style="max-width:280px;border:1px solid #ddd">` : '';
-  return `<section><h2>${esc(p.name)}</h2><p>Frames: ${esc(p.frame_count)} · Status: ${esc(p.status || 'ok')}</p>${thumb}<p>${gif} · ${mp4}</p></section>`;
+  const thumb = p.thumb ? `<img src="${esc(p.thumb)}" alt="${esc(name)}" style="max-width:280px;border:1px solid #ddd">` : '';
+  const collapse = p.mode !== undefined
+    ? ` · Mode: ${esc(p.mode)} · Annotated: ${p.annotated ? 'yes' : 'no'} · Kept: ${esc(p.kept_frames)} · Collapsed: ${esc(p.collapsed_commits)} · Skipped: ${esc(p.skipped_commits)} · Duration: ${esc(secs(p.video_duration_ms))} · Longest hold: ${esc(secs(p.longest_hold_ms))}`
+    : '';
+  return `<section><h2>${esc(name)}</h2><p>Frames: ${esc(p.frame_count)} · Status: ${esc(p.status || 'ok')}${collapse}</p>${thumb}<p>${gif} · ${mp4}</p>${decisionsBlock(name)}</section>`;
 }).join('\n');
 
 const skipped = manifest.skipped || manifest.entries?.filter((e) => e.status === 'skip') || [];
@@ -45,6 +83,8 @@ const html = `<!DOCTYPE html>
     section { margin: 2rem 0; padding-bottom: 1rem; border-bottom: 1px solid #eee; }
     .meta { color: #555; font-size: 0.9rem; }
     pre { background: #f6f6f6; padding: 1rem; overflow: auto; font-size: 0.85rem; }
+    table { border-collapse: collapse; font-size: 0.85rem; }
+    th, td { text-align: left; padding: 0.25rem 0.75rem 0.25rem 0; border-bottom: 1px solid #eee; }
   </style>
 </head>
 <body>
@@ -52,7 +92,7 @@ const html = `<!DOCTYPE html>
   <p class="meta">Run: ${esc(manifest.run_id || '—')} · Commits: ${esc(manifest.processed || 0)} processed, ${esc(manifest.skipped_count || 0)} skipped</p>
   ${cost ? `<p class="meta">Est. agent context tokens: ${esc(cost.agent_context?.tokens_est ?? '—')} · log cost avoided (est.): ${esc(cost.log_read_cost_avoided_est ?? '—')}</p>` : ''}
   ${pageBlocks}
-  ${skipped.length ? `<h2>Skipped commits</h2><pre>${skipped.map((s) => `${esc(s.hash)} ${esc(s.stage)}: ${esc(s.error)}`).join('\n')}</pre>` : ''}
+  ${skipped.length ? `<h2>Skipped commits</h2><pre>${skipped.map((s) => `${esc(s.hash)} ${esc(s.stage)}: ${esc(firstLine(s.error))}`).join('\n')}</pre>` : ''}
 </body>
 </html>`;
 
