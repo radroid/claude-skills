@@ -27,7 +27,8 @@ Not part of the build-loop pipeline — point them at any repo.
 
 | Skill | Purpose |
 |-------|---------|
-| [`frontend-evolution-timelapse`](./frontend-evolution-timelapse/) | **Frontend history timelapse** — walks git history on a Node web app, screenshots configured pages at each frontend-relevant commit, stitches per-page GIF/MP4 and an `index.html` summary. Isolated worktrees, resume checkpoints, token/cost accounting. Requires a JavaScript/TypeScript (or Node web) repo with a dev server. |
+| [`frontend-evolution-timelapse`](./frontend-evolution-timelapse/) | **Frontend history timelapse** — walks git history on a Node web app, screenshots configured pages at each frontend-relevant commit, stitches per-page GIF/MP4 and an `index.html` summary. Change-aware dedup drops visually-identical commits; annotation is burned in at stitch time so pristine pixels dedup cleanly. Isolated worktrees, resume checkpoints, token/cost accounting. Requires a JavaScript/TypeScript (or Node web) repo with a dev server. |
+| [`architecture-evolution-timelapse`](./architecture-evolution-timelapse/) | **C4 architecture history timelapse** — the structural sibling of the frontend timelapse. Extracts a deterministic C1/C2/C3 (context/container/component) model per commit and renders change-aware Mermaid diagram videos of how the system's architecture evolved. Pure static analysis — read-only JS/TS repos, no install, dev server, or secrets. |
 
 ### How the skills fit together
 
