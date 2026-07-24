@@ -80,9 +80,43 @@ git worktree remove --force <path>
 
 Or `timelapse.sh clean`.
 
-## CSP / overlay missing
+## Capture fails with `invalid ignore_selectors entry`
 
-Annotation inject failed; metadata is in filename and `index.html` captions instead.
+An entry in `dedup.ignore_selectors` is not a valid CSS selector for the browser. The page capture fails loudly rather than shipping an unmasked frame (a silently-unmasked frame would poison dedup's baseline). Fix the selector in `.timelapse.yaml`, then start a `--fresh` run — `dedup.ignore_selectors` is part of `config_hash`, so resume is refused after the edit.
+
+## Almost everything collapses into one frame
+
+`dedup.threshold` is too high, or an `ignore_selectors` entry masks real
+content (e.g. a selector matching the page body). Inspect the recorded
+`diff_ratio` values in `page-<name>/frames.json` — frames marked `duplicate`
+show the measured change ratio against the last kept frame. Lower the
+threshold (default `0.005`) or narrow the selectors, then run `--fresh`
+(both fields are part of `config_hash`).
+
+## Resume refused: dedup cannot replay a mid-run gap
+
+The error reads `resume refused: dedup cannot replay a mid-run gap`.
+A commit failed mid-run and later commits completed (a hole). With dedup on,
+recapturing the hole cannot be compared against duplicates that were already
+discarded, so `resume` exits 3 naming the hole commits. Remedies: rerun with
+`--fresh`, or set `dedup.enabled: false` and rerun with `--fresh` for v1
+behavior. Tail resumes (crash/interrupt with no completed commits after the
+gap) proceed normally.
+
+## Stitched video has no annotation bar
+
+`annotate: false` is set in `.timelapse.yaml`, or `--no-annotate` was passed
+to the `run` or `stitch-only` invocation — both produce completely bare frames
+in every collapse mode. Annotation is stitch-time only: set `annotate: true`
+(the default) and re-run `timelapse.sh stitch-only --run-id <id>` — no
+recapture needed (`annotate` is not part of `config_hash`). Related: with
+annotation on, stitch renders banner text with Playwright Chromium; if it
+exits 3 telling you to run `npx playwright install chromium`, install the
+browser and re-run `stitch-only`.
+
+## Strict CSP blocks the animation-freeze CSS
+
+A strict `style-src` CSP can reject the injected animation-freeze stylesheet. With `dedup.enabled: false` the capture proceeds anyway with a one-line stderr warning (v1 behaviour). With `dedup.enabled: true` the failure is loud and fails the page capture — pixel comparison needs frozen pixels. Relax the CSP for local capture, or set `dedup.enabled: false`.
 
 ## Node version
 

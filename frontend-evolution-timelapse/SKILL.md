@@ -120,6 +120,5 @@ Exit codes: `0` success, `2` partial skips, `3` preflight/lock failure.
 ## Out of scope (v1)
 
 - Authenticated routes (future: Playwright `storageState`)
-- Perceptual dedup of identical frames
 - Git submodules / LFS
 - Remote Browserbase capture
