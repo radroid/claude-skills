@@ -1,0 +1,11 @@
+{
+  "name": "architecture-evolution-timelapse-scripts",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "mermaid": "11.16.0",
+    "minimatch": "^9.0.5",
+    "playwright": "^1.49.0",
+    "yaml": "^2.6.1"
+  }
+}

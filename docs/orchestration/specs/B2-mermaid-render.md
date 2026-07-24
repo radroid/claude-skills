@@ -379,3 +379,52 @@ Environment for acceptance:
 3. Fixed 1920×1080 canvas may render 75-proof's component level with small text
    (B1 risk 1 carried forward); B5's report is the checkpoint, `render.width/height`
    and `component_roots` are the levers.
+
+## Execution notes (slice 1)
+
+- **Deviation (`--model` default):** `<cwd>/<config.output_dir>/model/model.json`,
+  not a hard-coded `.arch-timelapse/model/model.json` — identical under default
+  config, honors a user-set `output_dir`, and mirrors B1's recorded `--out`
+  deviation. `--out` still defaults to the directory containing `--model`.
+- **Deviation (unknown level names):** `--levels` names outside
+  {context, container, component} are treated exactly like model-absent levels
+  (`skipped`, reason `level-absent`, exit 0) rather than usage errors —
+  §2.2 defines absence as skip, and config/model drift is user error, not a
+  crash. Processing order: known levels in the fixed order, then unknown names
+  bytewise-sorted after.
+- **Deviation (C3 zero-member container):** a `kind == container` node at
+  component level owning zero components renders as a plain rectangle node,
+  not an empty subgraph — same rationale as §2.5's container-level degenerate
+  rule; unreachable with B1 models (B1 only emits parents owning ≥1
+  component).
+- **Status-map shape (B3 binds to this):** each requested level maps to
+  `{status, reason?, files}` where `files` is an array of bare file names
+  (`["context.mmd","context.png"]`; `[]` for skipped). `renderModel` returns
+  exactly the map printed under the stdout line's `levels` key. Failed-level
+  reasons: `chromium-and-ffmpeg-missing` (both binaries absent) and
+  `render-error` (placeholder screenshot itself failed — only reachable if
+  Chromium dies mid-run).
+- **Lockfile pin detail:** package.json carries `playwright: ^1.49.0`
+  (mirroring the sibling) but the committed lockfile resolves **1.60.0**, the
+  sibling's exact resolution, so both skills share one downloaded Chromium
+  build. `npm ci` (never bare `npm install`/`npm update`) keeps that pin; a
+  lockfile drift changes pixels (spec risk 1).
+- **Subgraph headers:** carry the full node label (name + `<br/>[tech]`),
+  same composition and escaping as node lines — §2.5 fixes only the escaping;
+  the composition choice is frozen bytes now.
+- **Config merge:** the `render` block deep-merges over `DEFAULTS.render` at
+  use (`render-diagrams.mjs`), so a user config with a partial `render:`
+  mapping keeps defaults for the other keys despite `loadConfig`'s shallow
+  spread.
+- **Gotcha (fence wording):** slice check 10's grep matches comments too —
+  source comments must not contain the literal banned tool names. The two
+  `frontend-evolution-timelapse` matches in `render-diagrams.mjs` are
+  provenance comments (anim-CSS block, placeholder pattern), per I6.
+- **NFD/NFC carry-through (document, don't solve — from B1's hostile
+  review):** `.mmd`/PNG bytes derive from `model.json` bytes, so B1's
+  cross-machine unicode-filename caveat propagates unchanged through render;
+  pixel identity is same-machine only regardless (§2.7). User-facing docs land
+  in B4's troubleshooting per its spec.
+- **Verified exit-code surface:** 0 (happy, placeholder, skip), 2 (usage), 3
+  (missing/unparseable model, schema ≠ 1), 4 (Chromium AND ffmpeg absent —
+  exercised via bogus `PLAYWRIGHT_BROWSERS_PATH` + stripped `PATH`).
