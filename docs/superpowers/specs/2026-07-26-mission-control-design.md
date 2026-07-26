@@ -16,7 +16,7 @@
 
 | # | Decision | Default chosen | Why / override cost |
 |---|---|---|---|
-| D-A | **Autonomy of the spawn path** | **Draft, then one human sign-off.** Orchestrator drafts PRD + picks stack + scaffolds from a written brief, then PAUSES for one scope sign-off before starting the loop. | Your answer deflected. This is the middle option — max AFK, one real gate, matches the design doc's L4 "human-on-the-rails where reversibility is lowest." Flipping to *fully interactive* or *fully unattended* changes the orchestrator manual + gates materially, so the impl plan waits on this. |
+| D-A | **Autonomy of the spawn path** | **Draft to the scope gate, then one human sign-off.** Orchestrator drafts to `idea-to-loop`'s **S0** (PRD + GOALS + runnable prototype) and stops the session; the human "go" (scope acceptance) IS idea-to-loop's S0 heavy gate; S1 auto / S2 keys / loop follow in a fresh session. | Your answer deflected. Middle option — max AFK, one real gate, matches L4 "human-on-the-rails". **Revised after multi-model review:** the original "draft PRD+stack+scaffold then one gate" invented a "non-interactive mode" idea-to-loop doesn't have ("never skip a stage"); the honest realization is that idea-to-loop's own S0 scope gate IS the one sign-off. Flipping to fully-interactive/unattended still changes gates materially. |
 | D-B | **Skill consumption** | **Pinned / built, not a live symlink.** Orchestrator loads skills from a pinned `claude-skills` tag (extracted `dist/*.skill` or a detached checkout), bumped deliberately between runs — never mid-run. | Overrides the repo README's own symlink default. The red-team's highest-value fix: your overnight loops *execute* these skills, so an unpinned live symlink re-versions in-flight loops non-reproducibly. Reversible, but load-bearing for trust. |
 | D-C | **In-flight build tracking** | **mission-control's own roster + ledger** (`fleet/apps.md` + `ledger.jsonl` `spawned` event), NOT a `fleet-registry` record. A registry record is created only at graduation. | Leanest correct choice: honors the current `fleet-registry` contract (registry = *graduated* apps only) and touches no skill. Adding a `building` status to the registry enum is deferred to a future improvement. |
 | D-D | **Spawn logic form** | **A runbook in `mission-control/CLAUDE.md` first; extract to a `fleet-dispatch` skill once proven.** | Prove-then-extract (same pattern the design doc used for `workflow-runtime`). Avoids authoring a new distributable skill before the path works once. |
@@ -122,30 +122,38 @@ mission-control/                 # the state repo AND the orchestrator's launch 
 
 ## 6. The spawn path (v1 tracer bullet)
 
-Under D-A ("draft, then one sign-off"), driven by `CLAUDE.md` + `bin/spawn-app.md`:
+Under D-A ("draft to the scope gate, then one sign-off"), driven by `CLAUDE.md` +
+`bin/spawn-app.md`. **The one sign-off IS `idea-to-loop`'s S0 heavy human gate** ("scope accepted
+before S1") — this respects idea-to-loop's contract ("never skip a stage") instead of inventing a
+"non-interactive mode" it doesn't have. The orchestrator drafts to S0 and *stops the session*;
+S1/S2/loop run only after a fresh human "go" (revised after multi-model review — see §10).
 
 1. **Intake.** Human writes `intake/inbox/<slug>.md` from `_TEMPLATE.md`: problem, rough scope,
-   stack hint, `visibility: public|private`, hard constraints.
-2. **Kick.** Human launches the orchestrator in `mission-control` and says "process the inbox"
-   (v1 is human-kicked — no trigger fires it).
-3. **Claim.** Orchestrator picks the oldest unclaimed brief; verifies a clean workspace.
+   `visibility: public|private`, stack hint, constraints, success signal.
+2. **Kick.** Human launches the orchestrator in `mission-control` and says "process the inbox".
+   Orchestrator runs `bin/verify-skills.md` first (v1 is human-kicked — no trigger fires it).
+3. **Claim + validate.** Pick the brief with the lexicographically-smallest filename not already a
+   roster row; validate `slug` (non-empty kebab-case) + `visibility`; fail-closed with a `blocked`
+   ledger line otherwise. Confirm `workspace/<slug>/` does not already exist (filesystem check —
+   `git status` is blind to the gitignored dir; a stale dir is moved aside, never `rm -rf`'d).
 4. **Create the repo.** `git init` in `workspace/<slug>/` (gitignored, beneath the launch root);
-   `gh repo create <slug> --private|--public --source=. --push`. Apply the `env_git_remotes` fix
-   (SSH remote fails on this machine → `git remote set-url origin https://…`). The
-   `auto-loop-bootstrap` denylist is stamped into the new repo during the S2→S3 handoff.
-5. **Draft (the AFK part).** Run `idea-to-loop` S0–S2 against `workspace/<slug>/` in
-   **non-interactive draft mode**: use the brief as the `grill-to-prd` input, draft `docs/PRD.md`
-   (to-prd style, with a "decisions under uncertainty" appendix), `GOALS.md`, an
-   `ARCHITECTURE.md`/stack pick, and a runnable scaffold.
-6. **Track it.** Append a `spawned` event to `fleet/ledger.jsonl`; add a row to `fleet/apps.md`
-   (status `drafted`). **No `fleet/apps/<id>/` record yet** (D-C).
-7. **The one gate.** Orchestrator **stops** and posts a summary (PRD link, scope, stack, scaffold
-   state, repo URL) for human review. This is the single L4 human-on-the-rails gate.
-8. **Go.** On approval: hand off `idea-to-loop` S2→S3 to `auto-loop-bootstrap`, then start
-   `autonomous-build-loop` in a dedicated per-app session. Move the brief to `intake/done/`;
-   set `apps.md` status → `looping`; append `loop-started` to the ledger.
-9. **Drain.** The app now builds itself via the existing loop. The orchestrator's job for this
-   idea is done; it can claim the next brief.
+   `gh repo create radroid/<slug> --<visibility> --source=. --remote=origin`; apply the
+   `env_git_remotes` HTTPS fix.
+5. **Draft to S0 (the AFK part).** Run `idea-to-loop` **S0 only** against `workspace/<slug>/` using
+   the brief as the `grill-to-prd` input: `docs/PRD.md` (with a decisions-under-uncertainty
+   appendix), `GOALS.md`, and a runnable prototype. `git commit && git push` so the summary links
+   resolve. Do NOT advance to S1.
+6. **Track it.** Append `spawned` then `ready-for-signoff` events to `fleet/ledger.jsonl`; add a
+   `fleet/apps.md` row (status `drafted`). **No `fleet/apps/<id>/` record yet** (D-C).
+7. **The one gate — then STOP.** Orchestrator posts a summary (repo URL, pushed PRD link, scope,
+   prototype, uncertainties) and **ends the session.** The sign-off is a fresh, explicit human "go"
+   in a new session — never inferred from the kick. The session boundary makes the gate unskippable.
+8. **Go (new session).** Resume `idea-to-loop` from S1 (auto system-design + vetting) → S2 (scaffold;
+   light gate = API keys) → S2 exit atomically invokes `auto-loop-bootstrap` (stamps the app's own
+   denylist + loop machinery, flips to S3). Append `sign-off` + `loop-started`; move the brief to
+   `intake/done/`; set `apps.md` status → `looping`.
+9. **Drain.** Run `autonomous-build-loop` in a **dedicated per-app session** (cwd = `workspace/<slug>/`,
+   design doc D1). The app now builds itself; the orchestrator returns to step 1 for the next brief.
 
 Graduation (`graduation-gate` → `admission-validator` → first `fleet/apps/<id>/` record →
 maintenance eligibility) is a later arc, stubbed in `bin/graduate-app.md`.
@@ -189,7 +197,34 @@ You can understand, test, and change any one without reading the internals of th
 ## 10. Open questions for morning review
 
 1. Confirm/override the six defaults in §1 (especially **D-A autonomy** and **D-D runbook-vs-skill**).
+   Note D-A was refined post-build (the sign-off = idea-to-loop's S0 scope gate) — confirm that
+   reading matches your intent, or say if you wanted the gate after the full scaffold instead.
 2. Is the very first brief a throwaway sacrificial idea (safest way to prove the path), or a real
    one you want to keep?
 3. Repo/workspace naming (D-E) — keep `mission-control` (launch root, apps nested under
    `workspace/`) or rename?
+4. **Skills install prerequisite (from review):** the pinned skill set must be installed into
+   `~/.claude/skills` at the `skills.lock` ref before the first spawn. The four spawn-path skills
+   are present, but the governance/graduation skills (`cto-governance-spine`, `fleet-registry`,
+   `graduation-gate`, `fleet-maintenance`) are **not currently installed** — `bin/verify-skills.md`
+   checks this and ESCALATEs. Do you want me to install the pinned set, or will you?
+
+## 11. Build + review record (2026-07-26)
+
+Built and pushed to `radroid/mission-control` (private). Independent multi-model review ran
+(Opus/Sonnet/Haiku, distinct lenses): **mechanical APPROVE (0 findings)**, **fidelity APPROVE**,
+**operational REVISE** → worst-wins REVISE. All confirmed findings were fixed in the runbook/docs
+(none touched the scaffold structure, which all three passed):
+- Sign-off gate hardened from prose to a **session boundary** (draft session STOPS; loop-start is a
+  separate act after a fresh "go") — the highest-severity finding.
+- `idea-to-loop` gate reconciliation (the "non-interactive mode" fiction) → sign-off = S0 gate.
+- Stale-`workspace/<slug>` precondition now a filesystem check + move-aside (no `rm -rf`, which the
+  denylist blocks by design).
+- Draft is committed + pushed before the gate so the summary's repo/PRD links resolve.
+- Brief claim/validation: "oldest" defined; `slug`/`visibility` validated, fail-closed on blanks.
+- Added `bin/verify-skills.md` preflight; CLAUDE.md now hard-stops gated actions if the spine isn't
+  installed. Dropped `to-prd` (lives outside the pinned repo). Dropped `graduated` from the roster
+  status enum (it's a ledger event; matches fleet-registry).
+
+Two items remain for Raj before the **first live product spawn** (both already human-gated, not repo
+defects): the skills-install prerequisite (§10 Q4) and confirming the D-A gate-location reading (§10 Q1).
