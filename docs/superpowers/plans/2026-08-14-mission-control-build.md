@@ -100,7 +100,7 @@ Pin to the current `claude-skills` **main** HEAD (the released state of the skil
 # live symlink would re-version in-flight loops non-reproducibly.
 
 claude-skills-ref: <MAIN_SHA>
-pinned-at:         2026-07-26
+pinned-at:         2026-08-14
 source:            https://github.com/radroid/claude-skills
 install:           extract dist/*.skill from this ref into ~/.claude/skills,
                    OR symlink ~/.claude/skills at a detached checkout of this ref.
@@ -146,7 +146,7 @@ before starting the autonomous build loop.
 
 v1: human-kicked, spawn-a-new-idea. Triggers, live maintenance sweeps, rollback/
 heartbeat/cost-breaker as running systems are deferred (design doc "enable last").
-Design: `claude-skills/docs/superpowers/specs/2026-07-26-mission-control-design.md`.
+Design: `claude-skills/docs/superpowers/specs/2026-08-14-mission-control-design.md`.
 ```
 
 - [ ] **Step 7: Create the private GitHub repo and fix the remote**
@@ -221,7 +221,7 @@ touch ~/Documents/mission-control/fleet/ledger.jsonl
 
 Each line is `{ ts, event, app_id, actor, detail }`:
 
-- `ts` — ISO-8601 UTC (e.g. `2026-07-26T21:04:00Z`); stamped by the session.
+- `ts` — ISO-8601 UTC (e.g. `2026-08-14T21:04:00Z`); stamped by the session.
 - `event` — one of: `spawned`, `loop-started`, `sign-off`, `graduated`,
   `blocked`, `note`.
 - `app_id` — the app slug (or `_cto-self` for orchestrator/heartbeat events).
@@ -229,7 +229,7 @@ Each line is `{ ts, event, app_id, actor, detail }`:
 - `detail` — free-form string (e.g. repo URL, brief slug, reason).
 
 Example:
-`{"ts":"2026-07-26T21:04:00Z","event":"spawned","app_id":"widget-tracker","actor":"orchestrator","detail":"repo=https://github.com/radroid/widget-tracker from brief inbox/widget-tracker.md"}`
+`{"ts":"2026-08-14T21:04:00Z","event":"spawned","app_id":"widget-tracker","actor":"orchestrator","detail":"repo=https://github.com/radroid/widget-tracker from brief inbox/widget-tracker.md"}`
 ```
 
 - [ ] **Step 4: Keep the empty `apps/` dir tracked**
@@ -242,7 +242,7 @@ touch ~/Documents/mission-control/fleet/apps/.gitkeep
 
 Run:
 ```bash
-echo '{"ts":"2026-07-26T21:04:00Z","event":"spawned","app_id":"widget-tracker","actor":"orchestrator","detail":"repo=x"}' | python3 -m json.tool > /dev/null && echo OK
+echo '{"ts":"2026-08-14T21:04:00Z","event":"spawned","app_id":"widget-tracker","actor":"orchestrator","detail":"repo=x"}' | python3 -m json.tool > /dev/null && echo OK
 ```
 Expected: `OK`.
 
@@ -554,7 +554,7 @@ Expected: `workspace/_smoke` printed, then `IGNORED-OK`, then `CLEAN-OK` (the ne
 
 ```bash
 cd ~/Documents/mission-control
-printf '%s\n' '{"ts":"2026-07-26T00:00:00Z","event":"note","app_id":"_smoke","actor":"orchestrator","detail":"mechanics smoke"}' >> fleet/ledger.jsonl
+printf '%s\n' '{"ts":"2026-08-14T00:00:00Z","event":"note","app_id":"_smoke","actor":"orchestrator","detail":"mechanics smoke"}' >> fleet/ledger.jsonl
 tail -n1 fleet/ledger.jsonl | python3 -m json.tool > /dev/null && echo "LEDGER-OK"
 ```
 Expected: `LEDGER-OK`.
@@ -566,7 +566,7 @@ Add a temporary row to `fleet/apps.md` under the header, then verify it's a well
 cd ~/Documents/mission-control
 grep -q "| _smoke |" fleet/apps.md && echo "APPS-ROW-OK" || echo "add the row first"
 ```
-(Add: `| _smoke | (local) | drafted | - | 2026-07-26 | mechanics smoke |`)
+(Add: `| _smoke | (local) | drafted | - | 2026-08-14 | mechanics smoke |`)
 Expected: `APPS-ROW-OK`.
 
 - [ ] **Step 4: Clean up the smoke artifacts**

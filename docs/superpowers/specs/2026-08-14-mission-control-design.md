@@ -1,6 +1,6 @@
 # mission-control — the CTO control-plane / operating repo
 
-> **Status:** Design / spec, awaiting Raj's approval. Produced 2026-07-26 in a brainstorming
+> **Status:** Design / spec, awaiting Raj's approval. Produced 2026-08-14 in a brainstorming
 > session (grounded against the live repo, `docs/cto-system-design.md`, the `fleet-registry`
 > skill, and a 5-agent analysis workflow + adversarial red-team).
 >
@@ -209,7 +209,7 @@ You can understand, test, and change any one without reading the internals of th
    `graduation-gate`, `fleet-maintenance`) are **not currently installed** — `bin/verify-skills.md`
    checks this and ESCALATEs. Do you want me to install the pinned set, or will you?
 
-## 11. Build + review record (2026-07-26)
+## 11. Build + review record (2026-08-14)
 
 Built and pushed to `radroid/mission-control` (private). Independent multi-model review ran
 (Opus/Sonnet/Haiku, distinct lenses): **mechanical APPROVE (0 findings)**, **fidelity APPROVE**,
