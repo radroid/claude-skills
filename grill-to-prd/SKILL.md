@@ -15,40 +15,39 @@ answers.
 Three persona lanes, three templates
 (`assets/templates/PRD-{technical,designer,vibe}.md`): **Technical** (data
 model, API surface, edge cases, test plan), **Designer** (journeys, states,
-flows, accessibility, copy), **Vibe** (mood, references, do/don't anchors —
-the user's own words ARE the spec: quote, don't paraphrase).
+flows, accessibility, copy), **Vibe** (mood, references, do/don't anchors, the
+builder's own words).
 
 ## Where to start
 
 Audit the repo — greenfield vs brownfield. On brownfield, read the manifest,
-README, existing docs, and recent commits first, so you never ask what the
-code already answers (that destroys trust in three turns). An existing
-`docs/PRD.md` → offer update / replace / abort; never silently overwrite.
-Then classify the lane (state it, let the user override) and grill
-in-conversation using `references/question-bank-<lane>.md` as the spine —
-a few questions per turn, sprinkling in secondary-lane questions where
-signals were mixed. The bank's exit checklist is the goal, not the
-questionnaire; skip what a fluent user has already answered.
+README, existing docs, and recent commits first, so every question lands where
+the code is silent; trust dies in three turns of asking what the repo already
+says. An existing `docs/PRD.md` → offer update / replace / abort; never
+silently overwrite. Then classify the lane (state it, let the user override)
+and grill in-conversation using `references/question-bank-<lane>.md` as the
+spine — at the lane's cadence, sprinkling in secondary-lane questions where
+signals were mixed. The bank's exit checklist is the goal: stop there, and skip
+anything the repo, an earlier answer, or an attached design file already
+answers.
 
 ## Contracts
 
 - One lane per run. Genuinely ambiguous after re-asking → default Technical
   (the most easily down-converted) and note the choice in the PRD appendix.
-- The grill is inline and interactive — no subagents for the interview
-  itself; the back-and-forth is the point.
-- Synthesis: fill the lane template completely; quote the user wherever
-  possible; flag every TBD with a searchable `> TODO:`; include committed
-  external references verbatim with one-line annotations; add a "Decisions
-  made under uncertainty" appendix for anything you had to guess.
+- Run the interview inline, in this conversation — the back-and-forth is the
+  point.
+- Synthesis: fill the lane template completely; quote the user **verbatim**,
+  and carry every committed external reference across verbatim with the user's
+  own one-line annotation; flag every TBD with a searchable `> TODO:`; add a
+  "Decisions made under uncertainty" appendix for anything you had to guess.
 - **User sign-off is a hard gate.** Surface the finished PRD with its top
   ambiguities and wait for an explicit yes before any handoff.
 - Handoff by invocation context: standalone → report the PRD path and stop
   (suggest `idea-to-loop` or `auto-loop-bootstrap` as next steps); called
-  from `idea-to-loop` S0 or `auto-loop-bootstrap` → return control, never
-  invoke downstream skills yourself. If `.loop/state.json` exists, record
-  `checkpoints.prd-accepted`; append one line to an existing
-  `docs/decision-log.md` — never create it.
-- `superpowers:brainstorming` is opt-in only (the user explicitly asks for a
-  design pass before synthesis) and must be briefed to return control rather
-  than advancing to writing-plans — otherwise it short-circuits your own
-  synthesis.
+  from `idea-to-loop` S0 or `auto-loop-bootstrap` → return control to the
+  caller. If `.loop/state.json` exists, record `checkpoints.prd-accepted`;
+  append one line to `docs/decision-log.md` when that file already exists.
+- Invoke `superpowers:brainstorming` only when the user explicitly asks for a
+  design pass before synthesis, and brief it to return control to you — your
+  synthesis is the one that writes the PRD.

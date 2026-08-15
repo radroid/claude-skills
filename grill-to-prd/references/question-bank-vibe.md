@@ -1,4 +1,4 @@
-# Phase 3 — Vibe question bank
+# Vibe question bank
 
 For founders / operators / hobbyists building from feel. The goal is **not** to force them into engineering language — it's to capture enough taste and constraints that a downstream agent can make decisions the builder would have made themselves.
 
@@ -6,10 +6,9 @@ For founders / operators / hobbyists building from feel. The goal is **not** to 
 
 - Ask one question per turn. Vibe builders need room.
 - **References > definitions.** "Show me a thing like this" beats "describe what you want" every single time.
-- **Quote the user verbatim.** Their voice is the spec. Paraphrasing is a sin in this lane.
+- **Quote the user verbatim.** Their voice is the spec.
 - Don't force precision where the user has none. If they say "I don't know, I just want it to feel good", log it as a Vibe anchor and move on — that *is* a real PRD entry.
 - Multiple-choice is OK but lean toward open prompts that invite a story.
-- Exit early if the user is fluent and the references are pouring in.
 
 ## Section A — The feeling
 
@@ -83,13 +82,11 @@ Stop the grill when:
 - [ ] At least one "sacred" detail or success-feeling (D3 or E1)
 - [ ] Surface answer or explicit "undetermined" (H1)
 
-Don't push past these. A Vibe PRD that's 60% filled-in but fully in the user's voice beats one that's 100% filled-in with your paraphrasing.
+Stop at these. A Vibe PRD 60% filled-in but fully in the user's voice beats one 100% filled-in in yours.
 
 ## Default behaviours
 
-- **Quote, never paraphrase.** When in doubt, use the user's exact sentence with quote marks around it. The Vibe PRD template has space for verbatim quotes.
-- If the user gives you a link, include the link verbatim with their **one-line** description, not your interpretation.
 - If they say "I don't know" twice in a row, change tactic: ask for a *reference* instead of a *description*. "Don't describe it — show me three things close to it."
-- If they get excited and start riffing — **let them**. Capture verbatim. Edit later. A 5-minute monologue is gold for a Vibe PRD.
+- If they get excited and start riffing — **let them**. Capture verbatim, edit later; a 5-minute monologue is gold for a Vibe PRD.
 - If they explicitly punt on the technical questions (H1, F1, F2): that's fine. The downstream agent / collaborator picks, and the PRD says "delegated, user signed off on agent's judgment."
 - Never end a Vibe grill with "let me know if you have any other questions." End with "I think I've got enough to write something. Want me to go for it?"

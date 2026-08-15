@@ -2,7 +2,7 @@
 
 > **Lane:** Vibe &nbsp;·&nbsp; **Last updated:** {{DATE}} &nbsp;·&nbsp; **Status:** Draft
 >
-> This PRD is intentionally light on spec and heavy on the user's own voice. Quoted blocks are verbatim. Don't paraphrase them — they *are* the spec.
+> This PRD is intentionally light on spec and heavy on the user's own voice. Quoted blocks are verbatim — they *are* the spec.
 
 ## 1. The feeling
 
@@ -134,5 +134,5 @@ The fence around the space. Everything inside is fair game.
 
 ## Appendix D — Source material
 
-- Phase 1 context summary: {{CONTEXT_SUMMARY}}
+- Context summary: {{CONTEXT_SUMMARY}}
 - Persona: Vibe (secondary: {{SECONDARY_LANE}})

@@ -156,5 +156,5 @@ Step by step — happy path, first touch to "done."
 
 ## Appendix C — Source material
 
-- Phase 1 context summary: {{CONTEXT_SUMMARY}}
+- Context summary: {{CONTEXT_SUMMARY}}
 - Persona: Designer (secondary: {{SECONDARY_LANE}})

@@ -16,6 +16,13 @@ stubs; a backlog source with ≥3 actionable items; one committed seed
 
 ## Where to start
 
+Read `.loop/state.json` first — it decides whether this skill runs at all.
+`"stage": "S3"` or later means the repo is already bootstrapped: say so, and
+invoke `autonomous-build-loop` via the Skill tool — the loop owns the tree from
+here. `"S0"` or `"S1"` belongs to `idea-to-loop`: hand back to it. `"S2"` is
+the greenfield handoff below. A missing file is this skill's case, and the rest
+of this skill is written for it.
+
 Audit what already exists — never clobber. Then fill only the gaps from
 `assets/templates/` (substituting placeholders), wire `.gitignore`
 (`/.loop/claims/` — `state.json` itself IS committed), and write a baseline
@@ -37,19 +44,22 @@ GOALS/ARCHITECTURE/PLAN untouched, and rewrite state.json S2 → S3 with
 - **Backlog source:** auto-detect (GOALS/TODO/ROADMAP-style files, GitHub
   issues, Linear), confirm with the user, and record as
   `backlog_source: {kind, path|ref}`. None found → interview the user (invoke
-  `grill-me`); never scaffold a fake backlog — a loop with vague goals burns
-  budget on bookkeeping. A missing-but-wanted PRD is `grill-to-prd`'s job,
-  run before this.
+  `grilling`; if `grilling` is not installed, run the interview inline — ask
+  what "shipped" looks like, then push on each answer until it names a concrete
+  verifiable change, and write the answers up as a `GOALS.md` with ≥3 items);
+  never scaffold a fake backlog — a loop with vague goals burns budget on
+  bookkeeping. A missing-but-wanted PRD is `grill-to-prd`'s job, run before
+  this.
 - Confirm the base branch (current vs GitHub default — surface a mismatch) and
   the commit mode: direct-commit (`pr_mode: false`, the default) vs
   per-feature PR (repos with required CI or branch protection).
-- Refuse to bootstrap on a dirty tree; commit only the scaffolded files, by
+- Bootstrap only from a clean tree; commit only the scaffolded files, by
   explicit path; verify `.gitignore` covers secrets before the seed commit.
 - **Smoke-test before declaring done:** have the user run exactly one loop
-  iteration ("run one iteration of autonomous-build-loop, then stop — no
-  ScheduleWakeup") and verify `logs/iter-001.md`, a new commit, and the
-  incremented iter counter. A scaffold that doesn't survive one real
-  iteration is broken.
+  iteration ("run exactly one iteration of autonomous-build-loop, then stop and
+  report — skip `ScheduleWakeup`") and verify `logs/iter-001.md`, a new commit,
+  and the incremented iter counter. One real iteration is the only evidence
+  the scaffold works.
 - Hand off with the start prompt ("Start the autonomous build loop"), the
   one-time settings suggestions (auto-compact around 40%, 1M context window),
   and the recommendation to open `/loop-supervisor` in a second window.

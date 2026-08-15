@@ -42,6 +42,9 @@ one-line **Progress** marker and per-item dependency IDs (one numbering scheme
 The loop per item: **planner → executor → reviewer → fix → merge → steward**
 (planner runs one item ahead).
 
+- A repo with `.loop/state.json` belongs to `autonomous-build-loop`, and this
+  skill runs there only as a delegate the loop invokes. Reached directly on
+  such a repo, report that the loop owns the tree and hand back to it.
 - Plans and reviews contain **no code** — prose, `file:line` anchors, a
   mandatory edge-case section. Reviewer verdicts end with exactly one line of
   the unified grammar: `VERDICT: APPROVE` · `VERDICT: REVISE — <n> issues` ·

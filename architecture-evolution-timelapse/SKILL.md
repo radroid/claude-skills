@@ -25,13 +25,13 @@ this version ships `init`, `extract`, and `render`.
 cd "$SKILL_ROOT/scripts" && npm ci && npx playwright install chromium
 ```
 
-Extraction needs no browser, no ffmpeg, no network, and no installs in the
-target repo; only `render` uses the Chromium installed above (and degrades to
-placeholder frames without it).
+Extraction is pure static analysis: a read-only target tree is enough. Only
+`render` reaches for the Chromium installed above, degrading to placeholder
+frames when it is absent.
 
 1. **Target app repo** — `cd` into the repo under analysis. `.arch-timelapse.yaml`
-   and `.arch-timelapse/` live here only. `extract` also runs config-less against
-   a read-only tree (defaults + a stderr notice) with `--out` pointed elsewhere.
+   and `.arch-timelapse/` live here only. `extract` also runs config-less
+   (defaults + a stderr notice) with `--out` pointed elsewhere.
 
 ## Quick start
 

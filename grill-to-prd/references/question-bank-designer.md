@@ -1,4 +1,4 @@
-# Phase 3 — Designer question bank
+# Designer question bank
 
 For design-led builders. Optimised for capturing user journeys, states, and interaction nuance — the things an engineer building from a sparse spec gets wrong.
 
@@ -7,8 +7,6 @@ For design-led builders. Optimised for capturing user journeys, states, and inte
 - Ask 1–2 questions per turn.
 - **Encourage references.** "Show me a screenshot of something close" is a valid answer for many of these.
 - Multiple-choice when possible, but designers often have nuanced answers — let them write in.
-- Skip questions whose answer is already in the Phase 1 context summary or in attached design files.
-- The exit checklist at the bottom is the goal — don't run every question if the user is fluent.
 
 ## Section A — Who and why
 
@@ -97,11 +95,9 @@ Stop when you can fill in the Designer PRD template without `> TODO:` in:
 - [ ] Success signal (I3)
 - [ ] External blockers (Section J)
 
-Sections G (a11y), H (multi-surface details), and copy specifics can stay sparse if the user defers — mark `> TODO:` and surface in Phase 5.
+Sections G (a11y), H (multi-surface details), and copy specifics can stay sparse if the user defers — mark `> TODO:` and surface in the sign-off review.
 
 ## Default behaviours
 
-- **Quote tonal phrasing verbatim.** "Warm but precise" is a better PRD entry than your paraphrase of it. Designer PRDs survive on language fidelity.
-- If they show you a reference link: include the link verbatim in the PRD, plus their **one-line annotation** of why it's relevant. Don't editorialise.
 - If they say "I'll know it when I see it" about a visual decision: log it as a Vibe-style anchor in the PRD's "Things that need to be felt, not specified" appendix. Don't push them to articulate beyond their ability — that's why we have the Vibe lane and why secondary lanes exist.
 - If they hand you a Figma URL: include the URL + a 2-line description of what you see when you open it (a screenshot summary, not a recreation). The link is the spec; your description is the index.
