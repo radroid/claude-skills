@@ -47,4 +47,4 @@ Archived iter logs, `logs/summary-*.md`, `logs/archive/**`. Everything next-iter
 - Never delete logs; archive under `logs/archive/` after a decade rollup.
 - Never run dev-server commands without explicit instruction.
 - Never `git push --force`, `--amend` pushed commits, or `push --no-verify` without explicit backlog authorization.
-- The loop NEVER halts on a semantic event — blocks/failures become entries in `logs/blocks.md` or the backlog; pick the next non-conflicting item.
+- Blocks keep the loop moving: a semantic block or failure becomes an entry in `logs/blocks.md` or the backlog; pick the next non-conflicting item.

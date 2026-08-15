@@ -23,6 +23,12 @@
 # somewhere else is a surprise — the script prints the target and exits 1 rather
 # than clobbering it. Nothing is applied until the whole plan is conflict-free.
 #
+# No directory is ever deleted. A plain directory sitting at an owned name is
+# moved to <skills dir>/../skills-replaced/<name>-<epoch> — a sibling of the
+# skills dir, never a child, because Claude Code loads every directory under the
+# skills dir that has a SKILL.md — and the symlink goes in after. Only our own
+# symlinks are unlinked outright.
+#
 # Set CLAUDE_SKILLS_DIR to install somewhere other than ~/.claude/skills (tests).
 
 set -euo pipefail
@@ -42,7 +48,7 @@ for arg in "$@"; do
     --dry-run|-n) DRY_RUN=true ;;
     --list|-l)    LIST=true ;;
     -h|--help)
-      sed -n '2,26p' "$0" | sed 's/^# \{0,1\}//'
+      sed -n '2,32p' "$0" | sed 's/^# \{0,1\}//'
       exit 0 ;;
     *)
       echo "unknown argument: $arg" >&2
@@ -76,6 +82,7 @@ contains() {
 normalize() {
   local path="$1" out="" seg
   local IFS=/
+  set -f                       # a segment like * must not glob against $PWD
   for seg in $path; do
     case "$seg" in
       ''|.) ;;
@@ -83,6 +90,7 @@ normalize() {
       *)    out="$out/$seg" ;;
     esac
   done
+  set +f
   printf '%s\n' "${out:-/}"
 }
 
@@ -107,6 +115,26 @@ under_repo() {
     "$REPO_ROOT"|"$REPO_ROOT"/*) return 0 ;;
     *) return 1 ;;
   esac
+}
+
+# Plain directories at owned names are moved here, never deleted. This is a
+# SIBLING of $SKILLS_DIR on purpose: Claude Code loads any directory under the
+# skills dir that contains a SKILL.md, so a copy parked inside would come back
+# as a duplicate skill.
+REPLACED_DIR="$(dirname "$SKILLS_DIR")/skills-replaced"
+
+# Where the directory currently at owned name $1 will be moved. Never returns a
+# path that already exists, so `mv` can't nest one copy inside another.
+replaced_dest() {
+  local base dest n
+  base="$REPLACED_DIR/$1-$(date +%s)"
+  dest="$base"
+  n=1
+  while [ -e "$dest" ]; do
+    dest="$base-$n"
+    n=$((n + 1))
+  done
+  printf '%s\n' "$dest"
 }
 
 # Character count of the `description:` value in a SKILL.md frontmatter block
@@ -308,14 +336,23 @@ while [ $i -lt ${#plan_names[@]} ]; do
       [ "$DRY_RUN" = "true" ] || ln -sfn "$src" "$entry"
       echo "  ${prefix}relink   $name (was -> $note)" ;;
     replace)
-      [ "$DRY_RUN" = "true" ] || { rm -rf "$entry"; ln -sfn "$src" "$entry"; }
-      echo "  ${prefix}REPLACE  $name — copy-install directory replaced by a symlink (it was frozen at install time and ignored every source edit since)" ;;
+      dest="$(replaced_dest "$name")"
+      [ "$DRY_RUN" = "true" ] || {
+        mkdir -p "$REPLACED_DIR"
+        mv "$entry" "$dest"
+        ln -sfn "$src" "$entry"
+      }
+      echo "  ${prefix}REPLACE  $name: directory moved to $dest; symlink installed" ;;
     unlink)
       [ "$DRY_RUN" = "true" ] || rm -f "$entry"
       echo "  ${prefix}unlink   $name (not in profile $PROFILE)" ;;
     remove)
-      [ "$DRY_RUN" = "true" ] || rm -rf "$entry"
-      echo "  ${prefix}REMOVE   $name — copy-install directory removed (not in profile $PROFILE)" ;;
+      dest="$(replaced_dest "$name")"
+      [ "$DRY_RUN" = "true" ] || {
+        mkdir -p "$REPLACED_DIR"
+        mv "$entry" "$dest"
+      }
+      echo "  ${prefix}REMOVE   $name: directory moved to $dest (not in profile $PROFILE)" ;;
   esac
   changed=$((changed + 1))
 done

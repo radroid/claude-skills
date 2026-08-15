@@ -120,10 +120,13 @@ invocation mode, description size, and profile. The installer only ever creates,
 or removes entries in `~/.claude/skills/` whose name matches a skill folder in this repo —
 skills you installed from anywhere else are never touched.
 
+**The profile is not persisted.** It is an argument, not a stored setting, so a bare
+`./scripts/install.sh` means `solo` — on a `fleet` machine that unlinks the four fleet
+skills. Pass `fleet` every time you re-run it there.
+
 Restart Claude Code. `ls ~/.claude/skills` — or `./scripts/install.sh --list` —
 is the check that they landed: `/skills` lists what the model can reach on its
-own, so the user-invoked skills you type by name are expected to be absent from
-it.
+own, so the user-invoked skills you type by name may be absent from it.
 
 Updates: `git pull` in the cloned dir — symlinks always reflect the latest commit.
 `./scripts/check-skills.sh` re-checks that the pointers still line up.
@@ -149,6 +152,10 @@ for s in $SKILLS; do
   unzip -oq "/tmp/$s.skill" -d ~/.claude/skills/
 done
 ```
+
+That list is all 19. Omit `cto-governance-spine fleet-maintenance fleet-registry
+graduation-gate` unless you want the `fleet` profile — they are the four fleet skills and
+they cost always-loaded context you don't spend until you run more than one app.
 
 ## Quick start — run your own build loop
 
@@ -213,8 +220,8 @@ Or just type "start the autonomous build loop" — the skill self-paces from the
 The loop runs **in-session** — one Claude Code window stays open and schedules its own
 next iteration via `ScheduleWakeup` (the Claude Code tool that wakes the session back up
 after a delay). Walk away. Check progress any time in `logs/latest.md` (the handoff state)
-and `logs/blocks.md` (anything that needs you). It never halts — blockers become log
-entries, not stops.
+and `logs/blocks.md` (anything that needs you): blocks become `logs/blocks.md` entries and
+the loop moves on to the next non-conflicting item.
 
 Stop conditions: Ctrl-C in CC, type a new prompt that overrides, the backlog source goes
 empty (the agent decides), or review and stop manually.
@@ -276,7 +283,7 @@ claude-skills/
 │   └── references/               persona probe + question banks + synthesis
 ├── idea-to-loop/                 skill source — greenfield S0 → S1 → S2
 │   ├── SKILL.md
-│   └── assets/templates/         docs/PRD.md, docs/decision-log.md, .loop/state.json seeds
+│   └── assets/templates/         docs/decision-log.md, .loop/state.json seeds
 ├── loop-supervisor/              skill source — read-only oversight window
 │   ├── SKILL.md
 │   ├── assets/templates/         supervisor log seed

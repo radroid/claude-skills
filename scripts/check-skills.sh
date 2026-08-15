@@ -39,6 +39,11 @@ SKILLS_DIR="${CLAUDE_SKILLS_DIR:-$HOME/.claude/skills}"
 # Skills this repo reaches for by name that live in someone else's repo.
 # `prototype` is invoked by idea-to-loop at S0; `grilling` and `codebase-design`
 # are reached from the delegation targets added in Task 5.
+#
+# Plugin-namespaced reaches (e.g. `superpowers:brainstorming` in
+# `grill-to-prd/SKILL.md`) are NOT covered by this check: they resolve through
+# ~/.claude/plugins/, not ~/.claude/skills/<name>, so there is no path here to
+# stat. Verify those by listing the installed plugin.
 CROSS_REPO=(grilling codebase-design prototype)
 
 failures=0
