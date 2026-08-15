@@ -1,6 +1,6 @@
 ---
 name: grill-to-prd
-description: Use when the user wants to be interviewed into a PRD — "/grill-to-prd", "grill me about my idea", "interview me", "help me write a PRD", "turn my idea into a spec" — or asks for a Technical, Designer, or Vibe PRD. Also the PRD-production step of idea-to-loop's S0.
+description: Grill the user into a PRD at docs/PRD.md. Use when they want to be interviewed about an idea, ask for a PRD or spec, or name a Technical, Designer, or Vibe PRD.
 ---
 
 # Grill to PRD

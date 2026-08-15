@@ -1,6 +1,6 @@
 ---
 name: autonomous-build-loop
-description: Use when the user wants Claude to keep building on its own across many sessions — "autonomous loop", "/loop", "keep building", "wake yourself up", "iter-NNN logs", "fat-iter"; or the project has iter-NNN.md logs, a GOALS.md backlog, .loop/state.json, or a CLAUDE.md autonomous-build-loop protocol section.
+description: Autonomous build loop — ship the backlog unattended, one bounded iteration per wake-up. Use when the user asks to keep building on its own ("/loop"), or the repo already has `.loop/state.json` or `logs/iter-NNN.md`.
 ---
 
 # Autonomous build loop

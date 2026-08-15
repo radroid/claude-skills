@@ -1,6 +1,6 @@
 ---
 name: orchestrated-delivery
-description: Use when shipping a multi-PR backlog with a team of subagents — the user wants PR-sized slices landed by planner/executor/reviewer/fix/steward roles, mentions "orchestrated delivery", a token ledger, a friction log, or resuming a multi-PR run from a backlog Progress line.
+description: Use when shipping a multi-PR backlog through role subagents — starting a fresh run, or resuming one from the backlog's Progress line. If `.loop/state.json` exists, the loop owns that repo and this only ever arrives as a delegate.
 ---
 
 # Orchestrated delivery

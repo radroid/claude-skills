@@ -1,6 +1,6 @@
 ---
 name: cto-governance-spine
-description: Use when an autonomous fleet needs the policy gate before acting unsupervised — "may the CTO do this unsupervised", the autonomous-mode-gate, prod-deploy HOLD rule, cost circuit-breaker, escalation ladder, dead-man's-switch, or the global audit ledger.
+description: The fleet policy contract — the autonomous-mode-gate (may this run unsupervised?), prod-deploy HOLD rule, cost breaker, incident ladder, audit ledger.
 ---
 
 # CTO governance spine

@@ -1,6 +1,6 @@
 ---
 name: auto-loop-bootstrap
-description: Use when the user wants a repo prepared for autonomous build looping — "set up the autonomous loop", "bootstrap auto-loop", "make this repo loopable", "scaffold the build loop" — and the loop protocol files (.loop/state.json, CLAUDE.md protocol section, logs/) don't exist yet.
+description: Make a repo loop-ready so autonomous-build-loop can take over: protocol files, backlog source, seed commit, smoke test. Use when the repo has no `.loop/state.json` yet.
 ---
 
 # Auto loop bootstrap

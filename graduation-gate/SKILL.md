@@ -1,6 +1,6 @@
 ---
 name: graduation-gate
-description: Use to admit a freshly-built app into the maintenance fleet or manage the reverse edge — "graduate an app", "enroll into the fleet", "is this app ready for maintenance", "quarantine an app", "re-admit a quarantined app".
+description: Graduate a built app into the maintenance fleet after a fail-closed readiness check, or work the reverse edge — quarantine on sustained sev1 sweeps, human re-admit.
 ---
 
 # Graduation gate

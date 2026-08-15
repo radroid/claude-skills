@@ -1,6 +1,6 @@
 ---
 name: idea-to-loop
-description: Use for greenfield builds — "I have an idea for X, help me build it", "start a product from scratch", "/idea-to-loop" — when there is no existing codebase and the user wants concept → PRD → stack → runnable scaffold → autonomous loop handoff. For existing repos use auto-loop-bootstrap instead.
+description: Greenfield build: idea → PRD → stack → runnable scaffold → autonomous-loop handoff, staged S0–S2 with human gates. Use when there is no codebase yet; for an existing repo use auto-loop-bootstrap.
 ---
 
 # Idea to loop

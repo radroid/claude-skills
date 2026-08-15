@@ -1,6 +1,6 @@
 ---
 name: fleet-maintenance
-description: Use when an autonomous fleet needs the MAINTAIN pillar — health sweeps over registry-enrolled apps, a maintenance backlog, triage and autonomous fixes, dependency/security hygiene, incident response, or the CTO self-heartbeat. Triggers: "fleet maintenance", "monitor the fleet", "health sweep", "is the fleet healthy".
+description: Health sweep over enrolled fleet apps — signals into a severity-ranked per-app backlog, then triage, gate, and delegate each fix. Covers dependency/security hygiene, incident response, and the CTO heartbeat.
 ---
 
 # Fleet maintenance

@@ -1,6 +1,6 @@
 ---
 name: screen-design-loop
-description: Use when existing HTML mockups should be refined against real-world design references — "design loop", "/design-loop", "refine the screens", "use Mobbin to design", "make it look like best-in-class apps" — on a repo with docs/screens/html/ mockups. For the initial baseline use prd-to-screens.
+description: Refine existing HTML mockups against real shipped-app references from Mobbin. Use on a repo that already has `docs/screens/html/`.
 ---
 
 # Screen design loop

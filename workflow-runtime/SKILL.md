@@ -1,6 +1,6 @@
 ---
 name: workflow-runtime
-description: Use when writing or debugging a Workflow script against the harness runner — wiring agent/parallel/pipeline/phase, building a quality gate as a pipeline stage, emitting the canonical APPROVE|REVISE|BLOCK verdict or audit ledger, or when a script won't parse or resume.
+description: Authoring Workflow scripts for the harness runner. Use when writing one against the paste-in canon, or when a script won't parse or resume.
 ---
 
 # Workflow runtime
