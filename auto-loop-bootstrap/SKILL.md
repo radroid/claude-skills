@@ -25,11 +25,14 @@ all. Then audit what already exists — never clobber. Then fill only the gaps f
 user names. The file-backlog format the loop expects is
 `references/backlog-format.md`.
 
-**Greenfield handoff:** if `.loop/state.json` says `"stage": "S2"`, or
-`docs/PRD.md` plus a real (non-stub) `ARCHITECTURE.md` exist, `idea-to-loop`
-already produced the docs — skip backlog discovery, keep its
-GOALS/ARCHITECTURE/PLAN untouched, and rewrite state.json S2 → S3 with
-`iter: 0`. That rewrite is the atomic handoff.
+**Greenfield handoff:** `.loop/state.json` at `"stage": "S2"` is `idea-to-loop`
+handing off — skip backlog discovery, keep its GOALS/ARCHITECTURE/PLAN
+untouched, and rewrite state.json S2 → S3 with `iter: 0`; that rewrite is the
+atomic handoff. **Docs already written:** no state file but `docs/PRD.md` and a
+real (non-stub) `ARCHITECTURE.md` present — a normal bootstrap that reuses them:
+keep them untouched, skip only the discovery they already answer (a backlog
+source is still required, derived from the PRD or the interview), and create
+`.loop/state.json` fresh at `"stage": "S3"`, `iter: 0`.
 
 ## Contracts
 

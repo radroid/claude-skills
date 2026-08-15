@@ -49,5 +49,5 @@ answers.
   caller. If `.loop/state.json` exists, record `checkpoints.prd-accepted`;
   append one line to `docs/decision-log.md` when that file already exists.
 - Invoke `superpowers:brainstorming` only when the user explicitly asks for a
-  design pass before synthesis, and brief it to return control to you — your
-  synthesis is the one that writes the PRD.
+  design pass before synthesis, and brief it to return control to you before it
+  reaches writing-plans, so your own synthesis is the one that writes the PRD.
