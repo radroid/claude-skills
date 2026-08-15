@@ -1,6 +1,7 @@
 ---
 name: frontend-evolution-timelapse
-description: Builds construction-style timelapse GIFs and MP4s of a web frontend across git history by checking out frontend-relevant commits, serving the app, and screenshotting configured pages. Use when the user wants a frontend evolution timelapse, visual git history of UI, screenshots over commits, construction-progress demo, branch UI history, or invokes frontend-evolution-timelapse. Requires a Node.js web app (npm/pnpm/yarn/bun) with a dev or production server — not mobile, PHP, or Python template repos.
+description: Build a construction-style timelapse (GIF/MP4) of a web frontend across git history. Needs a Node app with a dev server.
+disable-model-invocation: true
 ---
 
 # Frontend Evolution Timelapse

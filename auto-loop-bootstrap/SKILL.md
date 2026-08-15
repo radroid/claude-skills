@@ -52,7 +52,7 @@ GOALS/ARCHITECTURE/PLAN untouched, and rewrite state.json S2 → S3 with
   iteration is broken.
 - Hand off with the start prompt ("Start the autonomous build loop"), the
   one-time settings suggestions (auto-compact around 40%, 1M context window),
-  and the recommendation to pair a `loop-supervisor` window.
+  and the recommendation to open `/loop-supervisor` in a second window.
 
 ## Your judgment
 

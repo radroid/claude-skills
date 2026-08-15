@@ -1,6 +1,7 @@
 ---
 name: architecture-evolution-timelapse
-description: Builds C4 architecture-evolution timelapses of a codebase across git history by extracting a deterministic C1/C2/C3 model per commit and rendering change-aware diagram videos. Use when the user wants an architecture evolution timelapse, C4 diagram history, system/container/component evolution video, or invokes architecture-evolution-timelapse. Pure static analysis — works on read-only JS/TS repos with no install, dev server, or secrets.
+description: Build a C4 architecture-evolution timelapse of a JS/TS codebase across git history — static analysis on a read-only tree.
+disable-model-invocation: true
 ---
 
 # Architecture Evolution Timelapse

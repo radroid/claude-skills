@@ -1,6 +1,7 @@
 ---
 name: archive-loop-scaffolding
-description: Use when the user wants autonomous-build-loop scaffolding removed from a repo — "clean up the loop", "tear down auto-loop", "archive loop files", "uninstall the autonomous loop" — on a repo bootstrapped via auto-loop-bootstrap.
+description: Archive autonomous-build-loop scaffolding out of a repo, non-destructively, with your yes per file.
+disable-model-invocation: true
 ---
 
 # Archive loop scaffolding
