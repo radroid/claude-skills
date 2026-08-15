@@ -14,6 +14,10 @@
 # This prevents source changes in one skill from dirtying unrelated dist
 # binaries in the working tree, which used to produce noisy diffs and merge
 # conflicts on PRs touching shared dist/.
+#
+# Orphan prune: after the build pass, any dist/<name>.skill whose source
+# <name>/SKILL.md no longer exists is deleted (the skill was renamed or
+# removed), so dist/ never accumulates stale packages.
 
 set -euo pipefail
 
@@ -22,7 +26,7 @@ for arg in "$@"; do
   case "$arg" in
     --force|-f) FORCE=true ;;
     -h|--help)
-      sed -n '2,17p' "$0" | sed 's/^# \{0,1\}//'
+      sed -n '2,21p' "$0" | sed 's/^# \{0,1\}//'
       exit 0 ;;
     *)
       echo "unknown argument: $arg" >&2
@@ -85,6 +89,17 @@ if [ "$built" -eq 0 ] && [ "$skipped" -eq 0 ]; then
   echo "no skills found (looking for */SKILL.md under $REPO_ROOT)" >&2
   exit 1
 fi
+
+# Drop dist artifacts whose source skill is gone (renamed or deleted). Keyed on
+# <name>/SKILL.md, the same marker the build loop uses to recognise a skill.
+for out in "$DIST"/*.skill; do
+  name="$(basename "$out" .skill)"
+  if [ -f "$REPO_ROOT/$name/SKILL.md" ]; then
+    continue
+  fi
+  rm -f "$out"
+  echo "  pruned $name.skill (no source dir)"
+done
 
 if [ "$skipped" -gt 0 ]; then
   echo "$built skill(s) built, $skipped up-to-date, under $DIST/"
