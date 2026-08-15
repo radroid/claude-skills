@@ -87,7 +87,7 @@ Canonical stage defs: [`autonomous-build-loop/references/lifecycle-stages.md`](.
 
 [`docs/cto-system-design.md`](./docs/cto-system-design.md) — **the current plan of record.** The autonomous-CTO system design: the BUILD → MAINTAIN lifecycle, the P0 governance spine (`fleet-registry` → `cto-governance-spine` → `fleet-maintenance`), and the trigger model (loop / schedule / webhook).
 
-[`ROADMAP.md`](./ROADMAP.md) — **historical.** The original milestone plan (M0–M5) for evolving these skills into a lifecycle-staged build loop. Last revised 2026-05-15 and superseded by the CTO system design above; kept for provenance. It predates the entire P0 spine and doesn't mention 12 of the 15 skills now in this repo.
+[`ROADMAP.md`](./ROADMAP.md) — **historical.** The original milestone plan (M0–M5) for evolving these skills into a lifecycle-staged build loop. Last revised 2026-05-15 and superseded by the CTO system design above; kept for provenance. It predates the entire P0 spine and doesn't mention 15 of the 18 skills now in this repo.
 
 ## Install
 
@@ -95,20 +95,27 @@ Canonical stage defs: [`autonomous-build-loop/references/lifecycle-stages.md`](.
 
 ```bash
 git clone https://github.com/radroid/claude-skills.git ~/Documents/claude-skills
-mkdir -p ~/.claude/skills
+cd ~/Documents/claude-skills
 
-# Link every skill (any dir with a SKILL.md) into ~/.claude/skills/
-for d in ~/Documents/claude-skills/*/; do
-  [ -f "$d/SKILL.md" ] || continue
-  ln -sfn "${d%/}" ~/.claude/skills/"$(basename "$d")"
-done
+./scripts/install.sh solo      # default — every skill except the fleet spine
+./scripts/install.sh fleet     # every skill, fleet spine included
 ```
 
-To install a subset, replace the loop with individual `ln -sfn` lines.
+`solo` is the working set for building one project at a time. `fleet` adds the four
+autonomous-fleet skills (`fleet-registry`, `cto-governance-spine`, `fleet-maintenance`,
+`graduation-gate`), which only pay for their always-loaded context once you are running
+more than one app — re-install the `fleet` profile when `graduation-gate` has its first
+app to enroll.
+
+`--dry-run` prints the link/unlink plan and writes nothing; `--list` shows each skill's
+invocation mode, description size, and profile. The installer only ever creates, replaces
+or removes entries in `~/.claude/skills/` whose name matches a skill folder in this repo —
+skills you installed from anywhere else are never touched.
 
 Restart Claude Code. Run `/skills` to confirm the skills are loaded.
 
 Updates: `git pull` in the cloned dir — symlinks always reflect the latest commit.
+`./scripts/check-skills.sh` re-checks that the pointers still line up.
 
 ### Option B — Download the packaged `.skill` files
 
@@ -118,10 +125,12 @@ Grab the latest release from [GitHub Releases](https://github.com/radroid/claude
 mkdir -p ~/.claude/skills
 
 # .skill files are zip archives. Pick the ones you want, or take all of them:
-SKILLS="archive-loop-scaffolding auto-loop-bootstrap autonomous-build-loop \
-cto-governance-spine fleet-maintenance fleet-registry frontend-evolution-timelapse \
-graduation-gate grill-to-prd idea-to-loop loop-supervisor orchestrated-delivery \
-prd-to-screens screen-design-loop workflow-runtime"
+SKILLS="architecture-evolution-timelapse archive-loop-scaffolding \
+auto-loop-bootstrap autonomous-build-loop cto-governance-spine \
+fitness-functions fleet-maintenance fleet-registry \
+frontend-evolution-timelapse graduation-gate grill-to-prd idea-to-loop \
+loop-supervisor orchestrated-delivery prd-to-screens screen-design-loop \
+screenshot-to-replica workflow-runtime"
 
 for s in $SKILLS; do
   curl -fL -o "/tmp/$s.skill" \
@@ -260,20 +269,28 @@ claude-skills/
 │   ├── scripts/mobbin-fetch.mjs  Mobbin MCP images → clean PNG refs (de-watermarked)
 │   └── references/               device-profiles (viewport lookup)
 ├── scripts/
-│   └── build.sh                  package all skills into dist/
+│   ├── build.sh                  package all skills into dist/
+│   ├── install.sh                link skills into ~/.claude/skills (solo | fleet)
+│   └── check-skills.sh           name / dist / cross-repo pointer discipline
 └── dist/                         packaged .skill files (built from source)
+    ├── architecture-evolution-timelapse.skill
+    ├── archive-loop-scaffolding.skill
     ├── auto-loop-bootstrap.skill
     ├── autonomous-build-loop.skill
     ├── cto-governance-spine.skill
+    ├── fitness-functions.skill
     ├── fleet-maintenance.skill
     ├── fleet-registry.skill
+    ├── frontend-evolution-timelapse.skill
     ├── graduation-gate.skill
     ├── grill-to-prd.skill
     ├── idea-to-loop.skill
+    ├── loop-supervisor.skill
     ├── orchestrated-delivery.skill
     ├── prd-to-screens.skill
     ├── screen-design-loop.skill
-    └── screenshot-to-replica.skill
+    ├── screenshot-to-replica.skill
+    └── workflow-runtime.skill
 ```
 
 ## Development workflow
