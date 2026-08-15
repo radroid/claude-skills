@@ -110,7 +110,9 @@ under_repo() {
 }
 
 # Character count of the `description:` value in a SKILL.md frontmatter block
-# (between the first two --- lines). Descriptions here are single-line.
+# (between the first two --- lines). Descriptions here are single-line. A value
+# may be wrapped in a matching pair of quotes (required when it contains `: `);
+# the quotes are YAML syntax, not description text, so they are not counted.
 # length() is bytes in a C locale and characters in a UTF-8 one; subtracting the
 # UTF-8 continuation bytes gives the true character count under either.
 description_chars() {
@@ -119,6 +121,13 @@ description_chars() {
     fm && $0 == "---"      { exit }
     fm && index($0, "description: ") == 1 {
       d = substr($0, 14)
+      sq = sprintf("%c", 39)
+      if (length(d) >= 2) {
+        q = substr(d, 1, 1)
+        if ((q == "\"" || q == sq) && substr(d, length(d), 1) == q) {
+          d = substr(d, 2, length(d) - 2)
+        }
+      }
       n = length(d)
       c = gsub(/[\200-\277]/, "", d)
       print n - c

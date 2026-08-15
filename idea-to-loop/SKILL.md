@@ -1,6 +1,6 @@
 ---
 name: idea-to-loop
-description: Greenfield build: idea → PRD → stack → runnable scaffold → autonomous-loop handoff, staged S0–S2 with human gates. Use when there is no codebase yet; for an existing repo use auto-loop-bootstrap.
+description: "Greenfield build: idea → PRD → stack → runnable scaffold → autonomous-loop handoff, staged S0–S2 with human gates. Use when there is no codebase yet; for an existing repo use auto-loop-bootstrap."
 ---
 
 # Idea to loop

@@ -1,6 +1,6 @@
 ---
 name: auto-loop-bootstrap
-description: Make a repo loop-ready so autonomous-build-loop can take over: protocol files, backlog source, seed commit, smoke test. Use when the repo has no `.loop/state.json` yet.
+description: "Make a repo loop-ready so autonomous-build-loop can take over: protocol files, backlog source, seed commit, smoke test. Use when the repo has no `.loop/state.json` yet."
 ---
 
 # Auto loop bootstrap
