@@ -16,14 +16,8 @@ stubs; a backlog source with ≥3 actionable items; one committed seed
 
 ## Where to start
 
-Read `.loop/state.json` first — it decides whether this skill runs at all.
-`"stage": "S3"` or later means the repo is already bootstrapped: say so, and
-invoke `autonomous-build-loop` via the Skill tool — the loop owns the tree from
-here. `"S0"` or `"S1"` belongs to `idea-to-loop`: hand back to it. `"S2"` is
-the greenfield handoff below. A missing file is this skill's case, and the rest
-of this skill is written for it.
-
-Audit what already exists — never clobber. Then fill only the gaps from
+Read `.loop/state.json` first — Contracts settle whether this skill runs at
+all. Then audit what already exists — never clobber. Then fill only the gaps from
 `assets/templates/` (substituting placeholders), wire `.gitignore`
 (`/.loop/claims/` — `state.json` itself IS committed), and write a baseline
 `.claude/settings.local.json` denylist for secrets and dangerous patterns
@@ -39,6 +33,15 @@ GOALS/ARCHITECTURE/PLAN untouched, and rewrite state.json S2 → S3 with
 
 ## Contracts
 
+- **`.loop/state.json` settles whether this skill runs at all — its `stage`
+  field is the whole test.** No corroborating `logs/`, CLAUDE.md protocol
+  section, backlog, or commit history is needed, and their absence changes
+  nothing. `"S3"` or later: the repo is bootstrapped — report that it is
+  loop-ready, invoke `autonomous-build-loop` via the Skill tool, and scaffold
+  nothing. `"S0"` or `"S1"`: `idea-to-loop` owns the repo — hand back to it.
+  `"S2"`: run the greenfield handoff above, the one case where this skill
+  continues on an existing state file. No file at all: bootstrap, which is what
+  the rest of this skill describes.
 - **Never clobber existing content.** If CLAUDE.md exists without the protocol
   section, append the section; never rewrite the file.
 - **Backlog source:** auto-detect (GOALS/TODO/ROADMAP-style files, GitHub
@@ -66,6 +69,8 @@ GOALS/ARCHITECTURE/PLAN untouched, and rewrite state.json S2 → S3 with
 
 ## Your judgment
 
-Ordering, audit mechanics, how the interview goes, what stage the repo is
-really at — your call, confirmed with the user where it matters. When unsure
-whether something is user content or scaffold residue, ask.
+Ordering, audit mechanics, how the interview goes, and what a repo needs
+*within* a bootstrap — your call, confirmed with the user where it matters.
+Whether the repo is bootstrapped at all is settled by `.loop/state.json`
+(Contracts). When unsure whether something is user content or scaffold
+residue, ask.
