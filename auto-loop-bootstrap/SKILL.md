@@ -41,7 +41,11 @@ GOALS/ARCHITECTURE/PLAN untouched, and rewrite state.json S2 → S3 with
   nothing. `"S0"` or `"S1"`: `idea-to-loop` owns the repo — hand back to it.
   `"S2"`: run the greenfield handoff above, the one case where this skill
   continues on an existing state file. No file at all: bootstrap, which is what
-  the rest of this skill describes.
+  the rest of this skill describes. A state file that is present but has no
+  readable `stage` (unparseable JSON, or the field missing) is the one case you
+  do not decide: say what you found and ask the user which stage the repo is at,
+  then act on their answer — scaffolding over a state file you cannot read is
+  how a live loop gets clobbered.
 - **Never clobber existing content.** If CLAUDE.md exists without the protocol
   section, append the section; never rewrite the file.
 - **Backlog source:** auto-detect (GOALS/TODO/ROADMAP-style files, GitHub

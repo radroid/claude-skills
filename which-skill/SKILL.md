@@ -19,7 +19,7 @@ The route most work travels. You have an idea and want it built while you're els
 3. **`/idea-to-loop`** — S0 scope → S1 `ARCHITECTURE.md` → S2 a scaffold that actually runs, each stage behind a human gate tracked in `.loop/state.json`. Ask for this one alone from an idea: it runs `/grill-to-prd` at S0, ends S0 on a runnable prototype rather than a paper spec, and calls `/auto-loop-bootstrap` at the S2 exit gate itself — which writes `"stage": "S3"`, so the handoff is atomic and leaves you no flip step.
 4. **`/autonomous-build-loop`** — the unattended part. Each iteration reads `.loop/state.json`, the backlog and `logs/latest.md`, does one bounded turn of work, verifies it, logs, commits, and schedules its own next wake-up. Blocks become entries in `logs/blocks.md` and the loop moves on. Walk away.
 5. **`/graduation-gate`** — the seam between building and maintaining. Verifies the app is genuinely instrumented and operationally ready for unattended maintenance, then enrolls it in the fleet on a full pass **plus** your approval. (Fleet profile — see The fleet.)
-6. **`/archive-loop-scaffolding`** — the teardown, once per repo lifetime. Moves `GOALS.md`, `logs/`, `.loop/` and friends into a gitignored `.archive/<timestamp>/` with a MANIFEST that makes restoring mechanical. Nothing is deleted, and it takes your yes per file.
+6. **`/archive-loop-scaffolding`** — the teardown, once per repo lifetime. Moves `GOALS.md`, `logs/`, `.loop/` and friends into a gitignored `.archive/<timestamp>/` with a MANIFEST that makes restoring mechanical. Nothing is deleted, and it takes your yes per file. (User-invoked — you type it.)
 
 ## On-ramps
 

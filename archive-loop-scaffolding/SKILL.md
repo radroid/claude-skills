@@ -39,6 +39,13 @@ resulting dirty tree and commits it themselves.
   current `auto-loop-bootstrap/assets/templates/CLAUDE.md` template → ask
   before excising. Preserve the user's original bytes (line endings, BOM) in
   whatever you archive.
+- **Flip-back trigger.** This skill is user-invoked (`disable-model-invocation:
+  true`) because its contract waits for an explicit yes per file. The day
+  `graduation-gate` calls it non-interactively (sketched in
+  `docs/cto-system-design.md` §5), both halves ship together: drop
+  `disable-model-invocation` from the frontmatter, and add a non-interactive
+  mode that takes its per-file decisions from the caller — so the yes still
+  exists, just gathered earlier.
 - Never overwrite an existing `.archive/<timestamp>/` — bump a suffix. Ensure
   the archive root ends up in `.gitignore`.
 - The `MANIFEST.md` records: target, branch, timestamp, every move with its
