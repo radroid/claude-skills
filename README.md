@@ -94,6 +94,8 @@ Canonical stage defs: [`autonomous-build-loop/references/lifecycle-stages.md`](.
 
 [`docs/cto-system-design.md`](./docs/cto-system-design.md) — **the current plan of record.** The autonomous-CTO system design: the BUILD → MAINTAIN lifecycle, the P0 governance spine (`fleet-registry` → `cto-governance-spine` → `fleet-maintenance`), and the trigger model (loop / schedule / webhook).
 
+[`docs/analysis/skill-overlap-2026-08-14.html`](./docs/analysis/skill-overlap-2026-08-14.html) — **overlap analysis** vs [mattpocock/skills](https://github.com/mattpocock/skills): 630 pairs scored and adversarially verified, 4.3% partial overlap, zero substantial — the measurement behind the 2026-08-15 skill-set cleanup (user-only flips, `/which-skill`, install profiles).
+
 [`ROADMAP.md`](./ROADMAP.md) — **historical.** The original milestone plan (M0–M5) for evolving these skills into a lifecycle-staged build loop. Last revised 2026-05-15 and superseded by the CTO system design above; kept for provenance. It predates the entire P0 spine and doesn't mention 16 of the 19 skills now in this repo.
 
 ## Install

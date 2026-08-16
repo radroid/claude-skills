@@ -383,8 +383,9 @@ Per-skill findings are in the audit; the recurring patterns:
 
 ### Task 7 (deferred — not executed in this run): Fill the two high-severity capability gaps
 
-From the overlap analysis — the two holes that sit directly under the most autonomous
-machinery in the repo. Deferred because wiring a diagnosis loop into the loop runtime needs a
+From the overlap analysis (`docs/analysis/skill-overlap-2026-08-14.html` — 630 pairs vs
+mattpocock/skills, 4.3% partial overlap, zero substantial) — the two holes that sit directly
+under the most autonomous machinery in the repo. Deferred because wiring a diagnosis loop into the loop runtime needs a
 design decision the plan should not make in passing (below).
 
 - [ ] **Debugging.** There is no diagnosis skill at all; the loop's entire answer to a hard
