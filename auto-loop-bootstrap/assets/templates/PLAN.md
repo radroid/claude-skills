@@ -32,4 +32,4 @@ Current build sequence. Source of truth for phase ordering; complements `GOALS.m
 
 ## Phase boundary protocol
 
-At each phase boundary the loop MUST invoke the `Skill` tool with `skill: "improve-codebase-architecture"` before the next phase's first feature iter. Result logged to `logs/blocks.md` with `**Source:** arch-pass`.
+At each phase boundary the loop MUST run an architecture pass before the next phase's first feature iter: invoke the `Skill` tool with `skill: "codebase-design"` for the deep-module vocabulary, then survey this phase's new and changed modules against it and log each deepening candidate. If `codebase-design` is not installed, survey against the criterion directly: an interface much simpler than the implementation it hides, and a seam a test can drive without the rest of the system. Result logged to `logs/blocks.md` with `**Source:** arch-pass`.

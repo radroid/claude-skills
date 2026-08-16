@@ -1,6 +1,7 @@
 ---
 name: loop-supervisor
-description: Use when the user wants read-only oversight running alongside the autonomous build loop — "supervise the loop", "watch the build", "curate the backlog", "loop supervisor", "/supervise" — in a second Claude Code window on the same repo.
+description: Read-only oversight of a running autonomous build loop — open in a second Claude Code window on the same repo.
+disable-model-invocation: true
 ---
 
 # Loop supervisor

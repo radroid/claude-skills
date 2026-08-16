@@ -1,6 +1,6 @@
 # Blocks log
 
-Structured record of everything the autonomous loop would otherwise halt on: sub-agent block verdicts, peer-review request_changes, smoke failures, contract drift, user-decision blockers, arch-pass results. The loop never halts — it logs here and continues.
+Structured record of everything the autonomous loop would otherwise halt on: sub-agent block verdicts, peer-review request_changes, smoke failures, contract drift, user-decision blockers, arch-pass results. Blocks keep the loop moving: a block becomes an entry here and the loop picks the next non-conflicting item.
 
 Each entry follows this format:
 

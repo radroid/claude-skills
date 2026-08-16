@@ -1,6 +1,6 @@
 ---
 name: fleet-registry
-description: Use when an autonomous fleet needs its per-app source of truth — enrolling, retiring, or reading an app record; the merge-deploys-to-prod flag; the concurrency lease; last-known-good; the smoke oracle; the admission validator. Triggers: "fleet registry", "enroll an app", "registry drift".
+description: Registry record for one fleet app — read, enroll via the admission validator, retire, quarantine, reconcile drift. Holds the prod-deploy flag, lease, and last-known-good.
 ---
 
 # Fleet registry

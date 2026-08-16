@@ -1,6 +1,6 @@
 ---
 name: orchestrated-delivery
-description: Use when shipping a multi-PR backlog with a team of subagents — the user wants PR-sized slices landed by planner/executor/reviewer/fix/steward roles, mentions "orchestrated delivery", a token ledger, a friction log, or resuming a multi-PR run from a backlog Progress line.
+description: Use when shipping a multi-PR backlog through role subagents — starting a fresh run, or resuming one from the backlog's Progress line. If `.loop/state.json` exists, the loop owns that repo and this only ever arrives as a delegate.
 ---
 
 # Orchestrated delivery
@@ -42,6 +42,10 @@ one-line **Progress** marker and per-item dependency IDs (one numbering scheme
 The loop per item: **planner → executor → reviewer → fix → merge → steward**
 (planner runs one item ahead).
 
+- **`.loop/state.json` present = `autonomous-build-loop` owns that tree, and
+  its existence is the whole test.** This skill runs there only as a delegate
+  the loop invokes; reached any other way on such a repo, report that the loop
+  owns the tree and hand back to it.
 - Plans and reviews contain **no code** — prose, `file:line` anchors, a
   mandatory edge-case section. Reviewer verdicts end with exactly one line of
   the unified grammar: `VERDICT: APPROVE` · `VERDICT: REVISE — <n> issues` ·

@@ -1,4 +1,4 @@
-# Phase 3 — Technical question bank
+# Technical question bank
 
 For engineering-led builders. Optimised for getting to a PRD that another engineer (or an autonomous build loop) could implement without re-grilling the human.
 
@@ -6,8 +6,6 @@ For engineering-led builders. Optimised for getting to a PRD that another engine
 
 - Ask 1–2 questions per turn, not all at once.
 - **Multiple-choice when possible.** Open-ended only when the answer space is too large to enumerate.
-- Skip any question whose answer is already in the Phase 1 context summary.
-- If the user is fluent and the answers are sharp, stop early — the **exit checklist** at the bottom is the goal, not running every question.
 - If a question reveals a much bigger scope question ("oh, we'd actually need a separate auth service for that"), pause the bank and brainstorm the new scope before resuming.
 
 ## Section A — Problem and user
@@ -94,7 +92,7 @@ Stop the grill when you can fill in the Technical PRD template without `> TODO:`
 - [ ] At least one named edge case + recovery story (Sections F)
 - [ ] External blockers list (Section J) — even if empty
 
-Sections E, G, I can stay sparse if the user doesn't have answers — mark them `> TODO:` and surface in the Phase 5 review, don't keep grilling.
+Sections E, G, I can stay sparse if the user doesn't have answers — mark them `> TODO:` and surface in the sign-off review, then move on.
 
 ## Default behaviours
 

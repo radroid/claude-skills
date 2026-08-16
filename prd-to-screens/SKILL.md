@@ -1,6 +1,6 @@
 ---
 name: prd-to-screens
-description: Use when the user wants a PRD turned into approved HTML mockups before implementation — "what screens do I need?", "build the frontend mockups", "let's design the UI first", "/prd-to-screens", clickable HTML wireframes from a spec.
+description: Turn a PRD into approved HTML mockups. Use when a PRD exists and the user wants the UI settled before any frontend code is written.
 ---
 
 # PRD to screens

@@ -1,9 +1,10 @@
 ---
-name: mobbin-replica
-description: Use when the user wants a pixel-perfect, working replica of a real app's UI built in a given web stack — from screenshots they provide, or from an app they name/link on Mobbin (fetched via the Mobbin MCP server). Triggers on "replicate this app", "rebuild this UI from screenshots", "pixel-perfect clone", "copy this app's design", "clone Flighty/Spotify/etc", "build a replica of <app>", "make my app look exactly like this", "match these screenshots", a mobbin.com app or screen URL, or "/mobbin-replica". Not for building from a written PRD (use prd-to-screens), refining existing mockups from design inspiration (use screen-design-loop), or native-mobile targets.
+name: screenshot-to-replica
+description: Build a pixel-perfect, working web replica of an app from its screenshots — a local folder, or pulled from Mobbin.
+disable-model-invocation: true
 ---
 
-# Mobbin-Replica
+# Screenshot to replica
 
 Turn a folder of app screenshots into a working, **pixel-perfect** web replica — a
 functional app first, then a smoke test and a per-screen pixel-refinement loop.

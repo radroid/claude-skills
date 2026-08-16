@@ -1,6 +1,7 @@
 ---
 name: fitness-functions
-description: Designs and installs architectural fitness functions as a GitHub Actions CI pipeline that continuously checks how the code is written. Profiles a repo's languages, frameworks, and architectural style; web-searches current best-practice checks for that stack (e.g. circular-import / layering-violation detection for Java/.NET/Python/JS, coupling, complexity, security, coverage, bundle size); presents a tailored catalog of candidate checks; then implements the ones the user selects as workflows, tool configs, and a FITNESS.md. Use when the user wants to "add fitness functions", "set up architecture/CI guardrails", "enforce architectural rules", "catch circular imports / layering violations in CI", "add a fitness function pipeline", "continuously check code quality/architecture", or invokes fitness-functions. Works on any repo; research is stack-aware so it covers languages the baseline catalog hasn't pinned.
+description: Design and install architectural fitness functions as a GitHub Actions CI pipeline for this repo's stack.
+disable-model-invocation: true
 ---
 
 # Fitness Functions

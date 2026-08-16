@@ -1,6 +1,7 @@
 ---
 name: architecture-evolution-timelapse
-description: Builds C4 architecture-evolution timelapses of a codebase across git history by extracting a deterministic C1/C2/C3 model per commit and rendering change-aware diagram videos. Use when the user wants an architecture evolution timelapse, C4 diagram history, system/container/component evolution video, or invokes architecture-evolution-timelapse. Pure static analysis — works on read-only JS/TS repos with no install, dev server, or secrets.
+description: Build a C4 architecture-evolution timelapse of a JS/TS codebase across git history — static analysis on a read-only tree.
+disable-model-invocation: true
 ---
 
 # Architecture Evolution Timelapse
@@ -24,13 +25,13 @@ this version ships `init`, `extract`, and `render`.
 cd "$SKILL_ROOT/scripts" && npm ci && npx playwright install chromium
 ```
 
-Extraction needs no browser, no ffmpeg, no network, and no installs in the
-target repo; only `render` uses the Chromium installed above (and degrades to
-placeholder frames without it).
+Extraction is pure static analysis: a read-only target tree is enough. Only
+`render` reaches for the Chromium installed above, degrading to placeholder
+frames when it is absent.
 
 1. **Target app repo** — `cd` into the repo under analysis. `.arch-timelapse.yaml`
-   and `.arch-timelapse/` live here only. `extract` also runs config-less against
-   a read-only tree (defaults + a stderr notice) with `--out` pointed elsewhere.
+   and `.arch-timelapse/` live here only. `extract` also runs config-less
+   (defaults + a stderr notice) with `--out` pointed elsewhere.
 
 ## Quick start
 
